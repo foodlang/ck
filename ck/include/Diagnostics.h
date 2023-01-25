@@ -26,13 +26,6 @@ enum
 	/// reflect intended behaviour.
 	/// </summary>
 	CK_DIAG_SEVERITY_ERROR,
-
-	/// <summary>
-	/// CK has run into an uncoverable internal error,
-	/// and must abort. If this is encountered, it should
-	/// be fixed.
-	/// </summary>
-	CK_DIAG_SEVERITY_ABORT,
 };
 
 /// <summary>
@@ -141,10 +134,24 @@ void CkDiagnosticWhitelist(CkDiagnosticHandlerInstance *dhi, char *name);
 /// <summary>
 /// Throws a diagnostic.
 /// </summary>
-/// <param name="dhi"></param>
-/// <param name="name"></param>
-/// <param name="format"></param>
-/// <param name=""></param>
-void CkDiagnosticThrow(CkDiagnosticHandlerInstance *dhi, char *name, const char *restrict format, ...);
+/// <param name="dhi">A pointer to the diagnostic handler struct.</param>
+/// <param name="position">The linear position that causes the diagnostic.</param>
+/// <param name="severity">The severity of the diagnostic.</param>
+/// <param name="name">The name of the diagnostic to throw. Case-sensitive.</param>
+/// <param name="format">The format of the message.</param>
+/// <param name="va_args">Params for the format.</param>
+void CkDiagnosticThrow(
+	CkDiagnosticHandlerInstance *dhi,
+	uint64_t position,
+	uint8_t severity,
+	char *name,
+	const char *restrict format,
+	...);
+
+/// <summary>
+/// Displays all of the reported diagnostics.
+/// </summary>
+/// <param name="dhi">A pointer to the diagnostic handler struct.</param>
+void CkDiagnosticDisplay(CkDiagnosticHandlerInstance *dhi);
 
 #endif

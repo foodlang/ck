@@ -71,7 +71,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		CkExpression *expr = CkParserExpression(parser);
 		CkParserReadToken(parser, &token);
 		if (token.kind != ')') {
-			fprintf(stderr, "ck: A pair of brackets was opened but never closed at %d\n", token.position);
+			
 		}
 	}
 

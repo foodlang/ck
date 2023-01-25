@@ -213,6 +213,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\CDebug.h" />
     <ClInclude Include="include\Driver.h" />
     <ClInclude Include="include\FileIO.h" />
     <ClInclude Include="include\Food.h" />

@@ -1,6 +1,7 @@
 #include <include/Driver.h>
 #include <include/Syntax/Lex.h>
 #include <include/Syntax/Parser.h>
+#include <include/Diagnostics.h>
 #include <malloc.h>
 #include <stdio.h>
 
@@ -14,8 +15,9 @@ void CkDriverCompile(
 	size_t   tokenCount = 0;   // The amount of source tokens.
 	size_t   tokenBatchLength; // The length of the array storing the source tokens.
 
-	CkLexInstance lexer;     // The lexer.
-	CkParserInstance parser; // The parser.
+	CkDiagnosticHandlerInstance dh; // The diagnostic handler.
+	CkLexInstance lexer;            // The lexer.
+	CkParserInstance parser;        // The parser.
 
 	// 1. Default output values
 	result->successful = TRUE;
@@ -49,9 +51,13 @@ void CkDriverCompile(
 	// Cleaning up the tokens. They are no longer required after parsing.
 	for (size_t i = 0; i < tokenCount; i++)
 		CkLexDeleteToken(tokenBatch + tokenCount);
+
+	// Displaying diagnostics
+	CkDiagnosticDisplay(&dh);
 	
 	// Cleanup
 	free(tokenBatch);
 	CkLexDestroyInstance(&lexer);
 	CkParserDelete(&parser);
+	CkDiagnosticHandlerDestroyInstance(&dh);
 }
