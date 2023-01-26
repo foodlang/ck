@@ -44,6 +44,11 @@ typedef struct CkExpression
 	/// </summary>
 	struct CkExpression *extra;
 
+	/// <summary>
+	/// If true, this expression can be referenced.
+	/// </summary>
+	bool_t isLValue;
+
 } CkExpression;
 
 /// <summary>
@@ -103,5 +108,11 @@ CkExpression *CkExpressionCreateTernary(
 /// </summary>
 /// <param name="expression">The expression to delete.</param>
 void CkExpressionDelete(CkExpression *expression);
+
+/// <summary>
+/// Prints an expression.
+/// </summary>
+/// <param name="expression"></param>
+void CkExpressionPrint(CkExpression *expression);
 
 #endif

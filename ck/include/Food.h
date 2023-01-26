@@ -8,14 +8,14 @@
 
 #include "Types.h"
 
-#define CK_QUALIFIER_CONST_BIT    0b00000001
-#define CK_QUALIFIER_VOLATILE_BIT 0b00000010
-#define CK_QUALIFIER_RESTRICT_BIT 0b00000100
-#define CK_QUALIFIER_ATOMIC_BIT   0b00001000
+#define CK_QUALIFIER_CONST_BIT    1
+#define CK_QUALIFIER_VOLATILE_BIT 2
+#define CK_QUALIFIER_RESTRICT_BIT 4
+#define CK_QUALIFIER_ATOMIC_BIT   8
 
 enum
 {
-	CK_FOOD_VOID,
+	CK_FOOD_VOID = 1,
 	CK_FOOD_BOOL,
 	CK_FOOD_I8,
 	CK_FOOD_U8,
@@ -52,7 +52,7 @@ typedef struct CkFoodType
 	/// The type identifier. Must be equal to one of the
 	/// CK_FOOD_(typename) macros.
 	/// </summary>
-	uint32_t id;
+	uint8_t id;
 
 	/// <summary>
 	/// A bit array storing the type qualifiers.
@@ -76,7 +76,7 @@ typedef struct CkFoodType
 /// is now owned by this node.</param>
 /// <returns>A heap-allocated type instance.</returns>
 CkFoodType *CkFoodCreateTypeInstance(
-	uint32_t id,
+	uint8_t id,
 	uint8_t qualifiers,
 	CkFoodType *child);
 
@@ -85,5 +85,12 @@ CkFoodType *CkFoodCreateTypeInstance(
 /// </summary>
 /// <param name="instance">The instance to delete.</param>
 void CkFoodDeleteTypeInstance(CkFoodType *instance);
+
+/// <summary>
+/// Duplicates a type instance.
+/// </summary>
+/// <param name="instance">The instance to duplicate.</param>
+/// <returns></returns>
+CkFoodType *CkFoodCopyTypeInstance(CkFoodType *instance);
 
 #endif

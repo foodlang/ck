@@ -1,11 +1,16 @@
 #include <include/Syntax/Parser.h>
 #include <string.h>
 
-void CkParserCreateInstance(CkParserInstance *dest, CkToken *pPassedTokens, size_t passedCount)
+void CkParserCreateInstance(
+	CkParserInstance *dest,
+	CkToken *pPassedTokens,
+	size_t passedCount,
+	CkDiagnosticHandlerInstance *pDhi)
 {
 	dest->position = 0;
 	dest->passedTokenCount = passedCount;
 	dest->pPassedTokens = pPassedTokens;
+	dest->pDhi = pDhi;
 }
 
 void CkParserDelete(CkParserInstance *dest)

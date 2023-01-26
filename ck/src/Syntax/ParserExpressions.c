@@ -2,6 +2,10 @@
 #include <include/FileIO.h>
 #include <stdio.h>
 
+/// <summary>
+/// Parses a primary value.
+/// </summary>
+/// <returns></returns>
 static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 {
 	CkToken token;
@@ -12,6 +16,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 
 		// Literal integer
 	case '0':
+
 		// Default is int
 		if (token.value.u32 == token.value.u64)
 			return CkExpressionCreateLiteral(
@@ -71,14 +76,74 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		CkExpression *expr = CkParserExpression(parser);
 		CkParserReadToken(parser, &token);
 		if (token.kind != ')') {
-			
+			CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"Missing closing bracket in parenthesized expression.");
 		}
+		return expr;
+	}
+		// Anything that isn't an expression but is passed as an expression.
+	default:
+		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			"An expression was expected in this context.");
+
+		return CkExpressionCreateLiteral(&token, CkFoodCreateTypeInstance(CK_FOOD_VOID, 0, NULL));
+
+		// TODO:
+		// Implement sizeof() and alignof()
+	}
+}
+
+/// <summary>
+/// Parses access, postfix increment and decrement operators.
+/// </summary>
+/// <param name="parser"></param>
+/// <returns></returns>
+static CkExpression *s_ParseLevel1(CkParserInstance *parser)
+{
+	CkToken token;
+	CkExpression *acc;
+
+	// The operand and next token are read.
+	acc = s_ParsePrimaryExpression(parser);
+	CkParserReadToken(parser, &token);
+
+	while (TRUE) {
+		switch (token.kind) {
+			// Postfix increment and decrement
+		case CKTOK2('+', '+'):
+		case CKTOK2('-', '-'):
+			acc = CkExpressionCreateUnary(&token, NULL, acc);
+			break;
+
+			// Member access / pointer member access
+		case '.':
+		case CKTOK2('-', '>'):
+			acc = CkExpressionCreateBinary(&token, NULL, acc, s_ParsePrimaryExpression(parser));
+			break;
+
+			// Array subscript
+		case '[':
+			acc = CkExpressionCreateBinary(&token, NULL, acc, CkParserExpression(parser));
+			CkParserReadToken(parser, &token);
+			if (token.kind != ']') {
+				CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Missing closing bracket in array subscript operation.");
+			}
+			break;
+		
+			// If not an access operator / increment / decrement
+		default:
+			CkParserRewind(parser, 1);
+			goto Leave;
+		}
+		CkParserReadToken(parser, &token);
 	}
 
-	}
+Leave:
+	return acc;
 }
 
 CkExpression *CkParserExpression(CkParserInstance *parser)
 {
-	
+	return s_ParseLevel1(parser);
 }

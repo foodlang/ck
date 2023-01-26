@@ -23,6 +23,11 @@ typedef struct CkDriverStartupConfiguration
 	/// </summary>
 	char *source;
 
+	/// <summary>
+	/// If true, warnings act as errors (prevent compilation).
+	/// </summary>
+	bool_t wError;
+
 } CkDriverStartupConfiguration;
 
 /// <summary>
@@ -35,6 +40,11 @@ typedef struct CkDriverCompilationResult
 	/// If true, the compilation unit compiled successfully.
 	/// </summary>
 	bool_t successful;
+
+	/// <summary>
+	/// The time elapsed (in milliseconds) for the driver to run.
+	/// </summary>
+	double executionTime;
 
 } CkDriverCompilationResult;
 

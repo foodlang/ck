@@ -5,7 +5,8 @@
 #ifndef CK_PARSER_H_
 #define CK_PARSER_H_
 
-#include "Expression.h" 
+#include "Expression.h"
+#include "../Diagnostics.h"
 
 /// <summary>
 /// A parser instance stores data about an individual parser
@@ -31,6 +32,11 @@ typedef struct CkParserInstance
 	/// </summary>
 	size_t   position;
 
+	/// <summary>
+	/// A pointer to the passed diagnostic handler.
+	/// </summary>
+	CkDiagnosticHandlerInstance *pDhi;
+
 } CkParserInstance;
 
 /// <summary>
@@ -40,7 +46,12 @@ typedef struct CkParserInstance
 /// <param name="dest">A pointer to where the parser instance should be written.</param>
 /// <param name="pPassedTokens">The token buffer pointer to pass.</param>
 /// <param name="passedCount">The amount of tokens passed.</param>
-void CkParserCreateInstance(CkParserInstance *dest, CkToken *pPassedTokens, size_t passedCount);
+/// <param name="pDhi">The diagnostic handler to report errors to. This is passed, meaning the parser doesn't own it.</param>
+void CkParserCreateInstance(
+	CkParserInstance *dest,
+	CkToken *pPassedTokens,
+	size_t passedCount,
+	CkDiagnosticHandlerInstance *pDhi);
 
 /// <summary>
 /// Deletes a parser instance.

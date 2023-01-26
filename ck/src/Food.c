@@ -2,7 +2,7 @@
 #include <malloc.h>
 
 CkFoodType *CkFoodCreateTypeInstance(
-	uint32_t id,
+	uint8_t id,
 	uint8_t qualifiers,
 	CkFoodType *child)
 {
@@ -18,4 +18,13 @@ void CkFoodDeleteTypeInstance(CkFoodType *instance)
 	if (instance->child)
 		CkFoodDeleteTypeInstance(instance->child);
 	free(instance);
+}
+
+CkFoodType *CkFoodCopyTypeInstance(CkFoodType *instance)
+{
+	return CkFoodCreateTypeInstance(
+		instance->id,
+		instance->qualifiers,
+		instance->child ? CkFoodCopyTypeInstance(instance->child) : NULL
+	);
 }

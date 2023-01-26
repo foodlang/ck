@@ -45,6 +45,9 @@
     <ClInclude Include="include\CDebug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Syntax\ParserTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.c">
@@ -74,5 +77,11 @@
     <ClCompile Include="src\Diagnostics.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Syntax\ParserTypes.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="tests\test.txt" />
   </ItemGroup>
 </Project>

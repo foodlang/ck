@@ -1,6 +1,7 @@
 #include <include/Syntax/Expression.h>
 #include <malloc.h>
 #include <string.h>
+#include <stdio.h>
 
 CkExpression *CkExpressionCreateLiteral(
 	const CkToken *token,
@@ -63,6 +64,25 @@ void CkExpressionDelete(CkExpression *expression)
 		CkExpressionDelete(expression->right);
 	if (expression->extra)
 		CkExpressionDelete(expression->extra);
-	CkFoodDeleteTypeInstance(expression->type);
+	if (expression->type)
+		CkFoodDeleteTypeInstance(expression->type);
 	free(expression);
+}
+
+static void s_ExprPrintTab(int tab, CkExpression *expression)
+{
+	for (int i = 0; i < tab; i++)
+		printf("  ");
+	printf_s("%c:%llu\n", (char)expression->token.kind, expression->token.value.u64);
+	if (expression->left)
+		s_ExprPrintTab(tab + 1, expression->left);
+	if (expression->right)
+		s_ExprPrintTab(tab + 1, expression->right);
+	if (expression->extra)
+		s_ExprPrintTab(tab + 1, expression->extra);
+}
+
+void CkExpressionPrint(CkExpression *expression)
+{
+	s_ExprPrintTab(0, expression);
 }

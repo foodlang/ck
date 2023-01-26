@@ -174,11 +174,11 @@ static inline uint8_t s_escapeSequence(CkLexInstance *lexer)
 			&& elapsedChars <= 2) {
 			accumulator <<= 4;
 			if (isdigit(cur))
-				accumulator |= (uint64_t)( cur - '0' );
+				accumulator += (uint64_t)( cur - '0' );
 			else if (cur <= 'F' && cur >= 'A')
-				accumulator |= (uint64_t)( cur - 'A' + 10 );
+				accumulator += (uint64_t)( cur - 'A' + 10 );
 			else if (cur <= 'f' && cur >= 'a')
-				accumulator |= (uint64_t)( cur - 'a' + 10 );
+				accumulator += (uint64_t)( cur - 'a' + 10 );
 			lexer->cursor++;
 			cur = s_nextChar(lexer);
 			elapsedChars++;
@@ -203,7 +203,7 @@ static inline uint8_t s_escapeSequence(CkLexInstance *lexer)
 			&& elapsedChars <= 3
 			&& ((uint16_t)accumulator << 4) + 7 <= 255) {
 			accumulator <<= 3;
-			accumulator |= ( cur - '0' );
+			accumulator += ( cur - '0' );
 			lexer->cursor++;
 			cur = s_nextChar(lexer);
 			elapsedChars++;
@@ -402,7 +402,7 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 				cur = s_nextChar(lexer);
 				while (cur == '0' || cur == '1') {
 					accumulator <<= 1;
-					accumulator |= (uint64_t)( cur - '0' );
+					accumulator += (uint64_t)( cur - '0' );
 					lexer->cursor++;
 					cur = s_nextChar(lexer);
 				}
@@ -415,11 +415,11 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 				   || ( cur <= 'f' && cur >= 'a' )) {
 					accumulator <<= 4;
 					if (cur <= '9' && cur >= '0')
-						accumulator |= (uint64_t)( cur - '0' );
+						accumulator += (uint64_t)( cur - '0' );
 					else if (cur <= 'F' && cur >= 'A')
-						accumulator |= (uint64_t)( cur - 'A' + 10 );
+						accumulator += (uint64_t)( cur - 'A' + 10 );
 					else if (cur <= 'f' && cur >= 'a')
-						accumulator |= (uint64_t)( cur - 'a' + 10 );
+						accumulator += (uint64_t)( cur - 'a' + 10 );
 					lexer->cursor++;
 					cur = s_nextChar(lexer);
 				}
@@ -427,7 +427,7 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 			} else {
 				while (cur <= '7' && cur >= '0') {
 					accumulator <<= 3;
-					accumulator |= (uint64_t)( cur - '0' );
+					accumulator += (uint64_t)( cur - '0' );
 					lexer->cursor++;
 					cur = s_nextChar(lexer);
 				}
@@ -441,7 +441,7 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		// Decimal
 		while (isdigit(cur)) {
 			accumulator *= 10;
-			accumulator |= (uint64_t)( cur - '0' );
+			accumulator += (uint64_t)( cur - '0' );
 			lexer->cursor++;
 			cur = s_nextChar(lexer);
 		}
@@ -550,7 +550,7 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 				}
 				value = s_escapeSequence(lexer);
 			}
-			accumulator |= value;
+			accumulator += value;
 			lexer->cursor++;
 			cur = s_nextChar(lexer);
 		}

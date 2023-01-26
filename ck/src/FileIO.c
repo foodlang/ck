@@ -1,6 +1,7 @@
 #include <include/FileIO.h>
 #include <stdio.h>
 #include <malloc.h>
+#include <stdlib.h>
 
 char *CkReadFileContents(const char *path)
 {
@@ -9,8 +10,10 @@ char *CkReadFileContents(const char *path)
 	register char *cstrBuffer;
 
 	// 1. Opening the file and getting the length
-	if (fopen_s(&fileStruct, path, "rb"))
-		return NULL;
+	if (fopen_s(&fileStruct, path, "rb")) {
+		fprintf_s(stderr, "ck: '%s' does not exist, or cannot be read from.\n", path);
+		abort();
+	}
 	_fseeki64_nolock(fileStruct, 0, SEEK_END);
 	fileLength = (size_t)_ftelli64_nolock(fileStruct);
 	_fseeki64_nolock(fileStruct, 0, SEEK_SET);
