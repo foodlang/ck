@@ -213,11 +213,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\Arena.h" />
     <ClInclude Include="include\CDebug.h" />
     <ClInclude Include="include\Driver.h" />
     <ClInclude Include="include\FileIO.h" />
     <ClInclude Include="include\Food.h" />
     <ClInclude Include="include\Diagnostics.h" />
+    <ClInclude Include="include\List.h" />
     <ClInclude Include="include\Syntax\Expression.h" />
     <ClInclude Include="include\Syntax\Lex.h" />
     <ClInclude Include="include\Syntax\Parser.h" />
@@ -226,6 +228,7 @@
     <ClInclude Include="include\Types.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Arena.c" />
     <ClCompile Include="src\Diagnostics.c" />
     <ClCompile Include="src\Driver.c" />
     <ClCompile Include="src\FileIO.c" />

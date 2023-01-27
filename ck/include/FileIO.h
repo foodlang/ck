@@ -6,14 +6,14 @@
 #define CK_FILEIO_H_
 
 #include "Types.h"
+#include <include/Arena.h>
 
 /// <summary>
 /// Reads a file and puts the contents into a buffer.
-/// The returned buffer has to be freed.
 /// </summary>
 /// <param name="path"></param>
 /// <returns></returns>
-char *CkReadFileContents(const char *path);
+char *CkReadFileContents(CkArenaFrame *arena, const char *path);
 
 /// <summary>
 /// Gets the colum and row from a 1D position in a string.

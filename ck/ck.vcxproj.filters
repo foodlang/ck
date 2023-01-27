@@ -48,6 +48,12 @@
     <ClInclude Include="include\Syntax\ParserTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Arena.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\List.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.c">
@@ -78,6 +84,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Syntax\ParserTypes.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Arena.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

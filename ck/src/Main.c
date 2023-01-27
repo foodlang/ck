@@ -2,6 +2,7 @@
 #include <include/FileIO.h>
 #include <include/Food.h>
 #include <include/Syntax/ParserTypes.h>
+#include <include/Arena.h>
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
@@ -10,6 +11,7 @@ int main(int argc, char *argv[], char **envp)
 {
 	CkDriverStartupConfiguration config;
 	CkDriverCompilationResult result;
+	CkArenaFrame arena;
 
 	puts("CK (Official Food Compiler)");
 	puts("Copyright (C) 2023 The Food Project");
@@ -35,19 +37,21 @@ int main(int argc, char *argv[], char **envp)
 
 	for (int i = 1; i < argc; i++) {
 		const size_t len = strnlen_s(argv[i], 256);
+		CkArenaStartFrame(&arena, 0);
 
 		memset(&config, 0, sizeof(CkDriverStartupConfiguration));
 		memset(&result, 0, sizeof(CkDriverCompilationResult));
 
-		config.name = _malloca(len + 1);
+		config.name = CkArenaAllocate(&arena, len + 1);
 		strcpy_s(config.name, len + 1, argv[i]);
-		config.source = CkReadFileContents(config.name);
+		config.source = CkReadFileContents(&arena, config.name);
 		config.wError = FALSE;
-		CkDriverCompile(&result, &config);
+		CkDriverCompile(&arena, &result, &config);
 		
-		_freea(config.name);
-		free(config.source);
+		CkArenaResetFrame(&arena);
 	}
+
+	CkArenaEndFrame(&arena);
 
 	return 0;
 }

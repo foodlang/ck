@@ -7,65 +7,59 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#define BLACKLISTVECTOR_ALLOCBLOCK    16
-#define THROWNDIAGNOSTICS_ALLOCKBLOCK 16
 #define MAXDIAGLENGTH                 512
 #define DIAGNOSTICPREFIXFORMAT        "ck %s issued from (L%d, C%d): "
 
 void CkDiagnosticHandlerCreateInstance(
+	CkArenaFrame *arena,
 	CkDiagnosticHandlerInstance *dhi,
 	CkLexInstance *pPassedLexer)
 {
-	memset(dhi, 0, sizeof(CkDiagnosticHandlerInstance));
-	dhi->pPassedSource = pPassedLexer;
+	CK_ARG_NON_NULL(dhi)
+	CK_ARG_NON_NULL(arena)
+	CK_ARG_NON_NULL(pPassedLexer)
 
-	// 1. Allocating blacklist vector
-	dhi->blacklistCapacity = BLACKLISTVECTOR_ALLOCBLOCK;
-	dhi->blacklistVector = malloc(dhi->blacklistCapacity * sizeof(char *));
-	
-	// 2. Allocating diagnostic vector
-	dhi->thrownDiagnosticsCapacity = THROWNDIAGNOSTICS_ALLOCKBLOCK;
-	dhi->thrownDiagnosticsVector = malloc(dhi->thrownDiagnosticsCapacity * sizeof(CkThrownDiagnostic));
+	dhi->pPassedSource = pPassedLexer;
+	dhi->arena = arena;
+	dhi->anyErrors = FALSE;
+	dhi->anyWarnings = FALSE;
+	dhi->blacklistCount = 0;
+	dhi->thrownDiagnosticsCount = 0;
+
+	CkArenaStartFrame(&dhi->blacklistVector, 0);
+	CkArenaStartFrame(&dhi->thrownDiagnosticsVector, 0);
 }
 
 void CkDiagnosticHandlerDestroyInstance(CkDiagnosticHandlerInstance *dhi)
 {
-	// 1. Destroying the blacklist vector
-	for (size_t i = 0; i < dhi->blacklistCount; i++)
-		free(dhi->blacklistVector[i]);
-	free(dhi->blacklistVector);
+	CK_ARG_NON_NULL(dhi)
 
-	// 3. Destroying the thrown diagnostics vector
-	for (size_t i = 0; i < dhi->thrownDiagnosticsCount; i++)
-		free(dhi->thrownDiagnosticsVector[i].message);
-	free(dhi->thrownDiagnosticsVector);
-	
-	memset(dhi, 0, sizeof(CkDiagnosticHandlerInstance));
+	CkArenaEndFrame(&dhi->blacklistVector);
+	CkArenaEndFrame(&dhi->thrownDiagnosticsVector);
 }
 
 void CkDiagnosticBlacklist(CkDiagnosticHandlerInstance *dhi, char *name)
 {
-	
 	size_t nameLength;   // The length of the blacklist name entry.
 	char   **destination;// The destination blacklist entry.
+	char **blBase;
+
+	CK_ARG_NON_NULL(dhi)
+	CK_ARG_NON_NULL(name)
+	
+	blBase = dhi->blacklistVector.base;
 
 	// 1. Preventing duplicate entries
 	for (size_t i = 0; i < dhi->blacklistCount; i++) {
-		if (!strcmp(dhi->blacklistVector[i], name))
+		if (!strcmp(blBase[i], name))
 			return;
 	}
 
-	// 2. Reallocating space if required
-	if (dhi->blacklistCount + 1 == dhi->blacklistCapacity) {
-		dhi->blacklistCapacity += BLACKLISTVECTOR_ALLOCBLOCK;
-		dhi->blacklistVector = realloc(dhi->blacklistVector, dhi->blacklistCapacity * sizeof(char *));
-	}
-
 	nameLength = strlen(name) + 1;
-	destination = dhi->blacklistVector + dhi->blacklistCount++;
-
-	*destination = malloc(nameLength);
+	destination = CkArenaAllocate(&dhi->blacklistVector, sizeof(char *));
+	*destination = CkArenaAllocate(dhi->arena, nameLength);
 	strcpy_s(*destination, nameLength, name);
+	dhi->blacklistCount++;
 }
 
 void CkDiagnosticWhitelist(CkDiagnosticHandlerInstance *dhi, char *name)
@@ -74,37 +68,10 @@ void CkDiagnosticWhitelist(CkDiagnosticHandlerInstance *dhi, char *name)
 	CK_ARG_NON_NULL(name)
 
 	for (size_t i = 0; i < dhi->blacklistCount; i++) {
-		if (!strcmp(dhi->blacklistVector[i], name)) {
-			/*
-			 * Unless the diagnostic is at the end of the buffer,
-			 * we can't simply remove an entry from the middle of the
-			 * list. Therefore, we must take all of the entries below
-			 * and after the removed entry and paste them together.
-			*/
-			const size_t upperStart = i + 1 < dhi->blacklistCount ? i + 1 : i;
-			char **upperSubvector;
-			size_t upperSubvectorSize;
-
-			// Check for end-of-list
-			if (i == upperStart) {
-				dhi->blacklistCount--;
-				return;
-			}
-
-			free(dhi->blacklistVector[i]);
-
-			upperSubvectorSize = ( dhi->blacklistCount - upperStart ) * sizeof(char *);
-			upperSubvector = _malloca(upperSubvectorSize);
-			// Upper elems -> subvector
-			memcpy_s(
-				upperSubvector, upperSubvectorSize,
-				dhi->blacklistVector, upperSubvectorSize);
-			// Subvector -> Elems
-			memcpy_s(
-				dhi->blacklistVector + --dhi->blacklistCount, upperSubvectorSize,
-				upperSubvector, upperSubvectorSize);
-
-			_freea(upperSubvector);
+		char **base = (char **)dhi->blacklistVector.base + i;
+		if (!strcmp(*base, name)) {
+			*base = NULL;
+			return;
 		}
 	}
 }
@@ -154,7 +121,9 @@ void CkDiagnosticThrow(
 	if (severity == CK_DIAG_SEVERITY_WARNING) {
 		for (size_t i = 0; i < dhi->blacklistCount; i++) {
 			// Blacklisted warnings are ignored
-			if (!strcmp(name, dhi->blacklistVector[i]))
+			char **base = (char **)dhi->blacklistVector.base + i;
+			if (base == NULL) continue;
+			if (!strcmp(name, *base))
 				return;
 		}
 	}
@@ -162,13 +131,8 @@ void CkDiagnosticThrow(
 	va_start(va_args, format);
 	CkGetRowColString(dhi->pPassedSource->source, position, &pos2DRow, &pos2DCol);
 
-	// Reallocating necessary space
-	if (dhi->thrownDiagnosticsCount + 1 == dhi->thrownDiagnosticsCapacity) {
-		dhi->thrownDiagnosticsCapacity += THROWNDIAGNOSTICS_ALLOCKBLOCK;
-		dhi->thrownDiagnosticsVector = realloc(dhi->thrownDiagnosticsVector, sizeof(CkThrownDiagnostic) * dhi->thrownDiagnosticsCapacity);
-	}
-
-	diag = dhi->thrownDiagnosticsVector + dhi->thrownDiagnosticsCount++;
+	diag = CkArenaAllocate(&dhi->thrownDiagnosticsVector, sizeof(CkThrownDiagnostic));
+	dhi->thrownDiagnosticsCount++;
 
 	// Allocating and writing to the sub-buffers
 	prefixBuffer = _malloca(MAXDIAGLENGTH);
@@ -182,10 +146,10 @@ void CkDiagnosticThrow(
 	totalLength = prefixLength + messageLength;
 
 	// Allocating and writing to the final buffer
-	diag->message = malloc(totalLength + 1);
+	diag->message = CkArenaAllocate(dhi->arena, totalLength + 1);
 	diag->severity = severity;
-	strcpy_s(diag->message, totalLength, prefixBuffer);
-	strcat_s(diag->message, totalLength, messageBuffer);
+	strcpy_s(diag->message, totalLength + 1, prefixBuffer);
+	strcat_s(diag->message, totalLength + 1, messageBuffer);
 	_freea(prefixBuffer);
 	_freea(messageBuffer);
 
@@ -194,8 +158,9 @@ void CkDiagnosticThrow(
 
 void CkDiagnosticDisplay(CkDiagnosticHandlerInstance *dhi)
 {
+	CK_ARG_NON_NULL(dhi)
 	for (size_t i = 0; i < dhi->thrownDiagnosticsCount; i++) {
-		const CkThrownDiagnostic *diagnostic = dhi->thrownDiagnosticsVector + i;
+		const CkThrownDiagnostic *diagnostic = (CkThrownDiagnostic *)dhi->thrownDiagnosticsVector.base + i;
 		puts(diagnostic->message);
 	}
 }

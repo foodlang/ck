@@ -7,6 +7,7 @@
 #define CK_FOOD_H_
 
 #include "Types.h"
+#include "Arena.h"
 
 #define CK_QUALIFIER_CONST_BIT    1
 #define CK_QUALIFIER_VOLATILE_BIT 2
@@ -76,21 +77,16 @@ typedef struct CkFoodType
 /// is now owned by this node.</param>
 /// <returns>A heap-allocated type instance.</returns>
 CkFoodType *CkFoodCreateTypeInstance(
+	CkArenaFrame *arena,
 	uint8_t id,
 	uint8_t qualifiers,
 	CkFoodType *child);
-
-/// <summary>
-/// Deletes and frees a type instance on the heap.
-/// </summary>
-/// <param name="instance">The instance to delete.</param>
-void CkFoodDeleteTypeInstance(CkFoodType *instance);
 
 /// <summary>
 /// Duplicates a type instance.
 /// </summary>
 /// <param name="instance">The instance to duplicate.</param>
 /// <returns></returns>
-CkFoodType *CkFoodCopyTypeInstance(CkFoodType *instance);
+CkFoodType *CkFoodCopyTypeInstance(CkArenaFrame *arena, CkFoodType *instance);
 
 #endif

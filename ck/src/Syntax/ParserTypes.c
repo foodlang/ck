@@ -1,4 +1,5 @@
 #include <include/Syntax/ParserTypes.h>
+#include <include/CDebug.h>
 
 /// <summary>
 /// A type ID pair.
@@ -42,6 +43,8 @@ static uint8_t s_ParseQualifiers(CkParserInstance *parser)
 {
 	CkToken token;
 	uint8_t attr = 0;
+
+	CK_ARG_NON_NULL(parser)
 
 	while (TRUE) {
 		CkParserReadToken(parser, &token);
@@ -118,7 +121,7 @@ CkFoodType *CkParserType(CkParserInstance *parser)
 	}
 	// TODO: Handle user-defined types and function pointers
 	if (id == 0) return NULL;
-	acc = CkFoodCreateTypeInstance(id, attr, NULL);
+	acc = CkFoodCreateTypeInstance(parser->arena, id, attr, NULL);
 
 	// Handle pointers and references
 	// TODO: Handle arrays
@@ -127,10 +130,10 @@ CkFoodType *CkParserType(CkParserInstance *parser)
 		CkParserReadToken(parser, &token);
 		if (token.kind == '*') {
 			id = CK_FOOD_POINTER;
-			acc = CkFoodCreateTypeInstance(id, attr, acc);
+			acc = CkFoodCreateTypeInstance(parser->arena, id, attr, acc);
 		} else if (token.kind == '&') {
 			id = CK_FOOD_REFERENCE;
-			acc = CkFoodCreateTypeInstance(id, attr, acc);
+			acc = CkFoodCreateTypeInstance(parser->arena, id, attr, acc);
 			break; // References cannot be subtypes
 		} else {
 			CkParserRewind(parser, 1);

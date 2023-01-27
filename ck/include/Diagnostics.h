@@ -6,6 +6,7 @@
 #define CK_ERROR_H_
 
 #include "Syntax/Lex.h"
+#include "Arena.h"
 
 enum
 {
@@ -61,7 +62,7 @@ typedef struct CkDiagnosticHandlerInstance
 	/// <summary>
 	/// Stores all of the blacklisted diagnostics (diagnostics to skip over.)
 	/// </summary>
-	char **blacklistVector;
+	CkArenaFrame blacklistVector;
 
 	/// <summary>
 	/// The amount of elements in the blacklist vector.
@@ -69,24 +70,14 @@ typedef struct CkDiagnosticHandlerInstance
 	size_t blacklistCount;
 
 	/// <summary>
-	/// The current capacity of the blacklist vector.
-	/// </summary>
-	size_t blacklistCapacity;
-
-	/// <summary>
 	/// Stores all of the thrown diagnotics.
 	/// </summary>
-	CkThrownDiagnostic *thrownDiagnosticsVector;
+	CkArenaFrame thrownDiagnosticsVector;
 
 	/// <summary>
 	/// The amount of thrown diagnostics.
 	/// </summary>
 	size_t thrownDiagnosticsCount;
-
-	/// <summary>
-	/// The current capacity of the thrown diagnostics vector.
-	/// </summary>
-	size_t thrownDiagnosticsCapacity;
 
 	/// <summary>
 	/// True if the diagnostics encounters any errors.
@@ -98,6 +89,11 @@ typedef struct CkDiagnosticHandlerInstance
 	/// </summary>
 	bool_t anyWarnings;
 
+	/// <summary>
+	/// The arena used for allocations. Does not include the thrown diagnostics and the blacklist.
+	/// </summary>
+	CkArenaFrame *arena;
+
 } CkDiagnosticHandlerInstance;
 
 /// <summary>
@@ -105,7 +101,7 @@ typedef struct CkDiagnosticHandlerInstance
 /// </summary>
 /// <param name="dhi">A pointer to the destination struct.</param>
 /// <param name="pPassedLexer">A pointer to the passed lexer instance.</param>
-void CkDiagnosticHandlerCreateInstance(CkDiagnosticHandlerInstance *dhi, CkLexInstance *pPassedLexer);
+void CkDiagnosticHandlerCreateInstance(CkArenaFrame *arena, CkDiagnosticHandlerInstance *dhi, CkLexInstance *pPassedLexer);
 
 /// <summary>
 /// Destroys a diagnostic handler and frees all used resources (except

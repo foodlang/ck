@@ -1,11 +1,9 @@
 #include <include/Syntax/Lex.h>
+#include <include/CDebug.h>
 #include <string.h>
-#include <malloc.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
-
-#define STRBLOCKSIZE 32
 
 /// <summary>
 /// Represents an entry in the keyword dictionary.
@@ -217,23 +215,31 @@ static inline uint8_t s_escapeSequence(CkLexInstance *lexer)
 	}
 }
 
-void CkLexCreateInstance(CkLexInstance *dest, char *source)
+void CkLexCreateInstance(CkArenaFrame *arena, CkLexInstance *dest, char *source)
 {
+	CK_ARG_NON_NULL(arena)
+	CK_ARG_NON_NULL(dest)
+	CK_ARG_NON_NULL(source)
+
 	dest->cursor = 0;
 	dest->sourceLength = strlen(source);
-	dest->source = malloc(dest->sourceLength + 1);
+	dest->source = CkArenaAllocate(arena, dest->sourceLength + 1);
+	dest->arena = arena;
 	strcpy_s(dest->source, dest->sourceLength + 1, source);
 }
 
 void CkLexDestroyInstance(CkLexInstance *lexer)
 {
-	free(lexer->source);
+	(void)lexer;
 }
 
 bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 {
 	char cur;
 	size_t base;
+
+	CK_ARG_NON_NULL(lexer)
+	CK_ARG_NON_NULL(token)
 
 	cur = s_nextChar(lexer);
 
@@ -515,12 +521,11 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 			length++;
 		}
 
-		strbuf = malloc(length + 1);
+		strbuf = CkArenaAllocate(lexer->arena, length + 1);
 		memcpy_s(strbuf, length + 1, lexer->source + base, length);
 		strbuf[length] = 0;
 		for (size_t i = 0; i < sizeof(s_keywordDict) / sizeof(KeywordEntryPair); i++) {
 			if (!strcmp(strbuf, s_keywordDict[i].key)) {
-				free(strbuf);
 				token->position = base;
 				token->kind = s_keywordDict[i].value;
 				return TRUE;
@@ -528,9 +533,7 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		}
 		token->position = base;
 		token->kind = 'I';
-		token->value.cstr = malloc(length + 1);
-		memcpy_s(token->value.cstr, length + 1, strbuf, length + 1);
-		free(strbuf);
+		token->value.cstr = strbuf;
 		return TRUE;
 	}
 
@@ -563,28 +566,30 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 
 	if (cur == '\"') {
 		size_t length = 0;
-		size_t strlimit = STRBLOCKSIZE;
-		token->value.cstr = malloc(strlimit);
+		size_t end = 0;
+		lexer->cursor++;
+		cur = s_nextChar(lexer);
 		while (cur != '\"' && cur != 0) {
-			if (length + 1 == strlimit) {
-				strlimit += STRBLOCKSIZE;
-				token->value.cstr = realloc(token->value.cstr, strlimit);
-			}
 			if (cur == '\\') {
 				lexer->cursor++;
-				cur = s_nextChar(lexer);
-				if (cur == 0) {
-					return FALSE;
-				}
-				cur = (char)s_escapeSequence(lexer);
+				(void)s_escapeSequence(lexer);
 			}
-			token->value.cstr[length] = (char)cur;
 			lexer->cursor++;
-			cur = s_nextChar(lexer);
 			length++;
+			cur = s_nextChar(lexer);
 		}
-		lexer->cursor++;
-		token->value.cstr[length] = '0';
+		end = lexer->cursor + 1;
+		token->value.cstr = CkArenaAllocate(lexer->arena, length + 1);
+		lexer->cursor = base;
+		for (size_t i = 0; i <= length; i++) {
+			token->value.cstr[i] = s_nextChar(lexer);
+			if (cur == '\\') {
+				lexer->cursor++;
+				token->value.cstr[i] = (char)s_escapeSequence(lexer);
+			}
+			lexer->cursor++;
+		}
+		lexer->cursor = end;
 		token->position = base;
 		token->kind = 'S';
 		return TRUE;
@@ -594,11 +599,4 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 	token->kind = (uint64_t)cur;
 	lexer->cursor++;
 	return FALSE;
-}
-
-void CkLexDeleteToken(CkToken *token)
-{
-	if (token->kind == 'S'
-	 || token->kind == 'I')
-		free(token->value.cstr);
 }

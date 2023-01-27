@@ -58,6 +58,7 @@ typedef struct CkExpression
 /// <param name="type">The type to be given over to the expression. It is now owned by the expression.</param>
 /// <returns></returns>
 CkExpression *CkExpressionCreateLiteral(
+	CkArenaFrame *arena,
 	const CkToken *token,
 	CkFoodType *type);
 
@@ -69,6 +70,7 @@ CkExpression *CkExpressionCreateLiteral(
 /// <param name="type">The type to be given over to the expression. It is now owned by the expression.</param>
 /// <returns></returns>
 CkExpression *CkExpressionCreateUnary(
+	CkArenaFrame *arena,
 	const CkToken *operator,
 	CkFoodType *type,
 	CkExpression *operand);
@@ -82,6 +84,7 @@ CkExpression *CkExpressionCreateUnary(
 /// <param name="type">The type to be given over to the expression. It is now owned by the expression.</param>
 /// <returns></returns>
 CkExpression *CkExpressionCreateBinary(
+	CkArenaFrame *arena,
 	const CkToken *operator,
 	CkFoodType *type,
 	CkExpression *left,
@@ -97,17 +100,12 @@ CkExpression *CkExpressionCreateBinary(
 /// <param name="type">The type to be given over to the expression. It is now owned by the expression.</param>
 /// <returns></returns>
 CkExpression *CkExpressionCreateTernary(
+	CkArenaFrame *arena,
 	const CkToken *operator,
 	CkFoodType *type,
 	CkExpression *left,
 	CkExpression *right,
 	CkExpression *extra);
-
-/// <summary>
-/// Deletes an expression and all of its subnodes.
-/// </summary>
-/// <param name="expression">The expression to delete.</param>
-void CkExpressionDelete(CkExpression *expression);
 
 /// <summary>
 /// Prints an expression.

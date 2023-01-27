@@ -6,6 +6,7 @@
 #define CK_DRIVER_H_
 
 #include "Types.h"
+#include "Arena.h"
 
 /// <summary>
 /// Stores the configuration for a Ck compilation driver.
@@ -51,7 +52,12 @@ typedef struct CkDriverCompilationResult
 /// <summary>
 /// Runs a compilation driver.
 /// </summary>
-/// <param name="startupConfig"></param>
-void CkDriverCompile(CkDriverCompilationResult *result, CkDriverStartupConfiguration *startupConfig);
+/// <param name="threadArena">The arena for this thread of execution.</param>
+/// <param name="result">The result of the driver.</param>
+/// <param name="startupConfig">The startup configuration.</param>
+void CkDriverCompile(
+	CkArenaFrame *threadArena,
+	CkDriverCompilationResult *result,
+	CkDriverStartupConfiguration *startupConfig);
 
 #endif

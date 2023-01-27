@@ -6,6 +6,7 @@
 #define CK_LEX_H_
 
 #include "../Types.h"
+#include "../Arena.h"
 
 /// <summary>
 /// Stores the state of a lexer.
@@ -26,6 +27,11 @@ typedef struct CkLexInstance
 	/// The current position of the lexer in the source buffer.
 	/// </summary>
 	size_t cursor;
+
+	/// <summary>
+	/// The arena used for allocations.
+	/// </summary>
+	CkArenaFrame *arena;
 
 } CkLexInstance;
 
@@ -143,7 +149,7 @@ enum
 /// </summary>
 /// <param name="dest">The destination lexer instance.</param>
 /// <param name="source">The source buffer. It is copied before passing it to the lexer.</param>
-void CkLexCreateInstance(CkLexInstance *dest, char *source);
+void CkLexCreateInstance(CkArenaFrame *arena, CkLexInstance *dest, char *source);
 
 /// <summary>
 /// Reads a token from the lexer source code.
@@ -157,11 +163,5 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *dest);
 /// </summary>
 /// <param name="lexer">The lexer to destroy.</param>
 void CkLexDestroyInstance(CkLexInstance *lexer);
-
-/// <summary>
-/// Deletes any heap-allocated data with the token.
-/// </summary>
-/// <param name="token">A pointer to the token to be deleted.</param>
-void CkLexDeleteToken(CkToken *token);
 
 #endif

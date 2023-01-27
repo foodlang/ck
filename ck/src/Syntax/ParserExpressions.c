@@ -1,5 +1,6 @@
 #include <include/Syntax/ParserExpressions.h>
 #include <include/FileIO.h>
+#include <include/CDebug.h>
 #include <stdio.h>
 
 /// <summary>
@@ -20,50 +21,59 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		// Default is int
 		if (token.value.u32 == token.value.u64)
 			return CkExpressionCreateLiteral(
+				parser->arena,
 				&token,
-				CkFoodCreateTypeInstance(CK_FOOD_I32, 0, NULL)
+				CkFoodCreateTypeInstance(parser->arena, CK_FOOD_I32, 0, NULL)
 			);
 
 		// If the value cannot be stored as a 32-bit int, use a 64-bit
 		return CkExpressionCreateLiteral(
+			parser->arena,
 			&token,
-			CkFoodCreateTypeInstance(CK_FOOD_I64, 0, NULL)
+			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_I64, 0, NULL)
 		);
 
 	case 'F':
 		// Default is float
-		if (token.value.f64 == (double)(float)token.value.f64)
+		if (FloatEqual((double)token.value.f32, token.value.f64))
 			return CkExpressionCreateLiteral(
+				parser->arena,
 				&token,
-				CkFoodCreateTypeInstance(CK_FOOD_F32, 0, NULL)
+				CkFoodCreateTypeInstance(parser->arena, CK_FOOD_F32, 0, NULL)
 			);
 
 		// If the value cannot be stored as a 32-bit float, use a 64-bit
 		return CkExpressionCreateLiteral(
+			parser->arena,
 			&token,
-			CkFoodCreateTypeInstance(CK_FOOD_F64, 0, NULL)
+			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_F64, 0, NULL)
 		);
 
 		// True is a boolean constant
 	case KW_TRUE:
 		return CkExpressionCreateLiteral(
+			parser->arena,
 			&token,
-			CkFoodCreateTypeInstance(CK_FOOD_BOOL, 0, NULL));
+			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_BOOL, 0, NULL));
 
 		// False is a boolean constant
 	case KW_FALSE:
 		return CkExpressionCreateLiteral(
+			parser->arena,
 			&token,
-			CkFoodCreateTypeInstance(CK_FOOD_BOOL, 0, NULL));
+			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_BOOL, 0, NULL));
 
 		// Null is a pointer constant
 	case KW_NULL:
 		return CkExpressionCreateLiteral(
+			parser->arena,
 			&token,
 			CkFoodCreateTypeInstance(
+				parser->arena,
 				CK_FOOD_POINTER,
 				0,
 				CkFoodCreateTypeInstance(
+					parser->arena,
 					CK_FOOD_VOID,
 					0,
 					NULL
@@ -86,7 +96,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 			"An expression was expected in this context.");
 
-		return CkExpressionCreateLiteral(&token, CkFoodCreateTypeInstance(CK_FOOD_VOID, 0, NULL));
+		return CkExpressionCreateLiteral(parser->arena, &token, CkFoodCreateTypeInstance(parser->arena, CK_FOOD_VOID, 0, NULL));
 
 		// TODO:
 		// Implement sizeof() and alignof()
@@ -112,18 +122,18 @@ static CkExpression *s_ParseLevel1(CkParserInstance *parser)
 			// Postfix increment and decrement
 		case CKTOK2('+', '+'):
 		case CKTOK2('-', '-'):
-			acc = CkExpressionCreateUnary(&token, NULL, acc);
+			acc = CkExpressionCreateUnary(parser->arena, &token, NULL, acc);
 			break;
 
 			// Member access / pointer member access
 		case '.':
 		case CKTOK2('-', '>'):
-			acc = CkExpressionCreateBinary(&token, NULL, acc, s_ParsePrimaryExpression(parser));
+			acc = CkExpressionCreateBinary(parser->arena, &token, NULL, acc, s_ParsePrimaryExpression(parser));
 			break;
 
 			// Array subscript
 		case '[':
-			acc = CkExpressionCreateBinary(&token, NULL, acc, CkParserExpression(parser));
+			acc = CkExpressionCreateBinary(parser->arena, &token, NULL, acc, CkParserExpression(parser));
 			CkParserReadToken(parser, &token);
 			if (token.kind != ']') {
 				CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
@@ -145,5 +155,6 @@ Leave:
 
 CkExpression *CkParserExpression(CkParserInstance *parser)
 {
+	CK_ARG_NON_NULL(parser)
 	return s_ParseLevel1(parser);
 }

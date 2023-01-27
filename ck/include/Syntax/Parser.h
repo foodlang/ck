@@ -7,6 +7,7 @@
 
 #include "Expression.h"
 #include "../Diagnostics.h"
+#include "../Arena.h"
 
 /// <summary>
 /// A parser instance stores data about an individual parser
@@ -37,6 +38,11 @@ typedef struct CkParserInstance
 	/// </summary>
 	CkDiagnosticHandlerInstance *pDhi;
 
+	/// <summary>
+	/// The arena used for allocations.
+	/// </summary>
+	CkArenaFrame *arena;
+
 } CkParserInstance;
 
 /// <summary>
@@ -48,6 +54,7 @@ typedef struct CkParserInstance
 /// <param name="passedCount">The amount of tokens passed.</param>
 /// <param name="pDhi">The diagnostic handler to report errors to. This is passed, meaning the parser doesn't own it.</param>
 void CkParserCreateInstance(
+	CkArenaFrame *arena,
 	CkParserInstance *dest,
 	CkToken *pPassedTokens,
 	size_t passedCount,
