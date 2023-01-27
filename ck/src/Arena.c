@@ -55,6 +55,7 @@ void CkArenaResetFrame(CkArenaFrame *frame)
 {
 	CK_ARG_NON_NULL(frame);
 
+	memset(frame->base, 0, frame->offsetFree);
 	frame->offsetFree = 0;
 }
 

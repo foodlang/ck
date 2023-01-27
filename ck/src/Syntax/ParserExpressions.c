@@ -295,6 +295,29 @@ static CkExpression *s_ParseLevel2(CkParserInstance *parser)
 		break;
 		
 		// TODO: Implement C-style casting
+	case '(':
+	{
+		CkFoodType *t = CkParserType(parser);
+		CkToken exprToken = token;
+		// In case its a parenthesized expression
+		if (t == NULL) {
+			CkParserRewind(parser, 1);
+			accumulator = s_ParsePrimaryExpression(parser); // Skipping level 1 because its parenthesized expr
+			break;
+		}
+		CkParserReadToken(parser, &token);
+		if (token.kind != ')') {
+			CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"Missing closing bracket in C-style cast.");
+		}
+		accumulator = CkExpressionCreateBinary(
+			parser->arena,
+			&exprToken,
+			t,
+			s_ParseLevel2(parser),
+			CkExpressionCreateType(parser->arena, t));
+		break;
+	}
 
 		// No level-2 operator
 	default:
@@ -349,7 +372,7 @@ static CkExpression *s_ParseFoodCast(CkParserInstance *parser)
 		CkFoodType *t = CkParserType(parser);
 		if (t == NULL) {
 			CkDiagnosticThrow(parser->pDhi, op.position, CK_DIAG_SEVERITY_ERROR, "",
-				"Expected a type in Food-style cast");
+				"Expected a type in Food-style cast.");
 		}
 		acc = CkExpressionCreateBinary(parser->arena, &op, NULL, acc, CkExpressionCreateType(parser->arena, t));
 		CkParserReadToken(parser, &op);

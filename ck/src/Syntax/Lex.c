@@ -30,6 +30,7 @@ static KeywordEntryPair s_keywordDict[] =
 	{ "bool", KW_BOOL },
 	{ "byte", KW_U8 },
 	{ "case", KW_CASE },
+	{ "char", KW_I8 },
 	{ "class", KW_CLASS },
 	{ "const", KW_CONST },
 	{ "continue", KW_CONTINUE },

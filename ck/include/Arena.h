@@ -39,7 +39,8 @@ typedef struct CkArenaFrame
 } CkArenaFrame;
 
 /// <summary>
-/// Starts a new arena frame.
+/// Starts a new arena frame. All of the data that is newly allocated
+/// is zeroed out.
 /// </summary>
 /// <param name="dest">The destination arena frame structure.</param>
 /// <param name="maxSize">The maximum size of the arena. If set to 0, will default to 256 megabytes.</param>
@@ -53,6 +54,8 @@ void CkArenaEndFrame(CkArenaFrame *frame);
 
 /// <summary>
 /// Resets an arena frame, without deallocating it.
+/// The data is zeroed out to maintain compatibility with
+/// CkArenaStartFrame().
 /// </summary>
 /// <param name="frame"></param>
 void CkArenaResetFrame(CkArenaFrame *frame);
