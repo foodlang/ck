@@ -69,3 +69,15 @@ void CkArenaWriteLock(CkArenaFrame *frame)
 	mprotect(frame->base, frame->size, PROT_READ);
 #endif
 }
+
+void CkArenaWriteUnlock(CkArenaFrame *frame)
+{
+	unsigned long old;
+	CK_ARG_NON_NULL(frame);
+
+#if _WIN32
+	VirtualProtect(frame->base, frame->size, PAGE_READWRITE, &old);
+#else
+	mprotect(frame->base, frame->size, PROT_READ | PROT_WRITE);
+#endif
+}

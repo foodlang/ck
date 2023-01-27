@@ -67,9 +67,15 @@ void CkArenaResetFrame(CkArenaFrame *frame);
 void *CkArenaAllocate(CkArenaFrame *frame, size_t bytes);
 
 /// <summary>
-/// Locks an arenas and prevents writing. This uses the MMU.
+/// Locks an arena and prevents writing. This uses the MMU.
 /// </summary>
 /// <param name="frame">The frame of the arena.</param>
 void CkArenaWriteLock(CkArenaFrame *frame);
+
+/// <summary>
+/// Unlocks an arena and allows writing. This uses the MMU.
+/// </summary>
+/// <param name="frame">The frame of the arena.</param>
+void CkArenaWriteUnlock(CkArenaFrame *frame);
 
 #endif
