@@ -7,6 +7,73 @@
 #include <string.h>
 
 /// <summary>
+/// An entry in the precedence table for binary operators.
+/// </summary>
+typedef struct BinaryOperatorPrecedenceEntry
+{
+	/// <summary>
+	/// The operator.
+	/// </summary>
+	uint64_t op;
+
+	/// <summary>
+	/// The precedence.
+	/// </summary>
+	uint8_t  prec;
+
+} BinaryOperatorPrecedenceEntry;
+
+/// <summary>
+/// A table having operators as its first entries and
+/// precedences as its second.
+/// </summary>
+static BinaryOperatorPrecedenceEntry s_binaryPrecedences[] =
+{
+	{ '*', 9 },
+	{ '/', 9 },
+	{ '%', 9 },
+
+	{ '-', 8 },
+	{ '+', 8 },
+
+	{ '>', 7 },
+	{ '<', 7 },
+	{ CKTOK2('<', '='), 7 },
+	{ CKTOK2('>', '='), 7 },
+
+	{ CKTOK2('!', '='), 6 },
+	{ CKTOK2('=', '='), 6 },
+
+	{ '&', 5 },
+
+	{ '^', 4 },
+
+	{ '|', 3 },
+
+	{ CKTOK2('&', '&'), 2 },
+
+	{ CKTOK2('|', '|'), 1 },
+};
+
+/// <summary>
+/// Looks up in the binary precedence table and attempts to get 
+/// the precedence of a given operator.
+/// </summary>
+/// <param name="op">The operator to look up.</param>
+/// <returns></returns>
+static uint8_t s_BinaryOpPrec(uint64_t op)
+{
+	for (
+		size_t i = 0;
+		i < sizeof(s_binaryPrecedences) / sizeof(BinaryOperatorPrecedenceEntry);
+		i++) {
+		if (s_binaryPrecedences[i].op == op)
+			return s_binaryPrecedences[i].prec;
+	}
+	return 0;
+}
+
+/// <summary>
 /// Parses a primary value.
 /// </summary>
 /// <returns></returns>
@@ -239,8 +306,144 @@ static CkExpression *s_ParseLevel2(CkParserInstance *parser)
 	return accumulator;
 }
 
+/// <summary>
+/// Parses binary operators. Uses Pratt parsing.
+/// </summary>
+/// <param name="parser">A pointer to the parser.</param>
+/// <returns></returns>
+static CkExpression *s_ParseBinary(uint8_t parentPrec, CkParserInstance *parser)
+{
+	CkToken token;
+	CkExpression *acc = s_ParseLevel2(parser);
+
+	while (TRUE) {
+		uint8_t prec;
+		CkExpression *right;
+
+		CkParserReadToken(parser, &token);
+		prec = s_BinaryOpPrec(token.kind);
+		if (prec == 0 || prec <= parentPrec) {
+			CkParserRewind(parser, 1);
+			break;
+		}
+
+		right = s_ParseBinary(prec, parser);
+		acc = CkExpressionCreateBinary(parser->arena, &token, NULL, acc, right);
+	}
+
+	return acc;
+}
+
+/// <summary>
+/// Parses a Food-style cast (expr => T)
+/// </summary>
+/// <param name="parser">A pointer to the parser.</param>
+/// <returns></returns>
+static CkExpression *s_ParseFoodCast(CkParserInstance *parser)
+{
+	CkToken op;
+	CkExpression *acc = s_ParseBinary(0, parser);
+
+	CkParserReadToken(parser, &op);
+	while (op.kind == CKTOK2('=', '>')) {
+		CkFoodType *t = CkParserType(parser);
+		if (t == NULL) {
+			CkDiagnosticThrow(parser->pDhi, op.position, CK_DIAG_SEVERITY_ERROR, "",
+				"Expected a type in Food-style cast");
+		}
+		acc = CkExpressionCreateBinary(parser->arena, &op, NULL, acc, CkExpressionCreateType(parser->arena, t));
+		CkParserReadToken(parser, &op);
+	}
+	CkParserRewind(parser, 1);
+	return acc;
+}
+
+/// <summary>
+/// Parses a conditional expression.
+/// </summary>
+/// <param name="parser">A pointer to the parser.</param>
+/// <returns></returns>
+static CkExpression *s_ParseConditional(CkParserInstance *parser)
+{
+	CkToken token;
+	CkToken op;
+	CkExpression *left;
+	CkExpression *right;
+	CkExpression *extra = s_ParseFoodCast(parser);
+
+	CkParserReadToken(parser, &token);
+	memcpy_s(&op, sizeof(CkToken), &token, sizeof(CkToken));
+
+	// If it not a conditional expression
+	if (token.kind != '?') {
+		CkParserRewind(parser, 1);
+		return extra;
+	}
+
+	left = s_ParseConditional(parser);
+	CkParserReadToken(parser, &token);
+	if (token.kind != ':') {
+		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			"Expected colon in conditional expression.");
+	}
+	right = s_ParseConditional(parser);
+
+	return CkExpressionCreateTernary(parser->arena, &op, NULL, left, right, extra);
+}
+
+/// <summary>
+/// Parses an assignment expression.
+/// </summary>
+/// <param name="parser">A pointer to the parser.</param>
+/// <returns></returns>
+static CkExpression *s_ParseAssign(CkParserInstance *parser)
+{
+	CkToken op;
+
+	CkExpression *left = s_ParseConditional(parser);
+	CkParserReadToken(parser, &op);
+	switch (op.kind) {
+	case '=':
+	case CKTOK2('+', '='):
+	case CKTOK2('-', '='):
+	case CKTOK2('*', '='):
+	case CKTOK2('/', '='):
+	case CKTOK2('%', '='):
+	case CKTOK2('&', '='):
+	case CKTOK2('|', '='):
+	case CKTOK2('^', '='):
+	case CKTOK3('<', '<', '='):
+	case CKTOK3('>', '>', '='):
+		return CkExpressionCreateBinary(parser->arena, &op, NULL, left, s_ParseConditional(parser));
+
+		// Not an assignment
+	default:
+		CkParserRewind(parser, 1);
+		return left;
+	}
+}
+
+/// <summary>
+/// Parses a compound expression.
+/// </summary>
+/// <param name="parser">A pointer to the parser.</param>
+/// <returns></returns>
+static CkExpression *s_ParseCompound(CkParserInstance *parser)
+{
+	CkToken op;
+	CkExpression *acc = s_ParseAssign(parser);
+
+	CkParserReadToken(parser, &op);
+	while (op.kind == ',') {
+		acc = CkExpressionCreateBinary(parser->arena, &op, NULL, acc, s_ParseAssign(parser));
+		CkParserReadToken(parser, &op);
+	}
+	CkParserRewind(parser, 1);
+	return acc;
+}
+
 CkExpression *CkParserExpression(CkParserInstance *parser)
 {
 	CK_ARG_NON_NULL(parser)
-	return s_ParseLevel2(parser);
+	return s_ParseCompound(parser);
 }

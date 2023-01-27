@@ -104,12 +104,12 @@ static void s_ExprPrintTab(int tab, CkExpression *expression)
 	for (int i = 0; i < tab; i++)
 		printf("  ");
 	printf_s("%c:%llu\n", (char)expression->token.kind, expression->token.value.u64);
+	if (expression->extra)
+		s_ExprPrintTab(tab + 1, expression->extra);
 	if (expression->left)
 		s_ExprPrintTab(tab + 1, expression->left);
 	if (expression->right)
 		s_ExprPrintTab(tab + 1, expression->right);
-	if (expression->extra)
-		s_ExprPrintTab(tab + 1, expression->extra);
 }
 
 void CkExpressionPrint(CkExpression *expression)
