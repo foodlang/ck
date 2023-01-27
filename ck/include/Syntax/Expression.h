@@ -22,9 +22,10 @@ typedef struct CkExpression
 	CkToken token;
 
 	/// <summary>
-	/// The type of the expression. The type
-	/// instance is heap-allocated and will be
-	/// automatically be freed with CkExpressionDelete().
+	/// The type of the expression. This is a passed
+	/// pointer. Ideally, this should be allocated on 
+	/// the same arena as the expression to prevent
+	/// object lifetime issues.
 	/// </summary>
 	CkFoodType *type;
 
@@ -52,10 +53,19 @@ typedef struct CkExpression
 } CkExpression;
 
 /// <summary>
+/// Creates an expression that only holds a type.
+/// </summary>
+/// <param name="type">The type.</param>
+/// <returns></returns>
+CkExpression *CkExpressionCreateType(
+	CkArenaFrame *arena,
+	CkFoodType *type);
+
+/// <summary>
 /// Creates a literal expression (an expression with no child nodes.)
 /// </summary>
 /// <param name="token">The literal value token.</param>
-/// <param name="type">The type to be given over to the expression. It is now owned by the expression.</param>
+/// <param name="type">The type to be given over to the expression.</param>
 /// <returns></returns>
 CkExpression *CkExpressionCreateLiteral(
 	CkArenaFrame *arena,
@@ -67,7 +77,7 @@ CkExpression *CkExpressionCreateLiteral(
 /// </summary>
 /// <param name="operator">The operator.</param>
 /// <param name="operand">The child node.</param>
-/// <param name="type">The type to be given over to the expression. It is now owned by the expression.</param>
+/// <param name="type">The type to be given over to the expression.</param>
 /// <returns></returns>
 CkExpression *CkExpressionCreateUnary(
 	CkArenaFrame *arena,
@@ -81,7 +91,7 @@ CkExpression *CkExpressionCreateUnary(
 /// <param name="operator">The operator.</param>
 /// <param name="left">The left child node.</param>
 /// <param name="right">The right child node.</param>
-/// <param name="type">The type to be given over to the expression. It is now owned by the expression.</param>
+/// <param name="type">The type to be given over to the expression.</param>
 /// <returns></returns>
 CkExpression *CkExpressionCreateBinary(
 	CkArenaFrame *arena,
@@ -97,7 +107,7 @@ CkExpression *CkExpressionCreateBinary(
 /// <param name="left">The left child node.</param>
 /// <param name="right">The right child node.</param>
 /// <param name="extra">The third child node.</param>
-/// <param name="type">The type to be given over to the expression. It is now owned by the expression.</param>
+/// <param name="type">The type to be given over to the expression.</param>
 /// <returns></returns>
 CkExpression *CkExpressionCreateTernary(
 	CkArenaFrame *arena,

@@ -4,6 +4,19 @@
 #include <string.h>
 #include <stdio.h>
 
+CkExpression *CkExpressionCreateType(
+	CkArenaFrame *arena,
+	CkFoodType *type)
+{
+	CkExpression *expr;
+
+	CK_ARG_NON_NULL(arena);
+
+	expr = CkArenaAllocate(arena, sizeof(CkExpression));
+	expr->type = type;
+	return expr;
+}
+
 CkExpression *CkExpressionCreateLiteral(
 	CkArenaFrame *arena,
 	const CkToken *token,
@@ -11,8 +24,8 @@ CkExpression *CkExpressionCreateLiteral(
 {
 	CkExpression *expr;
 
-	CK_ARG_NON_NULL(arena)
-	CK_ARG_NON_NULL(token)
+	CK_ARG_NON_NULL(arena);
+	CK_ARG_NON_NULL(token);
 
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	memcpy_s(&expr->token, sizeof(CkToken), token, sizeof(CkToken));
@@ -28,9 +41,9 @@ CkExpression *CkExpressionCreateUnary(
 {
 	CkExpression *expr;
 
-	CK_ARG_NON_NULL(arena)
-	CK_ARG_NON_NULL(operator)
-	CK_ARG_NON_NULL(operand)
+	CK_ARG_NON_NULL(arena);
+	CK_ARG_NON_NULL(operator);
+	CK_ARG_NON_NULL(operand);
 
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	memcpy_s(&expr->token, sizeof(CkToken), operator, sizeof(CkToken));
@@ -48,10 +61,10 @@ CkExpression *CkExpressionCreateBinary(
 {
 	CkExpression *expr;
 
-	CK_ARG_NON_NULL(arena)
-	CK_ARG_NON_NULL(operator)
-	CK_ARG_NON_NULL(left)
-	CK_ARG_NON_NULL(right)
+	CK_ARG_NON_NULL(arena);
+	CK_ARG_NON_NULL(operator);
+	CK_ARG_NON_NULL(left);
+	CK_ARG_NON_NULL(right);
 
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	memcpy_s(&expr->token, sizeof(CkToken), operator, sizeof(CkToken));
@@ -71,11 +84,11 @@ CkExpression *CkExpressionCreateTernary(
 {
 	CkExpression *expr;
 
-	CK_ARG_NON_NULL(arena)
-	CK_ARG_NON_NULL(operator)
-	CK_ARG_NON_NULL(left)
-	CK_ARG_NON_NULL(right)
-	CK_ARG_NON_NULL(extra)
+	CK_ARG_NON_NULL(arena);
+	CK_ARG_NON_NULL(operator);
+	CK_ARG_NON_NULL(left);
+	CK_ARG_NON_NULL(right);
+	CK_ARG_NON_NULL(extra);
 
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	memcpy_s(&expr->token, sizeof(CkToken), operator, sizeof(CkToken));
@@ -101,6 +114,6 @@ static void s_ExprPrintTab(int tab, CkExpression *expression)
 
 void CkExpressionPrint(CkExpression *expression)
 {
-	CK_ARG_NON_NULL(expression)
+	CK_ARG_NON_NULL(expression);
 	s_ExprPrintTab(0, expression);
 }

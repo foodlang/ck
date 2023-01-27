@@ -243,18 +243,18 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 
 	cur = s_nextChar(lexer);
 
+	while (isspace(cur)) {
+		lexer->cursor++;
+		cur = s_nextChar(lexer);
+	}
+	base = lexer->cursor;
+
 	if (!cur) {
 		// EOF
 		token->position = lexer->cursor;
 		token->kind = 0;
 		return TRUE;
 	}
-
-	while (isspace(cur)) {
-		lexer->cursor++;
-		cur = s_nextChar(lexer);
-	}
-	base = lexer->cursor;
 
 	// Operators
 	switch (cur) {

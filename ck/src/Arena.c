@@ -10,12 +10,9 @@
 // Default maximum arena size
 #define DEFAULT_MAXSIZE 268435456
 
-// The alignment required for objects in the arena.
-#define ARENA_ALLOC_ALIGN 16
-
 void CkArenaStartFrame(CkArenaFrame *dest, size_t maxSize)
 {
-	CK_ARG_NON_NULL(dest)
+	CK_ARG_NON_NULL(dest);
 
 	if (maxSize == 0) maxSize = DEFAULT_MAXSIZE;
 	dest->size = maxSize;
@@ -29,7 +26,7 @@ void CkArenaStartFrame(CkArenaFrame *dest, size_t maxSize)
 
 void CkArenaEndFrame(CkArenaFrame *frame)
 {
-	CK_ARG_NON_NULL(frame)
+	CK_ARG_NON_NULL(frame);
 
 #if _WIN32
 	VirtualFree(frame->base, 0, MEM_RELEASE);
@@ -42,7 +39,7 @@ void *CkArenaAllocate(CkArenaFrame *frame, size_t bytes)
 {
 	register void *yield = (char *)frame->base + frame->offsetFree;
 
-	CK_ARG_NON_NULL(frame)
+	CK_ARG_NON_NULL(frame);
 
 	// Alignment
 	bytes += -bytes & ( ARENA_ALLOC_ALIGN - 1 );
@@ -56,7 +53,19 @@ void *CkArenaAllocate(CkArenaFrame *frame, size_t bytes)
 
 void CkArenaResetFrame(CkArenaFrame *frame)
 {
-	CK_ARG_NON_NULL(frame)
+	CK_ARG_NON_NULL(frame);
 
 	frame->offsetFree = 0;
+}
+
+void CkArenaWriteLock(CkArenaFrame *frame)
+{
+	unsigned long old;
+	CK_ARG_NON_NULL(frame);
+
+#if _WIN32
+	VirtualProtect(frame->base, frame->size, PAGE_READONLY, &old);
+#else
+	mprotect(frame->base, frame->size, PROT_READ);
+#endif
 }

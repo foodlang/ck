@@ -7,7 +7,8 @@
 
 #include "Types.h"
 
-#define CK_ARENA_MEM_BLOCKSIZE 262144
+// The alignment required for objects in the arena.
+#define ARENA_ALLOC_ALIGN 16
 
 /// <summary>
 /// Stores and keep information about allocation blocks.
@@ -64,5 +65,11 @@ void CkArenaResetFrame(CkArenaFrame *frame);
 /// <param name="bytes">The amount of bytes to allocate. Padding may be applied.</param>
 /// <returns>A pointer to the newly allocated memory.</returns>
 void *CkArenaAllocate(CkArenaFrame *frame, size_t bytes);
+
+/// <summary>
+/// Locks an arenas and prevents writing. This uses the MMU.
+/// </summary>
+/// <param name="frame">The frame of the arena.</param>
+void CkArenaWriteLock(CkArenaFrame *frame);
 
 #endif

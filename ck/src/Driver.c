@@ -43,10 +43,12 @@ void CkDriverCompile(
 			break;
 		tokenCount++;
 	}
+	// Locking pages at MMU level to prevent write operations
+	CkArenaWriteLock(&tokenListArena);
 
 	// 4. Parsing
 	CkParserCreateInstance(threadArena, &parser, (CkToken *)tokenListArena.base, tokenCount, &dh);
-	(void)CkParserExpression(&parser);
+	CkExpressionPrint(CkParserExpression(&parser));
 
 	// Displaying diagnostics
 	CkDiagnosticDisplay(&dh);
