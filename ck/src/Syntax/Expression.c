@@ -14,12 +14,14 @@ CkExpression *CkExpressionCreateType(
 
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	expr->type = type;
+	expr->kind = CK_EXPRESSION_TYPE;
 	return expr;
 }
 
 CkExpression *CkExpressionCreateLiteral(
 	CkArenaFrame *arena,
 	const CkToken *token,
+	const CkExpressionKind kind,
 	CkFoodType *type)
 {
 	CkExpression *expr;
@@ -30,12 +32,14 @@ CkExpression *CkExpressionCreateLiteral(
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	memcpy_s(&expr->token, sizeof(CkToken), token, sizeof(CkToken));
 	expr->type = type;
+	expr->kind = kind;
 	return expr;
 }
 
 CkExpression *CkExpressionCreateUnary(
 	CkArenaFrame *arena,
 	const CkToken *operator,
+	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *operand)
 {
@@ -43,18 +47,19 @@ CkExpression *CkExpressionCreateUnary(
 
 	CK_ARG_NON_NULL(arena);
 	CK_ARG_NON_NULL(operator);
-	CK_ARG_NON_NULL(operand);
 
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	memcpy_s(&expr->token, sizeof(CkToken), operator, sizeof(CkToken));
 	expr->left = operand;
 	expr->type = type;
+	expr->kind = kind;
 	return expr;
 }
 
 CkExpression *CkExpressionCreateBinary(
 	CkArenaFrame *arena,
 	const CkToken *operator,
+	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *left,
 	CkExpression *right)
@@ -63,20 +68,20 @@ CkExpression *CkExpressionCreateBinary(
 
 	CK_ARG_NON_NULL(arena);
 	CK_ARG_NON_NULL(operator);
-	CK_ARG_NON_NULL(left);
-	CK_ARG_NON_NULL(right);
 
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	memcpy_s(&expr->token, sizeof(CkToken), operator, sizeof(CkToken));
 	expr->left = left;
 	expr->right = right;
 	expr->type = type;
+	expr->kind = kind;
 	return expr;
 }
 
 CkExpression *CkExpressionCreateTernary(
 	CkArenaFrame *arena,
 	const CkToken *operator,
+	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *left,
 	CkExpression *right,
@@ -86,9 +91,6 @@ CkExpression *CkExpressionCreateTernary(
 
 	CK_ARG_NON_NULL(arena);
 	CK_ARG_NON_NULL(operator);
-	CK_ARG_NON_NULL(left);
-	CK_ARG_NON_NULL(right);
-	CK_ARG_NON_NULL(extra);
 
 	expr = CkArenaAllocate(arena, sizeof(CkExpression));
 	memcpy_s(&expr->token, sizeof(CkToken), operator, sizeof(CkToken));
@@ -96,6 +98,7 @@ CkExpression *CkExpressionCreateTernary(
 	expr->right = right;
 	expr->extra = extra;
 	expr->type = type;
+	expr->kind = kind;
 	return expr;
 }
 

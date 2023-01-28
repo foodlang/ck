@@ -9,7 +9,7 @@ CkFoodType *CkFoodCreateTypeInstance(
 {
 	CkFoodType *instance;
 
-	CK_ARG_NON_NULL(arena)
+	CK_ARG_NON_NULL(arena);
 
 	instance = CkArenaAllocate(arena, sizeof(CkFoodType));
 	instance->id = id;
@@ -20,8 +20,8 @@ CkFoodType *CkFoodCreateTypeInstance(
 
 CkFoodType *CkFoodCopyTypeInstance(CkArenaFrame *arena, CkFoodType *instance)
 {
-	CK_ARG_NON_NULL(arena)
-	CK_ARG_NON_NULL(instance)
+	CK_ARG_NON_NULL(arena);
+	CK_ARG_NON_NULL(instance);
 
 	return CkFoodCreateTypeInstance(
 		arena,

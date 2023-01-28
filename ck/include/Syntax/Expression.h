@@ -10,6 +10,93 @@
 #include "../Food.h"
 
 /// <summary>
+/// The kind of an expression (its operator.)
+/// </summary>
+typedef enum CkExpressionKind
+{
+
+	/// <summary>
+	/// Misc. unknown expression identifier
+	/// </summary>
+	CK_EXPRESSION_DUMMY,
+
+	CK_EXPRESSION_COMPOUND_LITERAL,
+	CK_EXPRESSION_INTEGER_LITERAL,
+	CK_EXPRESSION_FLOAT_LITERAL,
+	CK_EXPRESSION_STRING_LITERAL,
+	CK_EXPRESSION_BOOL_LITERAL,
+	CK_EXPRESSION_TYPE,
+	CK_EXPRESSION_SIZEOF,
+	CK_EXPRESSION_ALIGNOF,
+	CK_EXPRESSION_NAMEOF,
+	CK_EXPRESSION_TYPEOF,
+
+	CK_EXPRESSION_POSTFIX_INC,
+	CK_EXPRESSION_POSTFIX_DEC,
+	CK_EXPRESSION_FUNCCALL,
+	CK_EXPRESSION_SUBSCRIPT,
+	CK_EXPRESSION_MEMBER_ACCESS,
+	CK_EXPRESSION_POINTER_MEMBER_ACCESS,
+
+	CK_EXPRESSION_PREFIX_INC,
+	CK_EXPRESSION_PREFIX_DEC,
+	CK_EXPRESSION_UNARY_PLUS,
+	CK_EXPRESSION_UNARY_MINUS,
+	CK_EXPRESSION_LOGICAL_NOT,
+	CK_EXPRESSION_BITWISE_NOT,
+	CK_EXPRESSION_C_CAST,
+	CK_EXPRESSION_DEREFERENCE,
+	CK_EXPRESSION_ADDRESS_OF,
+
+	CK_EXPRESSION_MUL,
+	CK_EXPRESSION_DIV,
+	CK_EXPRESSION_MOD,
+
+	CK_EXPRESSION_ADD,
+	CK_EXPRESSION_SUB,
+
+	CK_EXPRESSION_LEFT_SHIFT,
+	CK_EXPRESSION_RIGHT_SHIFT,
+
+	CK_EXPRESSION_LOWER,
+	CK_EXPRESSION_LOWER_EQUAL,
+	CK_EXPRESSION_GREATER,
+	CK_EXPRESSION_GREATER_EQUAL,
+
+	CK_EXPRESSION_EQUAL,
+	CK_EXPRESSION_NOT_EQUAL,
+
+	CK_EXPRESSION_BITWISE_AND,
+
+	CK_EXPRESSION_BITWISE_XOR,
+
+	CK_EXPRESSION_BITWISE_OR,
+
+	CK_EXPRESSION_LOGICAL_AND,
+
+	CK_EXPRESSION_LOGICAL_OR,
+
+	CK_EXPRESSION_FOOD_CAST,
+
+	CK_EXPRESSION_CONDITIONAL,
+
+	CK_EXPRESSION_ASSIGN,
+	CK_EXPRESSION_ASSIGN_SUM,
+	CK_EXPRESSION_ASSIGN_DIFF,
+	CK_EXPRESSION_ASSIGN_PRODUCT,
+	CK_EXPRESSION_ASSIGN_QUOTIENT,
+	CK_EXPRESSION_ASSIGN_REMAINDER,
+	CK_EXPRESSION_ASSIGN_LEFT_SHIFT,
+	CK_EXPRESSION_ASSIGN_RIGHT_SHIFT,
+	CK_EXPRESSION_ASSIGN_AND,
+	CK_EXPRESSION_ASSIGN_XOR,
+	CK_EXPRESSION_ASSIGN_OR,
+
+	CK_EXPRESSION_COMPOUND,
+
+} CkExpressionKind;
+
+/// <summary>
 /// A parser expression.
 /// </summary>
 typedef struct CkExpression
@@ -20,6 +107,14 @@ typedef struct CkExpression
 	/// value token with literal expressions.
 	/// </summary>
 	CkToken token;
+
+	/// <summary>
+	/// The kind of the expression (its operator.)
+	/// This cannot be stored with the token, cause the
+	/// main expression token of two operators can be the same.
+	/// (e.g. both x++ and ++x have ++ has their main token.)
+	/// </summary>
+	CkExpressionKind kind;
 
 	/// <summary>
 	/// The type of the expression. This is a passed
@@ -70,6 +165,7 @@ CkExpression *CkExpressionCreateType(
 CkExpression *CkExpressionCreateLiteral(
 	CkArenaFrame *arena,
 	const CkToken *token,
+	const CkExpressionKind kind,
 	CkFoodType *type);
 
 /// <summary>
@@ -82,6 +178,7 @@ CkExpression *CkExpressionCreateLiteral(
 CkExpression *CkExpressionCreateUnary(
 	CkArenaFrame *arena,
 	const CkToken *operator,
+	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *operand);
 
@@ -96,6 +193,7 @@ CkExpression *CkExpressionCreateUnary(
 CkExpression *CkExpressionCreateBinary(
 	CkArenaFrame *arena,
 	const CkToken *operator,
+	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *left,
 	CkExpression *right);
@@ -112,6 +210,7 @@ CkExpression *CkExpressionCreateBinary(
 CkExpression *CkExpressionCreateTernary(
 	CkArenaFrame *arena,
 	const CkToken *operator,
+	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *left,
 	CkExpression *right,

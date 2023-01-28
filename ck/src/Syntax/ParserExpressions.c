@@ -21,6 +21,11 @@ typedef struct BinaryOperatorPrecedenceEntry
 	/// </summary>
 	uint8_t  prec;
 
+	/// <summary>
+	/// The kind of the operator.
+	/// </summary>
+	CkExpressionKind kind;
+
 } BinaryOperatorPrecedenceEntry;
 
 /// <summary>
@@ -29,30 +34,33 @@ typedef struct BinaryOperatorPrecedenceEntry
 /// </summary>
 static BinaryOperatorPrecedenceEntry s_binaryPrecedences[] =
 {
-	{ '*', 9 },
-	{ '/', 9 },
-	{ '%', 9 },
+	{ '*', 10, CK_EXPRESSION_MUL },
+	{ '/', 10, CK_EXPRESSION_DIV },
+	{ '%', 10, CK_EXPRESSION_MOD },
 
-	{ '-', 8 },
-	{ '+', 8 },
+	{ '-', 9, CK_EXPRESSION_SUB },
+	{ '+', 9, CK_EXPRESSION_ADD },
 
-	{ '>', 7 },
-	{ '<', 7 },
-	{ CKTOK2('<', '='), 7 },
-	{ CKTOK2('>', '='), 7 },
+	{ CKTOK2('<', '<'), 8, CK_EXPRESSION_LEFT_SHIFT },
+	{ CKTOK2('>', '>'), 8, CK_EXPRESSION_RIGHT_SHIFT },
 
-	{ CKTOK2('!', '='), 6 },
-	{ CKTOK2('=', '='), 6 },
+	{ '>', 7, CK_EXPRESSION_GREATER },
+	{ '<', 7, CK_EXPRESSION_LOWER },
+	{ CKTOK2('<', '='), 7, CK_EXPRESSION_LOWER_EQUAL },
+	{ CKTOK2('>', '='), 7, CK_EXPRESSION_GREATER_EQUAL },
 
-	{ '&', 5 },
+	{ CKTOK2('!', '='), 6, CK_EXPRESSION_NOT_EQUAL },
+	{ CKTOK2('=', '='), 6, CK_EXPRESSION_EQUAL },
 
-	{ '^', 4 },
+	{ '&', 5, CK_EXPRESSION_BITWISE_AND },
 
-	{ '|', 3 },
+	{ '^', 4, CK_EXPRESSION_BITWISE_XOR },
 
-	{ CKTOK2('&', '&'), 2 },
+	{ '|', 3, CK_EXPRESSION_BITWISE_OR },
 
-	{ CKTOK2('|', '|'), 1 },
+	{ CKTOK2('&', '&'), 2, CK_EXPRESSION_LOGICAL_AND, },
+
+	{ CKTOK2('|', '|'), 1, CK_EXPRESSION_LOGICAL_OR, },
 };
 
 /// <summary>
@@ -71,6 +79,24 @@ static uint8_t s_BinaryOpPrec(uint64_t op)
 			return s_binaryPrecedences[i].prec;
 	}
 	return 0;
+}
+
+/// <summary>
+/// Looks up the binary precedence table and attempts to get
+/// the expression kind of a given operator.
+/// </summary>
+/// <param name="op">The operator to look up.</param>
+/// <returns></returns>
+static CkExpressionKind s_BinaryOpKind(uint64_t op)
+{
+	for (
+		size_t i = 0;
+		i < sizeof(s_binaryPrecedences) / sizeof(BinaryOperatorPrecedenceEntry);
+		i++) {
+		if (s_binaryPrecedences[i].op == op)
+			return s_binaryPrecedences[i].kind;
+	}
+	return CK_EXPRESSION_DUMMY;
 }
 
 /// <summary>
@@ -93,6 +119,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 			return CkExpressionCreateLiteral(
 				parser->arena,
 				&token,
+				CK_EXPRESSION_INTEGER_LITERAL,
 				CkFoodCreateTypeInstance(parser->arena, CK_FOOD_I32, 0, NULL)
 			);
 
@@ -100,6 +127,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		return CkExpressionCreateLiteral(
 			parser->arena,
 			&token,
+			CK_EXPRESSION_INTEGER_LITERAL,
 			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_I64, 0, NULL)
 		);
 
@@ -109,6 +137,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 			return CkExpressionCreateLiteral(
 				parser->arena,
 				&token,
+				CK_EXPRESSION_FLOAT_LITERAL,
 				CkFoodCreateTypeInstance(parser->arena, CK_FOOD_F32, 0, NULL)
 			);
 
@@ -116,6 +145,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		return CkExpressionCreateLiteral(
 			parser->arena,
 			&token,
+			CK_EXPRESSION_FLOAT_LITERAL,
 			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_F64, 0, NULL)
 		);
 
@@ -124,6 +154,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		return CkExpressionCreateLiteral(
 			parser->arena,
 			&token,
+			CK_EXPRESSION_BOOL_LITERAL,
 			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_BOOL, 0, NULL));
 
 		// False is a boolean constant
@@ -131,6 +162,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		return CkExpressionCreateLiteral(
 			parser->arena,
 			&token,
+			CK_EXPRESSION_BOOL_LITERAL,
 			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_BOOL, 0, NULL));
 
 		// Null is a pointer constant
@@ -138,6 +170,7 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		return CkExpressionCreateLiteral(
 			parser->arena,
 			&token,
+			CK_EXPRESSION_INTEGER_LITERAL,
 			CkFoodCreateTypeInstance(
 				parser->arena,
 				CK_FOOD_POINTER,
@@ -166,7 +199,11 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 			"An expression was expected in this context.");
 
-		return CkExpressionCreateLiteral(parser->arena, &token, CkFoodCreateTypeInstance(parser->arena, CK_FOOD_VOID, 0, NULL));
+		return CkExpressionCreateLiteral(
+			parser->arena,
+			&token,
+			CK_EXPRESSION_DUMMY,
+			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_VOID, 0, NULL));
 
 	case KW_SIZEOF:
 	{
@@ -188,7 +225,12 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 			CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing closing bracket in sizeof() operator.");
 		}
-		return CkExpressionCreateLiteral(parser->arena, &exprToken, type);
+		return CkExpressionCreateUnary(
+			parser->arena,
+			&exprToken,
+			CK_EXPRESSION_SIZEOF,
+			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_U64, 0, NULL),
+			CkExpressionCreateType(parser->arena, type));
 	}
 
 	case KW_ALIGNOF:
@@ -211,7 +253,12 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 			CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing closing bracket in alignof() operator.");
 		}
-		return CkExpressionCreateLiteral(parser->arena, &exprToken, type);
+		return CkExpressionCreateUnary(
+			parser->arena,
+			&exprToken,
+			CK_EXPRESSION_ALIGNOF,
+			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_U64, 0, NULL),
+			CkExpressionCreateType(parser->arena, type));
 	}
 
 	}
@@ -236,18 +283,33 @@ static CkExpression *s_ParseLevel1(CkParserInstance *parser)
 			// Postfix increment and decrement
 		case CKTOK2('+', '+'):
 		case CKTOK2('-', '-'):
-			acc = CkExpressionCreateUnary(parser->arena, &token, NULL, acc);
+			acc = CkExpressionCreateUnary(parser->arena, &token, CK_EXPRESSION_POSTFIX_INC, NULL, acc);
 			break;
 
 			// Member access / pointer member access
 		case '.':
+			acc = CkExpressionCreateBinary(
+				parser->arena,
+				&token,
+				CK_EXPRESSION_MEMBER_ACCESS,
+				NULL,
+				acc, 
+				s_ParsePrimaryExpression(parser));
+			break;
+
 		case CKTOK2('-', '>'):
-			acc = CkExpressionCreateBinary(parser->arena, &token, NULL, acc, s_ParsePrimaryExpression(parser));
+			acc = CkExpressionCreateBinary(
+				parser->arena,
+				&token, 
+				CK_EXPRESSION_POINTER_MEMBER_ACCESS,
+				NULL,
+				acc,
+				s_ParsePrimaryExpression(parser));
 			break;
 
 			// Array subscript
 		case '[':
-			acc = CkExpressionCreateBinary(parser->arena, &token, NULL, acc, CkParserExpression(parser));
+			acc = CkExpressionCreateBinary(parser->arena, &token, CK_EXPRESSION_SUBSCRIPT, NULL, acc, CkParserExpression(parser));
 			CkParserReadToken(parser, &token);
 			if (token.kind != ']') {
 				CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
@@ -276,6 +338,7 @@ static CkExpression *s_ParseLevel2(CkParserInstance *parser)
 {
 	CkToken token;
 	CkExpression *accumulator;
+	CkExpressionKind kind;
 
 	CkParserReadToken(parser, &token);
 
@@ -291,7 +354,16 @@ static CkExpression *s_ParseLevel2(CkParserInstance *parser)
 	case '~':
 	case '*':
 	case '&':
-		accumulator = CkExpressionCreateUnary(parser->arena, &token, NULL, s_ParseLevel2(parser));
+		kind = token.kind == CKTOK2('+', '+') ? CK_EXPRESSION_PREFIX_INC
+			: token.kind == CKTOK2('-', '-') ? CK_EXPRESSION_PREFIX_DEC
+			: token.kind == '+' ? CK_EXPRESSION_UNARY_PLUS
+			: token.kind == '-' ? CK_EXPRESSION_UNARY_MINUS
+			: token.kind == '!' ? CK_EXPRESSION_LOGICAL_NOT
+			: token.kind == '~' ? CK_EXPRESSION_BITWISE_NOT
+			: token.kind == '*' ? CK_EXPRESSION_DEREFERENCE
+			: CK_EXPRESSION_ADDRESS_OF;
+
+		accumulator = CkExpressionCreateUnary(parser->arena, &token, kind, NULL, s_ParseLevel2(parser));
 		break;
 		
 		// TODO: Implement C-style casting
@@ -313,6 +385,7 @@ static CkExpression *s_ParseLevel2(CkParserInstance *parser)
 		accumulator = CkExpressionCreateBinary(
 			parser->arena,
 			&exprToken,
+			CK_EXPRESSION_C_CAST,
 			t,
 			s_ParseLevel2(parser),
 			CkExpressionCreateType(parser->arena, t));
@@ -351,7 +424,7 @@ static CkExpression *s_ParseBinary(uint8_t parentPrec, CkParserInstance *parser)
 		}
 
 		right = s_ParseBinary(prec, parser);
-		acc = CkExpressionCreateBinary(parser->arena, &token, NULL, acc, right);
+		acc = CkExpressionCreateBinary(parser->arena, &token, s_BinaryOpKind(token.kind), NULL, acc, right);
 	}
 
 	return acc;
@@ -374,7 +447,7 @@ static CkExpression *s_ParseFoodCast(CkParserInstance *parser)
 			CkDiagnosticThrow(parser->pDhi, op.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Expected a type in Food-style cast.");
 		}
-		acc = CkExpressionCreateBinary(parser->arena, &op, NULL, acc, CkExpressionCreateType(parser->arena, t));
+		acc = CkExpressionCreateBinary(parser->arena, &op, CK_EXPRESSION_FOOD_CAST, NULL, acc, CkExpressionCreateType(parser->arena, t));
 		CkParserReadToken(parser, &op);
 	}
 	CkParserRewind(parser, 1);
@@ -411,7 +484,7 @@ static CkExpression *s_ParseConditional(CkParserInstance *parser)
 	}
 	right = s_ParseConditional(parser);
 
-	return CkExpressionCreateTernary(parser->arena, &op, NULL, left, right, extra);
+	return CkExpressionCreateTernary(parser->arena, &op, CK_EXPRESSION_CONDITIONAL, NULL, left, right, extra);
 }
 
 /// <summary>
@@ -422,6 +495,7 @@ static CkExpression *s_ParseConditional(CkParserInstance *parser)
 static CkExpression *s_ParseAssign(CkParserInstance *parser)
 {
 	CkToken op;
+	CkExpressionKind kind;
 
 	CkExpression *left = s_ParseConditional(parser);
 	CkParserReadToken(parser, &op);
@@ -437,7 +511,19 @@ static CkExpression *s_ParseAssign(CkParserInstance *parser)
 	case CKTOK2('^', '='):
 	case CKTOK3('<', '<', '='):
 	case CKTOK3('>', '>', '='):
-		return CkExpressionCreateBinary(parser->arena, &op, NULL, left, s_ParseConditional(parser));
+		kind = op.kind == '=' ? CK_EXPRESSION_ASSIGN
+			: op.kind == CKTOK2('+', '=') ? CK_EXPRESSION_ASSIGN_SUM
+			: op.kind == CKTOK2('-', '=') ? CK_EXPRESSION_ASSIGN_DIFF
+			: op.kind == CKTOK2('*', '=') ? CK_EXPRESSION_ASSIGN_PRODUCT
+			: op.kind == CKTOK2('/', '=') ? CK_EXPRESSION_ASSIGN_QUOTIENT
+			: op.kind == CKTOK2('%', '=') ? CK_EXPRESSION_ASSIGN_REMAINDER
+			: op.kind == CKTOK2('&', '=') ? CK_EXPRESSION_ASSIGN_AND
+			: op.kind == CKTOK2('|', '=') ? CK_EXPRESSION_ASSIGN_OR
+			: op.kind == CKTOK2('^', '=') ? CK_EXPRESSION_ASSIGN_XOR
+			: op.kind == CKTOK3('<', '<', '=') ? CK_EXPRESSION_ASSIGN_LEFT_SHIFT
+			: CK_EXPRESSION_ASSIGN_RIGHT_SHIFT;
+
+		return CkExpressionCreateBinary(parser->arena, &op, kind, NULL, left, s_ParseConditional(parser));
 
 		// Not an assignment
 	default:
@@ -458,7 +544,7 @@ static CkExpression *s_ParseCompound(CkParserInstance *parser)
 
 	CkParserReadToken(parser, &op);
 	while (op.kind == ',') {
-		acc = CkExpressionCreateBinary(parser->arena, &op, NULL, acc, s_ParseAssign(parser));
+		acc = CkExpressionCreateBinary(parser->arena, &op, CK_EXPRESSION_COMPOUND, NULL, acc, s_ParseAssign(parser));
 		CkParserReadToken(parser, &op);
 	}
 	CkParserRewind(parser, 1);

@@ -2,6 +2,7 @@
 #include <include/Syntax/Lex.h>
 #include <include/Syntax/Parser.h>
 #include <include/Syntax/ParserExpressions.h>
+#include <include/Syntax/Semantics.h>
 #include <include/Diagnostics.h>
 #include <include/CDebug.h>
 #include <malloc.h>
@@ -48,7 +49,7 @@ void CkDriverCompile(
 
 	// 4. Parsing
 	CkParserCreateInstance(threadArena, &parser, (CkToken *)tokenListArena.base, tokenCount, &dh);
-	CkExpressionPrint(CkParserExpression(&parser));
+	CkExpressionPrint(CkSemanticsProcessExpression(&dh, threadArena, CkParserExpression(&parser)));
 
 	// Displaying diagnostics
 	CkDiagnosticDisplay(&dh);

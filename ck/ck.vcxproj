@@ -229,6 +229,7 @@
     <ClInclude Include="include\Syntax\Parser.h" />
     <ClInclude Include="include\Syntax\ParserExpressions.h" />
     <ClInclude Include="include\Syntax\ParserTypes.h" />
+    <ClInclude Include="include\Syntax\Semantics.h" />
     <ClInclude Include="include\Types.h" />
   </ItemGroup>
   <ItemGroup>
@@ -243,6 +244,7 @@
     <ClCompile Include="src\Syntax\Parser.c" />
     <ClCompile Include="src\Syntax\ParserExpressions.c" />
     <ClCompile Include="src\Syntax\ParserTypes.c" />
+    <ClCompile Include="src\Syntax\Semantics.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="tests\test.txt" />
