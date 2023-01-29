@@ -384,3 +384,40 @@ LSkipLookup:
 
 	return total;
 }
+
+char *CkConfigGetSource(CkBuildConfig *cfg, size_t index)
+{
+	char *cPtr = cfg->sources.base;
+	size_t strCounter = 0;
+	bool_t walkingThroughAlignment = FALSE;
+
+	if (cfg->sourceCount <= index) {
+		fprintf_s(stderr, "ck: Project '%s' doesn't have %llu source files.\n", cfg->name, index);
+		return NULL;
+	}
+
+	if (index == 0) return cPtr;
+	
+	while (strCounter < index) {
+		if (!*cPtr && !walkingThroughAlignment) {
+			cPtr++;
+			walkingThroughAlignment = TRUE;
+		}
+
+		if (!*cPtr && walkingThroughAlignment) {
+			cPtr++;
+			continue;
+		}
+
+		if (*cPtr && walkingThroughAlignment) {
+			strCounter++;
+			walkingThroughAlignment = FALSE;
+			continue;
+		}
+
+		cPtr++;
+		walkingThroughAlignment = FALSE;
+	}
+
+	return cPtr;
+}

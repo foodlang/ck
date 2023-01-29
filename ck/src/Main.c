@@ -1,51 +1,16 @@
 #include <include/Driver.h>
 #include <include/Configs.h>
 #include <include/Arena.h>
+#include <include/FileIO.h>
 
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
+
+#include <cwalk.h>
 
 int main(int argc, char *argv[], char **envp)
 {
-	/*CkDriverStartupConfiguration config;
-	CkDriverCompilationResult result;
-	CkArenaFrame arena;
-
-	if (argc == 1 || (argc == 2 &&
-		(
-			!strcmp(argv[1], "--help")
-			|| !strcmp(argv[1], "-h")
-			|| !strcmp(argv[1], "--usage")
-			))) {
-		puts("Usage: ck [params] <source-file-1> <source-file-2> ...");
-		puts("Parameters list:");
-		puts("");
-		puts("  --help, -h\tBrings up this message.");
-		puts("  --usage\tSame as --help.");
-		return 0;
-	}
-
-	(void)envp;
-
-	for (int i = 1; i < argc; i++) {
-		const size_t len = strnlen_s(argv[i], 256);
-		CkArenaStartFrame(&arena, 0);
-
-		memset(&config, 0, sizeof(CkDriverStartupConfiguration));
-		memset(&result, 0, sizeof(CkDriverCompilationResult));
-
-		config.name = CkArenaAllocate(&arena, len + 1);
-		strcpy_s(config.name, len + 1, argv[i]);
-		config.source = CkReadFileContents(&arena, config.name);
-		config.wError = FALSE;
-		CkDriverCompile(&arena, &result, &config);
-		
-		CkArenaResetFrame(&arena);
-	}
-
-	CkArenaEndFrame(&arena);*/
-
 	CkArenaFrame configArena; // The arena used for config/profile-related allocations.
 	CkArenaFrame driverArena; // The arena used for driver allocations. Reset for each driver.
 
@@ -96,8 +61,53 @@ int main(int argc, char *argv[], char **envp)
 	}
 
 	(void)envp;
-	(void)driverStart;
-	(void)driverResult;
+
+	CkArenaStartFrame(&driverArena, 0);
+	for (size_t i = 0; i < applied->sourceCount; i++) {
+		const char *source = CkConfigGetSource(applied, i);
+		char *sourceTotal;
+		size_t nameLen;
+		size_t sourceLen;
+
+		if (!source) {
+			fprintf_s(stderr, "ck: Attempted to read out of bounds of file list.\n");
+			abort();
+		}
+
+		// Init
+		nameLen = strlen(applied->name) + strlen("::") + strlen(source);
+		sourceLen = strlen(buildDirectory) + strlen(applied->sourceDir) + strlen("//") + strlen(source);
+		memset(&driverStart, 0, sizeof(CkDriverStartupConfiguration));
+		memset(&driverResult, 0, sizeof(CkDriverCompilationResult));
+
+		// Name (ProjectName::FileName)
+		driverStart.name = CkArenaAllocate(&driverArena, nameLen + 1);
+		strcpy_s(driverStart.name, nameLen + 1, applied->name);
+		strcat_s(driverStart.name, nameLen + 1, "::");
+		strcat_s(driverStart.name, nameLen + 1, source);
+
+		// Source filepath (SourceDir/Filepath)
+		sourceTotal = CkArenaAllocate(&driverArena, sourceLen + 1);
+		cwk_path_join(buildDirectory, applied->sourceDir, sourceTotal, sourceLen + 1);
+		cwk_path_join(sourceTotal, source, sourceTotal, sourceLen + 1);
+
+		// Source loading
+		driverStart.source = CkReadFileContents(&driverArena, sourceTotal);
+		if (!driverStart.source) {
+			fprintf_s(stderr, "ck: Project '%s' does not have source file '%s'.\n", applied->name, sourceTotal);
+			CkArenaResetFrame(&driverArena);
+			continue;
+		}
+
+		// Loading settings
+		driverStart.wError = applied->wError;
+
+		// Driver compilation
+		CkDriverCompile(&driverArena, &driverResult, &driverStart);
+
+		// Resetting the frame for the next file
+		CkArenaResetFrame(&driverArena);
+	}
 
 	CkArenaEndFrame(&configArena);
 	CkArenaEndFrame(&driverArena);

@@ -19,9 +19,7 @@
             "name": "Win64",
             "binaryType": 4,
             "platform": "x86_64",
-            "system": "Windows",
-
-            "sources": [ "WinDriverx64.fd" ]
+            "system": "Windows"
         }
     ]
 }

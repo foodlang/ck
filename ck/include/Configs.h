@@ -168,4 +168,12 @@ CkBuildConfig *CkConfigGetBuildConfig(CkArenaFrame *allocator, char *directoryPa
 /// <returns>A non-nested configuration that has a profile applied. Returns NULL if the profile is invalid.</returns>
 CkBuildConfig *CkConfigApplied(CkArenaFrame *allocator, CkBuildConfig *base, char *profileName);
 
+/// <summary>
+/// Gets a pointer to the start of the source filepath string.
+/// </summary>
+/// <param name="cfg">The configuration to search through (applied.)</param>
+/// <param name="index">The index of the string to fetch.</param>
+/// <returns></returns>
+char *CkConfigGetSource(CkBuildConfig *cfg, size_t index);
+
 #endif
