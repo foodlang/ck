@@ -5,15 +5,22 @@
 #include <include/Syntax/Semantics.h>
 #include <include/Diagnostics.h>
 #include <include/CDebug.h>
+
 #include <malloc.h>
 #include <stdio.h>
 #include <time.h>
+
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 
 void CkDriverCompile(
 	CkArenaFrame *threadArena,
 	CkDriverCompilationResult *result,
 	CkDriverStartupConfiguration *startupConfig)
 {
+	lua_State *luavm;
+
 	CkArenaFrame tokenListArena; // The arena storing the list of the tokens.
 	size_t   tokenCount = 0;     // The amount of source tokens.
 
@@ -21,9 +28,11 @@ void CkDriverCompile(
 	CkLexInstance lexer;            // The lexer.
 	CkParserInstance parser;        // The parser.
 
-	CK_ARG_NON_NULL(threadArena)
-	CK_ARG_NON_NULL(result)
-	CK_ARG_NON_NULL(startupConfig)
+	CK_ARG_NON_NULL(threadArena);
+	CK_ARG_NON_NULL(result);
+	CK_ARG_NON_NULL(startupConfig);
+
+	luavm = luaL_newstate();
 
 	// 1. Default output values
 	result->successful = TRUE;
@@ -66,4 +75,5 @@ void CkDriverCompile(
 	CkLexDestroyInstance(&lexer);
 	CkParserDelete(&parser);
 	CkDiagnosticHandlerDestroyInstance(&dh);
+	lua_close(luavm);
 }

@@ -16,7 +16,7 @@ char *CkReadFileContents(CkArenaFrame *arena, const char *path)
 	// 1. Opening the file and getting the length
 	if (fopen_s(&fileStruct, path, "rb")) {
 		fprintf_s(stderr, "ck: '%s' does not exist, or cannot be read from.\n", path);
-		abort();
+		return NULL;
 	}
 	_fseeki64_nolock(fileStruct, 0, SEEK_END);
 	fileLength = (size_t)_ftelli64_nolock(fileStruct);

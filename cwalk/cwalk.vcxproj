@@ -21,32 +21,32 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{92924c78-8670-4551-8f28-818d6cf2f00c}</ProjectGuid>
-    <RootNamespace>ck</RootNamespace>
+    <ProjectGuid>{f58c432e-2f46-4390-b683-941cbd335f50}</ProjectGuid>
+    <RootNamespace>cwalk</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>ClangCL</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>ClangCL</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>ClangCL</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>ClangCL</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -70,26 +70,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)\bin\$(Platform)-$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\obj\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)\bin\$(Platform)-$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\obj\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)\bin\$(Platform)-$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\obj\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)\bin\$(Platform)-$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\obj\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;</IncludePath>
-  </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <VcpkgEnabled>false</VcpkgEnabled>
   </PropertyGroup>
@@ -104,169 +84,120 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <StringPooling>true</StringPooling>
-      <ControlFlowGuard>Guard</ControlFlowGuard>
-      <CompileAs>CompileAsC</CompileAs>
-      <LanguageStandard_C>Default</LanguageStandard_C>
       <ExceptionHandling>false</ExceptionHandling>
-      <FloatingPointModel>Strict</FloatingPointModel>
-      <AdditionalOptions>-Wno-unused-macros -Wno-float-equal -Wno-extra-semi-stmt -Wno-bad-function-cast -Wno-cast-align -Wno-unreachable-code %(AdditionalOptions)</AdditionalOptions>
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <LargeAddressAware>false</LargeAddressAware>
-      <StackReserveSize>
-      </StackReserveSize>
-      <StackCommitSize>
-      </StackCommitSize>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(ProjectDir)cwalkLicense.txt $(SolutionDir)bin\$(Platform)-$(Configuration)\cwalkLicense /a /v /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <StringPooling>true</StringPooling>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <ControlFlowGuard>false</ControlFlowGuard>
-      <CompileAs>CompileAsC</CompileAs>
-      <LanguageStandard_C>Default</LanguageStandard_C>
       <ExceptionHandling>false</ExceptionHandling>
-      <FloatingPointModel>Strict</FloatingPointModel>
-      <AdditionalOptions>-Wno-unused-macros -Wno-float-equal -Wno-extra-semi-stmt -Wno-bad-function-cast -Wno-cast-align -Wno-unreachable-code %(AdditionalOptions)</AdditionalOptions>
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <LargeAddressAware>false</LargeAddressAware>
-      <StackReserveSize>
-      </StackReserveSize>
-      <StackCommitSize>
-      </StackCommitSize>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(ProjectDir)cwalkLicense.txt $(SolutionDir)bin\$(Platform)-$(Configuration)\cwalkLicense /a /v /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <StringPooling>true</StringPooling>
-      <ControlFlowGuard>Guard</ControlFlowGuard>
-      <CompileAs>CompileAsC</CompileAs>
-      <LanguageStandard_C>Default</LanguageStandard_C>
       <ExceptionHandling>false</ExceptionHandling>
-      <FloatingPointModel>Strict</FloatingPointModel>
-      <AdditionalOptions>-Wno-unused-macros -Wno-float-equal -Wno-extra-semi-stmt -Wno-bad-function-cast -Wno-cast-align -Wno-unreachable-code %(AdditionalOptions)</AdditionalOptions>
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <LargeAddressAware>true</LargeAddressAware>
-      <StackReserveSize>
-      </StackReserveSize>
-      <StackCommitSize>
-      </StackCommitSize>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(ProjectDir)cwalkLicense.txt $(SolutionDir)bin\$(Platform)-$(Configuration)\cwalkLicense /a /v /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <StringPooling>true</StringPooling>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <ControlFlowGuard>false</ControlFlowGuard>
-      <CompileAs>CompileAsC</CompileAs>
-      <LanguageStandard_C>Default</LanguageStandard_C>
       <ExceptionHandling>false</ExceptionHandling>
-      <FloatingPointModel>Strict</FloatingPointModel>
-      <AdditionalOptions>-Wno-unused-macros -Wno-float-equal -Wno-extra-semi-stmt -Wno-bad-function-cast -Wno-cast-align -Wno-unreachable-code %(AdditionalOptions)</AdditionalOptions>
       <StructMemberAlignment>16Bytes</StructMemberAlignment>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <CompileAs>CompileAsC</CompileAs>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <LargeAddressAware>true</LargeAddressAware>
-      <StackReserveSize>
-      </StackReserveSize>
-      <StackCommitSize>
-      </StackCommitSize>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(ProjectDir)cwalkLicense.txt $(SolutionDir)bin\$(Platform)-$(Configuration)\cwalkLicense /a /v /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\Arena.h" />
-    <ClInclude Include="include\CDebug.h" />
-    <ClInclude Include="include\Configs.h" />
-    <ClInclude Include="include\Driver.h" />
-    <ClInclude Include="include\FileIO.h" />
-    <ClInclude Include="include\Food.h" />
-    <ClInclude Include="include\Diagnostics.h" />
-    <ClInclude Include="include\List.h" />
-    <ClInclude Include="include\Syntax\Expression.h" />
-    <ClInclude Include="include\Syntax\Lex.h" />
-    <ClInclude Include="include\Syntax\Parser.h" />
-    <ClInclude Include="include\Syntax\ParserExpressions.h" />
-    <ClInclude Include="include\Syntax\ParserTypes.h" />
-    <ClInclude Include="include\Syntax\Semantics.h" />
-    <ClInclude Include="include\Types.h" />
+    <ClCompile Include="cwalk.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Arena.c" />
-    <ClCompile Include="src\Configs.c" />
-    <ClCompile Include="src\Diagnostics.c" />
-    <ClCompile Include="src\Driver.c" />
-    <ClCompile Include="src\FileIO.c" />
-    <ClCompile Include="src\Food.c" />
-    <ClCompile Include="src\Syntax\Expression.c" />
-    <ClCompile Include="src\Syntax\Lex.c" />
-    <ClCompile Include="src\Main.c" />
-    <ClCompile Include="src\Syntax\Parser.c" />
-    <ClCompile Include="src\Syntax\ParserExpressions.c" />
-    <ClCompile Include="src\Syntax\ParserTypes.c" />
-    <ClCompile Include="src\Syntax\Semantics.c" />
+    <ClInclude Include="cwalk.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="tests\test.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\cJSON\cJSON.vcxproj">
-      <Project>{2dc338d8-8f1e-41d7-b591-e6b5a1413186}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\cwalk\cwalk.vcxproj">
-      <Project>{f58c432e-2f46-4390-b683-941cbd335f50}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\lua\lua.vcxproj">
-      <Project>{c989f8cd-47c7-402d-a277-f3278048bb07}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="tests\test0\bin\.gitkeep" />
-    <None Include="tests\test0\obj\.gitkeep" />
-    <None Include="tests\test0\src\Main.fd" />
-    <None Include="tests\test0\__ckbuild.json" />
+    <Text Include="cwalkLicense.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -102,6 +102,22 @@ CkExpression *CkExpressionCreateTernary(
 	return expr;
 }
 
+CkExpression *CkExpressionDuplicate(CkArenaFrame *arena, CkExpression *source)
+{
+	CkExpression *dest = CkArenaAllocate(arena, sizeof(CkExpression));
+	if (source->left)
+		dest->left = CkExpressionDuplicate(arena, source->left);
+	if (source->right)
+		dest->right = CkExpressionDuplicate(arena, source->right);
+	if (source->extra)
+		dest->extra = CkExpressionDuplicate(arena, source->extra);
+	dest->kind = source->kind;
+	dest->isLValue = source->isLValue;
+	memcpy_s(&dest->token, sizeof(CkToken), &source->token, sizeof(CkToken));
+	dest->type = CkFoodCopyTypeInstance(arena, source->type);
+	return dest;
+}
+
 static void s_ExprPrintTab(int tab, CkExpression *expression)
 {
 	for (int i = 0; i < tab; i++)

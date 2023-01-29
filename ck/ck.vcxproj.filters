@@ -57,6 +57,9 @@
     <ClInclude Include="include\Syntax\Semantics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Configs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.c">
@@ -95,8 +98,17 @@
     <ClCompile Include="src\Syntax\Semantics.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Configs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="tests\test.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="tests\test0\__ckbuild.json" />
+    <None Include="tests\test0\obj\.gitkeep" />
+    <None Include="tests\test0\bin\.gitkeep" />
+    <None Include="tests\test0\src\Main.fd" />
   </ItemGroup>
 </Project>

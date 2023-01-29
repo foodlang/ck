@@ -1,0 +1,27 @@
+{
+    "name": "Test0",
+    "sourceDirectory": "src/",
+    "objectDirectory": "obj/",
+    "outputDirectory": "bin/",
+
+    "binaryType": 1,
+    "platform": "universal",
+    "system": "universal",
+
+    "warningsAsErrors": false,
+    "debug": true,
+    "optimizationLevel": 1,
+    "sources": [ "Main.fd" ],
+    "libraries": [],
+
+    "profiles": [
+        {
+            "name": "Win64",
+            "binaryType": 4,
+            "platform": "x86_64",
+            "system": "Windows",
+
+            "sources": [ "WinDriverx64.fd" ]
+        }
+    ]
+}

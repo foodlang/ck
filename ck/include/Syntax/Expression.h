@@ -217,6 +217,14 @@ CkExpression *CkExpressionCreateTernary(
 	CkExpression *extra);
 
 /// <summary>
+/// Duplicates an expression.
+/// </summary>
+/// <param name="arena">The arena to allocate the expression on.</param>
+/// <param name="source">The source expression.</param>
+/// <returns></returns>
+CkExpression *CkExpressionDuplicate(CkArenaFrame *arena, CkExpression *source);
+
+/// <summary>
 /// Prints an expression.
 /// </summary>
 /// <param name="expression"></param>

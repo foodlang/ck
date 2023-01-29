@@ -122,7 +122,7 @@ CkExpression *CkSemanticsProcessExpression(
 		// Logical NOT
 	case CK_EXPRESSION_LOGICAL_NOT:
 		assert(newLeft);
-		if (!(TYPE_CLASSED_INT(lType) || lType == CK_FOOD_BOOL)) {
+		if (!(TYPE_CLASSED_INT(lType) || lType == CK_FOOD_BOOL || TYPE_CLASSED_POINTER(lType))) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Logical NOT operator requires an operand of integer or boolean type.");
 		}
