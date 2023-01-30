@@ -1,0 +1,79 @@
+#include <include/Syntax/ParserStatements.h>
+#include <include/Syntax/ParserExpressions.h>
+#include <include/Syntax/Semantics.h>
+#include <include/CDebug.h>
+
+static void s_IfStatement(CkParserInstance *parser, CkTACFunctionDecl *function)
+{
+	CkToken token;
+	CkExpression *condition;
+
+	// if >>>(<<< condition ) stmt
+	CkParserReadToken(parser, &token);
+	if (token.kind != '(') {
+		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			"The condition of an if statement must be wrapped inside brackets.");
+		return;
+	}
+
+	// if ( >>>condition<<< ) stmt
+	condition = CkParserExpression(parser);
+	if (!condition) {
+		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			"The condition of an if statement must be an expression.");
+		return;
+	}
+	condition = CkSemanticsProcessExpression(parser->pDhi, parser->arena, condition);
+	if (
+		condition->type->id != CK_FOOD_BOOL
+		&& !CK_TYPE_CLASSED_INT(condition->type->id)
+		&& !CK_TYPE_CLASSED_POINTER(condition->type->id)) {
+		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			"The condition of an if statement must be of pointer, boolean or integer type.");
+		return;
+	}
+
+	// if ( condition >>>)<<< stmt
+	CkParserReadToken(parser, &token);
+	if (token.kind != ')') {
+		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			"The condition of an if statement must be wrapped inside brackets.");
+		return;
+	}
+
+	CkParseStmt(parser, function);
+}
+
+void CkParseStmt(CkParserInstance *parser, CkTACFunctionDecl *function)
+{
+	CkToken token;
+
+	CK_ARG_NON_NULL(parser);
+	CK_ARG_NON_NULL(function);
+
+	CkParserReadToken(parser, &token);
+	switch (token.kind) {
+
+	case KW_IF:
+		s_IfStatement(parser, function);
+		return;
+
+		// nop
+	case ';':
+		return;
+
+		// Attempts to parse an expression
+	default:
+	{
+		CkExpression *expr = CkParserExpression(parser);
+		if (!expr) {
+			CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"Unknown statement.");
+			return;
+		}
+		expr = CkSemanticsProcessExpression(parser->pDhi, parser->arena, expr);
+		
+	}
+
+	}
+}

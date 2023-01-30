@@ -12,6 +12,16 @@
 #include "Expression.h"
 #include "../Diagnostics.h"
 
+#define CK_TYPE_CLASSED_INT(x) ((x) == CK_FOOD_I8 || (x) == CK_FOOD_U8 || (x) == CK_FOOD_I16 || (x) == CK_FOOD_U16 || \
+							 (x) == CK_FOOD_I32 || (x) == CK_FOOD_U32 || (x) == CK_FOOD_I64 || (x) == CK_FOOD_U64 || \
+							 (x) == CK_FOOD_ENUM)
+
+#define CK_TYPE_CLASSED_FLOAT(x) ((x) == CK_FOOD_F16 || (x) == CK_FOOD_F32 || (x) == CK_FOOD_F64)
+
+#define CK_TYPE_CLASSED_INTFLOAT(x) ((x) >= CK_FOOD_I8 && (x) <= CK_FOOD_F64)
+
+#define CK_TYPE_CLASSED_POINTER(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_FUNCPOINTER)
+
 /// <summary>
 /// Figures out the semantics of an expression.
 /// </summary>

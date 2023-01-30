@@ -3,6 +3,7 @@
 #include <include/Syntax/Parser.h>
 #include <include/Syntax/ParserExpressions.h>
 #include <include/Syntax/Semantics.h>
+#include <include/Queue.h>
 #include <include/Diagnostics.h>
 #include <include/CDebug.h>
 

@@ -194,16 +194,6 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 		}
 		return expr;
 	}
-		// Anything that isn't an expression but is passed as an expression.
-	default:
-		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-			"An expression was expected in this context.");
-
-		return CkExpressionCreateLiteral(
-			parser->arena,
-			&token,
-			CK_EXPRESSION_DUMMY,
-			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_VOID, 0, NULL));
 
 	case KW_SIZEOF:
 	{
@@ -260,6 +250,17 @@ static CkExpression *s_ParsePrimaryExpression(CkParserInstance *parser)
 			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_U64, 0, NULL),
 			CkExpressionCreateType(parser->arena, type));
 	}
+
+		// Anything that isn't an expression but is passed as an expression.
+	default:
+		CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			"An expression was expected in this context.");
+
+		return CkExpressionCreateLiteral(
+			parser->arena,
+			&token,
+			CK_EXPRESSION_DUMMY,
+			CkFoodCreateTypeInstance(parser->arena, CK_FOOD_VOID, 0, NULL));
 
 	}
 }

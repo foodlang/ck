@@ -3,16 +3,6 @@
 
 #include <assert.h>
 
-#define TYPE_CLASSED_INT(x) ((x) == CK_FOOD_I8 || (x) == CK_FOOD_U8 || (x) == CK_FOOD_I16 || (x) == CK_FOOD_U16 || \
-							 (x) == CK_FOOD_I32 || (x) == CK_FOOD_U32 || (x) == CK_FOOD_I64 || (x) == CK_FOOD_U64 || \
-							 (x) == CK_FOOD_ENUM)
-
-#define TYPE_CLASSED_FLOAT(x) ((x) == CK_FOOD_F16 || (x) == CK_FOOD_F32 || (x) == CK_FOOD_F64)
-
-#define TYPE_CLASSED_INTFLOAT(x) ((x) >= CK_FOOD_I8 && (x) <= CK_FOOD_F64)
-
-#define TYPE_CLASSED_POINTER(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_FUNCPOINTER)
-
 CkExpression *CkSemanticsProcessExpression(
 	CkDiagnosticHandlerInstance *dhi,
 	CkArenaFrame *outputArena,
@@ -85,7 +75,7 @@ CkExpression *CkSemanticsProcessExpression(
 				"Increment and decrement operators require an l-value operand.");
 		}
 
-		if (!( TYPE_CLASSED_INT(lType) || lType == CK_FOOD_POINTER)) {
+		if (!( CK_TYPE_CLASSED_INT(lType) || lType == CK_FOOD_POINTER)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Increment and decrement operators require an operand that is of integer or pointer type.");
 		}
@@ -98,7 +88,7 @@ CkExpression *CkSemanticsProcessExpression(
 	case CK_EXPRESSION_UNARY_PLUS:
 	case CK_EXPRESSION_UNARY_MINUS:
 		assert(newLeft);
-		if (!TYPE_CLASSED_INTFLOAT(lType)) {
+		if (!CK_TYPE_CLASSED_INTFLOAT(lType)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Unary plus and minus operators require an operand that is of integer or float type.");
 		}
@@ -110,7 +100,7 @@ CkExpression *CkSemanticsProcessExpression(
 		// Bitwise NOT
 	case CK_EXPRESSION_BITWISE_NOT:
 		assert(newLeft);
-		if (!TYPE_CLASSED_INT(lType)) {
+		if (!CK_TYPE_CLASSED_INT(lType)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Bitwise NOT operator requires an operand of integer type.");
 		}
@@ -122,7 +112,7 @@ CkExpression *CkSemanticsProcessExpression(
 		// Logical NOT
 	case CK_EXPRESSION_LOGICAL_NOT:
 		assert(newLeft);
-		if (!(TYPE_CLASSED_INT(lType) || lType == CK_FOOD_BOOL || TYPE_CLASSED_POINTER(lType))) {
+		if (!(CK_TYPE_CLASSED_INT(lType) || lType == CK_FOOD_BOOL || CK_TYPE_CLASSED_POINTER(lType))) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Logical NOT operator requires an operand of integer or boolean type.");
 		}
@@ -170,7 +160,7 @@ CkExpression *CkSemanticsProcessExpression(
 		assert(newLeft);
 		assert(newRight);
 
-		if (!TYPE_CLASSED_INTFLOAT(lType) || !TYPE_CLASSED_INTFLOAT(rType)) {
+		if (!CK_TYPE_CLASSED_INTFLOAT(lType) || !CK_TYPE_CLASSED_INTFLOAT(rType)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Multiplication and division operations require integer or float operands.");
 		}
@@ -192,7 +182,7 @@ CkExpression *CkSemanticsProcessExpression(
 		assert(newLeft);
 		assert(newRight);
 
-		if (!TYPE_CLASSED_INT(lType) || !TYPE_CLASSED_INT(rType)) {
+		if (!CK_TYPE_CLASSED_INT(lType) || !CK_TYPE_CLASSED_INT(rType)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The modulo operator require integer operands.");
 		}
@@ -216,8 +206,8 @@ CkExpression *CkSemanticsProcessExpression(
 		assert(newLeft);
 		assert(newRight);
 
-		if (!(TYPE_CLASSED_INTFLOAT(lType) || lType == CK_FOOD_POINTER)
-		 || !(TYPE_CLASSED_INTFLOAT(rType) || rType == CK_FOOD_POINTER)) {
+		if (!(CK_TYPE_CLASSED_INTFLOAT(lType) || lType == CK_FOOD_POINTER)
+		 || !(CK_TYPE_CLASSED_INTFLOAT(rType) || rType == CK_FOOD_POINTER)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Addition and subtraction operations require integer, float or pointer operands.");
 		}
@@ -252,8 +242,8 @@ CkExpression *CkSemanticsProcessExpression(
 
 		// This is odd because the left operand can be any integer or pointer,
 		// but the right operand can only be an integer.
-		if (!( TYPE_CLASSED_INT(lType) || lType == CK_FOOD_POINTER )
-			|| !TYPE_CLASSED_INT(rType)) {
+		if (!( CK_TYPE_CLASSED_INT(lType) || lType == CK_FOOD_POINTER )
+			|| !CK_TYPE_CLASSED_INT(rType)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Bitwise shifts require the first operand to be of integer or pointer type, and the second operand to be of integer type.");
 		}
@@ -275,13 +265,13 @@ CkExpression *CkSemanticsProcessExpression(
 		assert(newLeft);
 		assert(newRight);
 
-		if (!( TYPE_CLASSED_INTFLOAT(lType) || lType == CK_FOOD_POINTER )
-			|| !( TYPE_CLASSED_INTFLOAT(rType) || rType == CK_FOOD_POINTER )) {
+		if (!( CK_TYPE_CLASSED_INTFLOAT(lType) || lType == CK_FOOD_POINTER )
+			|| !( CK_TYPE_CLASSED_INTFLOAT(rType) || rType == CK_FOOD_POINTER )) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Lower, lower equal, greater and greater-equal require operands of integer, pointer or float types.");
 		}
 
-		if (TYPE_CLASSED_FLOAT(lType) || TYPE_CLASSED_FLOAT(rType)) {
+		if (CK_TYPE_CLASSED_FLOAT(lType) || CK_TYPE_CLASSED_FLOAT(rType)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_MESSAGE, "float-approximative-comparison",
 				"Floats cannot be compared practically. An approximative version of the comparison operator will be used.");
 		}
@@ -297,13 +287,13 @@ CkExpression *CkSemanticsProcessExpression(
 		assert(newRight);
 
 		if (lType != rType
-			&& !(TYPE_CLASSED_INTFLOAT(lType) && TYPE_CLASSED_INTFLOAT(rType))
-			&& !(TYPE_CLASSED_POINTER(lType) && TYPE_CLASSED_POINTER(rType))) {
+			&& !(CK_TYPE_CLASSED_INTFLOAT(lType) && CK_TYPE_CLASSED_INTFLOAT(rType))
+			&& !(CK_TYPE_CLASSED_POINTER(lType) && CK_TYPE_CLASSED_POINTER(rType))) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The equality operator requires the two operands to be compatible or equal.");
 		}
 
-		if (TYPE_CLASSED_FLOAT(lType) || TYPE_CLASSED_FLOAT(rType)) {
+		if (CK_TYPE_CLASSED_FLOAT(lType) || CK_TYPE_CLASSED_FLOAT(rType)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_MESSAGE, "float-approximative-comparison",
 				"Floats cannot be compared practically. An approximative version of the comparison operator will be used.");
 		}
@@ -323,8 +313,8 @@ CkExpression *CkSemanticsProcessExpression(
 		assert(newLeft);
 		assert(newRight);
 
-		if (!( TYPE_CLASSED_INT(lType) || lType == CK_FOOD_POINTER )
-			|| !( TYPE_CLASSED_INT(rType) || rType == CK_FOOD_POINTER )) {
+		if (!( CK_TYPE_CLASSED_INT(lType) || lType == CK_FOOD_POINTER )
+			|| !( CK_TYPE_CLASSED_INT(rType) || rType == CK_FOOD_POINTER )) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Bitwise operators require that their two operands be of integer or pointer type.");
 		}
@@ -350,8 +340,8 @@ CkExpression *CkSemanticsProcessExpression(
 		assert(newLeft);
 		assert(newRight);
 
-		if (!(lType == CK_FOOD_BOOL || TYPE_CLASSED_INT(lType) || TYPE_CLASSED_POINTER(lType))
-		 || !(rType == CK_FOOD_BOOL || TYPE_CLASSED_INT(rType) || TYPE_CLASSED_POINTER(rType))) {
+		if (!(lType == CK_FOOD_BOOL || CK_TYPE_CLASSED_INT(lType) || CK_TYPE_CLASSED_POINTER(lType))
+		 || !(rType == CK_FOOD_BOOL || CK_TYPE_CLASSED_INT(rType) || CK_TYPE_CLASSED_POINTER(rType))) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Logical operations require that their two operands be of integer or boolean type.");
 		}
@@ -380,14 +370,14 @@ CkExpression *CkSemanticsProcessExpression(
 		assert(newRight);
 		assert(newExtra);
 
-		if (!( eType == CK_FOOD_BOOL || TYPE_CLASSED_INT(eType) || TYPE_CLASSED_POINTER(eType) )) {
+		if (!( eType == CK_FOOD_BOOL || CK_TYPE_CLASSED_INT(eType) || CK_TYPE_CLASSED_POINTER(eType) )) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The condition of a conditional expression must be of integer or boolean type.");
 		}
 
 		if (lType != rType
-			&& !( TYPE_CLASSED_INTFLOAT(lType) && TYPE_CLASSED_INTFLOAT(rType) )
-			&& !( TYPE_CLASSED_POINTER(lType) && TYPE_CLASSED_POINTER(rType) )) {
+			&& !( CK_TYPE_CLASSED_INTFLOAT(lType) && CK_TYPE_CLASSED_INTFLOAT(rType) )
+			&& !( CK_TYPE_CLASSED_POINTER(lType) && CK_TYPE_CLASSED_POINTER(rType) )) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The left and right branches of a conditional expression must be of compatible or equal type.");
 		}
@@ -435,8 +425,8 @@ CkExpression *CkSemanticsProcessExpression(
 		}
 
 		if (lType != rType
-			&& !( TYPE_CLASSED_INTFLOAT(lType) && TYPE_CLASSED_INTFLOAT(rType) )
-			&& !( TYPE_CLASSED_POINTER(lType) && TYPE_CLASSED_POINTER(rType) )) {
+			&& !( CK_TYPE_CLASSED_INTFLOAT(lType) && CK_TYPE_CLASSED_INTFLOAT(rType) )
+			&& !( CK_TYPE_CLASSED_POINTER(lType) && CK_TYPE_CLASSED_POINTER(rType) )) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Both sides of the assignment must be of equal type.");
 		}
@@ -454,7 +444,7 @@ CkExpression *CkSemanticsProcessExpression(
 				"Subscripted object must be an array or a pointer.");
 		}
 
-		if (!TYPE_CLASSED_INT(rType)) {
+		if (!CK_TYPE_CLASSED_INT(rType)) {
 			CkDiagnosticThrow(dhi, new->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The index of the subscript must be of integer type.");
 		}

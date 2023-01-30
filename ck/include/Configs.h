@@ -6,7 +6,7 @@
 #ifndef CK_CONFIGS_H_
 #define CK_CONFIGS_H_
 
-#include "Arena.h"
+#include "List.h"
 
 // The filename of a build config file, relative to the directory specified.
 #define CK_BUILD_FILE_RELATIVE "__ckbuild.json"
@@ -118,37 +118,19 @@ typedef struct CkBuildConfig
 
 	/// <summary>
 	/// A list of CkBuildConfig structs that store the
-	/// individual build profiles. Once written to, it is 
-	/// locked.
+	/// individual build profiles.
 	/// </summary>
-	CkArenaFrame profiles;
+	CkList profiles;
 
 	/// <summary>
-	/// The amount of profiles.
+	/// A list of relative source filepaths.
 	/// </summary>
-	size_t       profileCount;
+	CkList sources;
 
 	/// <summary>
-	/// A list of relative source filepaths. Once written to, it is 
-	/// locked.
+	/// A list of paths to Food libraries.
 	/// </summary>
-	CkArenaFrame sources;
-
-	/// <summary>
-	/// The amount of source files.
-	/// </summary>
-	size_t       sourceCount;
-
-	/// <summary>
-	/// A list of paths to Food libraries. Once written to, it is 
-	/// locked.
-	/// </summary>
-	CkArenaFrame libraries;
-
-	/// <summary>
-	/// The amount of libraries.
-	/// </summary>
-	size_t       libraryCount;
+	CkList libraries;
 
 } CkBuildConfig;
 

@@ -184,76 +184,68 @@ static bool_t s_PopulateConfig(
 		config->optLevel = (uint8_t)cJSON_GetNumberValue(jOptLevel);
 	} else config->optLevel = 1;
 
-	if (parent && ( !jSourcesRoot && (parent->sourceCount == 0) )) {
+	if (parent && ( !jSourcesRoot && (parent->sources.elemCount == 0) )) {
 		fprintf_s(stderr, "ck: A configuration or profile must have source files.\n");
 		return FALSE;
 	}
 	if (jSourcesRoot) {
 		cJSON *sourcePath;
+		size_t count;
 
 		CHECKJ_ARRAY(jSourcesRoot, CONFIGOBJECT_SOURCES);
-		config->sourceCount = (size_t)cJSON_GetArraySize(jSourcesRoot);
-		CkArenaStartFrame(&config->sources, 0);
+		count = (size_t)cJSON_GetArraySize(jSourcesRoot);
+		CkListStart(&config->sources, arena, sizeof(char *), count);
 		
 		cJSON_ArrayForEach(sourcePath, jSourcesRoot) {
-			char *jStr = cJSON_GetStringValue(sourcePath);
-			char *dest;
 			if (!cJSON_IsString(sourcePath)) {
 				fprintf_s(stderr, "ck: A source path must be a string.\n");
-				config->sourceCount = 0;
-				CkArenaWriteLock(&config->sources);
 				return FALSE;
 			}
-			dest = CkArenaAllocate(&config->sources, strlen(jStr) + 1);
-			strcpy_s(dest, strlen(jStr) + 1, jStr);
+			CkListAdd(
+				&config->sources,
+				s_StringDuplicate(arena, cJSON_GetStringValue(sourcePath)));
 		}
-		CkArenaWriteLock(&config->sources);
-	}
+	} else CkListStart(&config->sources, arena, sizeof(char *), 0); // empty list
 
 	if (jLibrariesRoot) {
 		cJSON *libraryPath;
+		size_t count;
 
 		CHECKJ_ARRAY(jLibrariesRoot, CONFIGOBJECT_LIBRARIES);
-		config->libraryCount = (size_t)cJSON_GetArraySize(jLibrariesRoot);
-		CkArenaStartFrame(&config->libraries, 0);
+		count = (size_t)cJSON_GetArraySize(jLibrariesRoot);
+		CkListStart(&config->libraries, arena, sizeof(char *), count);
 
 		cJSON_ArrayForEach(libraryPath, jLibrariesRoot) {
-			char *jStr = cJSON_GetStringValue(libraryPath);
-			char *dest;
 			if (!cJSON_IsString(libraryPath)) {
 				fprintf_s(stderr, "ck: A library path must be a string.\n");
-				config->libraryCount = 0;
-				CkArenaWriteLock(&config->libraries);
 				return FALSE;
 			}
-			dest = CkArenaAllocate(&config->libraries, strlen(jStr) + 1);
-			strcpy_s(dest, strlen(jStr) + 1, jStr);
+			CkListAdd(
+				&config->libraries,
+				s_StringDuplicate(arena, cJSON_GetStringValue(libraryPath)));
 		}
-		CkArenaWriteLock(&config->libraries);
-	}
+	} else CkListStart(&config->libraries, arena, sizeof(char *), 0); // empty list
 
 	if (jProfilesRoot) {
 		cJSON *profile;
+		size_t count;
 
 		if (parent) {
 			fprintf_s(stderr, "ck: Cannot nest profiles.\n");
 			return FALSE;
 		}
 		CHECKJ_ARRAY(jProfilesRoot, CONFIGOBJECT_PROFILES);
-		config->profileCount = (size_t)cJSON_GetArraySize(jProfilesRoot);
-		CkArenaStartFrame(&config->profiles, 0);
+		count = (size_t)cJSON_GetArraySize(jProfilesRoot);
+		CkListStart(&config->profiles, arena, sizeof(CkBuildConfig), count);
 
 		cJSON_ArrayForEach(profile, jProfilesRoot) {
-			CkBuildConfig *dest;
-			dest = CkArenaAllocate(&config->profiles, sizeof(CkBuildConfig));
-			if (!s_PopulateConfig(arena, profile, dest, config)) {
-				config->profileCount = 0;
-				CkArenaWriteLock(&config->profiles);
+			CkBuildConfig dest;
+			if (!s_PopulateConfig(arena, profile, &dest, config)) {
 				return FALSE;
 			}
+			CkListAdd(&config->profiles, &dest);
 		}
-		CkArenaWriteLock(&config->profiles);
-	}
+	} else CkListStart(&config->profiles, arena, sizeof(CkBuildConfig), 0); // empty list
 
 	return TRUE;
 }
@@ -310,13 +302,8 @@ CkBuildConfig *CkConfigApplied(
 	CkBuildConfig *currentProfile;
 	CkBuildConfig *selected = NULL;
 
-	char *baseSourcesToWrite;
-	char *selectedSourcesToWrite;
-	char *baseLibrariesToWrite;
-	char *selectedLibrariesToWrite;
-
 	if (!profileName) goto LSkipLookup;
-	for (size_t i = 0; i < base->profileCount; i++) {
+	for (size_t i = 0; i < base->profiles.elemCount; i++) {
 		currentProfile = (CkBuildConfig *)((char *)(base->profiles.base) + BUILDCONFIG_SIZE_ALIGNED * i);
 		if (!strcmp(currentProfile->name, profileName)) {
 			selected = currentProfile;
@@ -357,30 +344,42 @@ LSkipLookup:
 	total->optLevel = selected->optLevel ? selected->optLevel : base->optLevel;
 
 	// Sources
-	CkArenaStartFrame(&total->sources, base->sources.offsetFree + selected->sources.offsetFree);
-	if (base->sourceCount) {
-		baseSourcesToWrite = CkArenaAllocate(&total->sources, base->sources.offsetFree);
-		memcpy_s(baseSourcesToWrite, base->sources.offsetFree, base->sources.base, base->sources.offsetFree);
+	CkListStart(&total->sources, allocator, sizeof(char *), base->sources.elemCount + selected->sources.elemCount);
+	if (base->sources.elemCount) {
+		for (size_t i = 0; i < base->sources.elemCount; i++) {
+			CkListAdd(
+				&total->sources,
+				s_StringDuplicate(allocator,
+					CkListAccess(&base->sources, i)));
+		}
 	}
-	if (selected->sourceCount) {
-		selectedSourcesToWrite = CkArenaAllocate(&total->sources, selected->sources.offsetFree);
-		memcpy_s(selectedSourcesToWrite, selected->sources.offsetFree, selected->sources.base, selected->sources.offsetFree);
+	if (selected->sources.elemCount) {
+		for (size_t i = 0; i < selected->sources.elemCount; i++) {
+			CkListAdd(
+				&total->sources,
+				s_StringDuplicate(allocator,
+					CkListAccess(&selected->sources, i)));
+		}
 	}
-	CkArenaWriteLock(&total->sources);
-	total->sourceCount = base->sourceCount + selected->sourceCount;
 
 	// Libraries
-	CkArenaStartFrame(&total->libraries, base->libraries.offsetFree + selected->libraries.offsetFree);
-	if (base->libraryCount) {
-		baseLibrariesToWrite = CkArenaAllocate(&total->libraries, base->libraries.offsetFree);
-		memcpy_s(baseLibrariesToWrite, base->libraries.offsetFree, base->libraries.base, base->libraries.offsetFree);
+	CkListStart(&total->libraries, allocator, sizeof(char *), base->libraries .elemCount + selected->libraries.elemCount);
+	if (base->libraries.elemCount) {
+		for (size_t i = 0; i < base->libraries.elemCount; i++) {
+			CkListAdd(
+				&total->libraries,
+				s_StringDuplicate(allocator,
+					CkListAccess(&base->libraries, i)));
+		}
 	}
-	if (selected->libraryCount) {
-		selectedLibrariesToWrite = CkArenaAllocate(&total->libraries, selected->libraries.offsetFree);
-		memcpy_s(selectedLibrariesToWrite, selected->libraries.offsetFree, selected->libraries.base, selected->libraries.offsetFree);
+	if (selected->libraries.elemCount) {
+		for (size_t i = 0; i < selected->libraries.elemCount; i++) {
+			CkListAdd(
+				&total->libraries,
+				s_StringDuplicate(allocator,
+					CkListAccess(&selected->libraries, i)));
+		}
 	}
-	CkArenaWriteLock(&total->libraries);
-	total->libraryCount = base->libraryCount + selected->libraryCount;
 
 	return total;
 }
@@ -391,7 +390,7 @@ char *CkConfigGetSource(CkBuildConfig *cfg, size_t index)
 	size_t strCounter = 0;
 	bool_t walkingThroughAlignment = FALSE;
 
-	if (cfg->sourceCount <= index) {
+	if (cfg->sources.elemCount <= index) {
 		fprintf_s(stderr, "ck: Project '%s' doesn't have %llu source files.\n", cfg->name, index);
 		return NULL;
 	}

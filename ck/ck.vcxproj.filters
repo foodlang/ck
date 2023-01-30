@@ -51,13 +51,25 @@
     <ClInclude Include="include\Arena.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\List.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Syntax\Semantics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Configs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Queue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Intermediate\IL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Syntax\ParserStatements.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Intermediate\Emitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\List.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -99,6 +111,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Configs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Queue.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Syntax\ParserStatements.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Intermediate\Emitter.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\List.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

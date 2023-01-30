@@ -218,20 +218,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\Arena.h" />
+    <ClInclude Include="include\Intermediate\Emitter.h" />
+    <ClInclude Include="include\List.h" />
+    <ClInclude Include="include\Queue.h" />
     <ClInclude Include="include\CDebug.h" />
     <ClInclude Include="include\Configs.h" />
     <ClInclude Include="include\Driver.h" />
     <ClInclude Include="include\FileIO.h" />
     <ClInclude Include="include\Food.h" />
     <ClInclude Include="include\Diagnostics.h" />
-    <ClInclude Include="include\List.h" />
     <ClInclude Include="include\Syntax\Expression.h" />
     <ClInclude Include="include\Syntax\Lex.h" />
     <ClInclude Include="include\Syntax\Parser.h" />
     <ClInclude Include="include\Syntax\ParserExpressions.h" />
+    <ClInclude Include="include\Syntax\ParserStatements.h" />
     <ClInclude Include="include\Syntax\ParserTypes.h" />
     <ClInclude Include="include\Syntax\Semantics.h" />
     <ClInclude Include="include\Types.h" />
+    <ClInclude Include="include\Intermediate\IL.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Arena.c" />
@@ -240,11 +244,15 @@
     <ClCompile Include="src\Driver.c" />
     <ClCompile Include="src\FileIO.c" />
     <ClCompile Include="src\Food.c" />
+    <ClCompile Include="src\Intermediate\Emitter.c" />
+    <ClCompile Include="src\List.c" />
+    <ClCompile Include="src\Queue.c" />
     <ClCompile Include="src\Syntax\Expression.c" />
     <ClCompile Include="src\Syntax\Lex.c" />
     <ClCompile Include="src\Main.c" />
     <ClCompile Include="src\Syntax\Parser.c" />
     <ClCompile Include="src\Syntax\ParserExpressions.c" />
+    <ClCompile Include="src\Syntax\ParserStatements.c" />
     <ClCompile Include="src\Syntax\ParserTypes.c" />
     <ClCompile Include="src\Syntax\Semantics.c" />
   </ItemGroup>

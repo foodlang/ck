@@ -7,6 +7,7 @@
 
 #include "Syntax/Lex.h"
 #include "Arena.h"
+#include "List.h"
 
 enum
 {
@@ -62,22 +63,12 @@ typedef struct CkDiagnosticHandlerInstance
 	/// <summary>
 	/// Stores all of the blacklisted diagnostics (diagnostics to skip over.)
 	/// </summary>
-	CkArenaFrame blacklistVector;
-
-	/// <summary>
-	/// The amount of elements in the blacklist vector.
-	/// </summary>
-	size_t blacklistCount;
+	CkList blacklistVector;
 
 	/// <summary>
 	/// Stores all of the thrown diagnotics.
 	/// </summary>
-	CkArenaFrame thrownDiagnosticsVector;
-
-	/// <summary>
-	/// The amount of thrown diagnostics.
-	/// </summary>
-	size_t thrownDiagnosticsCount;
+	CkList thrownDiagnosticsVector;
 
 	/// <summary>
 	/// True if the diagnostics encounters any errors.

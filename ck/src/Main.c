@@ -25,7 +25,7 @@ int main(int argc, char *argv[], char **envp)
 
 	puts("CK, The Official Food Compiler");
 	puts("Copyright (C) 2023 The Food Project & outside contributors");
-#if _DEBUG
+#if defined(_DEBUG)
 	puts("This is a debug build of CK. The compiler might not perform as fast as release builds.");
 #endif
 
@@ -63,7 +63,7 @@ int main(int argc, char *argv[], char **envp)
 	(void)envp;
 
 	CkArenaStartFrame(&driverArena, 0);
-	for (size_t i = 0; i < applied->sourceCount; i++) {
+	for (size_t i = 0; i < applied->sources.elemCount; i++) {
 		const char *source = CkConfigGetSource(applied, i);
 		char *sourceTotal;
 		size_t nameLen;
@@ -106,8 +106,10 @@ int main(int argc, char *argv[], char **envp)
 		CkDriverCompile(&driverArena, &driverResult, &driverStart);
 
 		// Resetting the frame for the next file
-		CkArenaResetFrame(&driverArena);
+		//CkArenaResetFrame(&driverArena);
 	}
+
+	while (TRUE) {}
 
 	CkArenaEndFrame(&configArena);
 	CkArenaEndFrame(&driverArena);
