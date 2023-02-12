@@ -1,5 +1,5 @@
-#include <include/Arena.h>
-#include <include/CDebug.h>
+#include "../Arena.h"
+#include "../CDebug.h"
 #include <stdio.h>
 #if _WIN32
 #include <Windows.h>
@@ -80,5 +80,27 @@ void CkArenaWriteUnlock(CkArenaFrame *frame)
 	VirtualProtect(frame->base, frame->size, PAGE_READWRITE, &old);
 #else
 	mprotect(frame->base, frame->size, PROT_READ | PROT_WRITE);
+#endif
+}
+
+void CkArenaExecLock( CkArenaFrame *frame )
+{
+	unsigned long old;
+	CK_ARG_NON_NULL( frame );
+#if _WIN32
+	VirtualProtect( frame->base, frame->size, PAGE_READWRITE, &old );
+#else
+	mprotect( frame->base, frame->size, PROT_READ | PROT_WRITE );
+#endif
+}
+
+void CkArenaExecUnlock( CkArenaFrame *frame )
+{
+	unsigned long old;
+	CK_ARG_NON_NULL( frame );
+#if _WIN32
+	VirtualProtect( frame->base, frame->size, PAGE_EXECUTE_READWRITE, &old );
+#else
+	mprotect( frame->base, frame->size, PROT_READ | PROT_WRITE | PROT_EXEC );
 #endif
 }

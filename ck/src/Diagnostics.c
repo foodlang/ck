@@ -1,5 +1,5 @@
 #include <include/Diagnostics.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 #include <include/FileIO.h>
 
 #include <malloc.h>
@@ -13,62 +13,65 @@
 void CkDiagnosticHandlerCreateInstance(
 	CkArenaFrame *arena,
 	CkDiagnosticHandlerInstance *dhi,
-	CkLexInstance *pPassedLexer)
+	CkLexInstance *pPassedLexer )
 {
-	CK_ARG_NON_NULL(dhi)
-	CK_ARG_NON_NULL(arena)
-	CK_ARG_NON_NULL(pPassedLexer)
+	CK_ARG_NON_NULL( dhi )
+		CK_ARG_NON_NULL( arena )
+		CK_ARG_NON_NULL( pPassedLexer )
 
-	dhi->pPassedSource = pPassedLexer;
+		dhi->pPassedSource = pPassedLexer;
 	dhi->arena = arena;
 	dhi->anyErrors = FALSE;
 	dhi->anyWarnings = FALSE;
 
-	CkListStart(&dhi->blacklistVector, arena, sizeof(char *), 512);
-	CkListStart(&dhi->thrownDiagnosticsVector, arena, sizeof(CkThrownDiagnostic), 4096);
+	CkListStart( &dhi->blacklistVector, arena, sizeof( char * ), 512 );
+	CkListStart( &dhi->thrownDiagnosticsVector, arena, sizeof( CkThrownDiagnostic ), 4096 );
 }
 
-void CkDiagnosticHandlerDestroyInstance(CkDiagnosticHandlerInstance *dhi)
+void CkDiagnosticHandlerDestroyInstance( CkDiagnosticHandlerInstance *dhi )
 {
-	CK_ARG_NON_NULL(dhi)
+	CK_ARG_NON_NULL( dhi )
 
-	CkListClear(&dhi->blacklistVector);
-	CkListClear(&dhi->thrownDiagnosticsVector);
+		CkListClear( &dhi->blacklistVector );
+	CkListClear( &dhi->thrownDiagnosticsVector );
 }
 
-void CkDiagnosticBlacklist(CkDiagnosticHandlerInstance *dhi, char *name)
+void CkDiagnosticBlacklist( CkDiagnosticHandlerInstance *dhi, char *name )
 {
 	size_t nameLength;   // The length of the blacklist name entry.
-	char   *blacklist;   // The destination blacklist entry.
+	char *blacklist;   // The destination blacklist entry.
 
-	CK_ARG_NON_NULL(dhi)
-	CK_ARG_NON_NULL(name)
+	CK_ARG_NON_NULL( dhi )
+		CK_ARG_NON_NULL( name )
 
-	// 1. Preventing duplicate entries
-	for (size_t i = 0; i < dhi->blacklistVector.elemCount; i++) {
-		if (!strcmp(CkListAccess(&dhi->blacklistVector, i), name))
-			return;
-	}
-
-	nameLength = strlen(name) + 1;
-	blacklist = CkArenaAllocate(dhi->arena, nameLength);
-	strcpy_s(blacklist, nameLength, name);
-	CkListAdd(&dhi->blacklistVector, blacklist);
-}
-
-void CkDiagnosticWhitelist(CkDiagnosticHandlerInstance *dhi, char *name)
-{
-	CK_ARG_NON_NULL(dhi)
-	CK_ARG_NON_NULL(name)
-
-	for (size_t i = 0; i < dhi->blacklistVector.elemCount; i++) {
-		char *base = CkListAccess(&dhi->blacklistVector, i);
-		if (!strcmp(base, name)) {
-			CkListRemove(&dhi->blacklistVector, i);
-			return;
+		// 1. Preventing duplicate entries
+		for ( size_t i = 0; i < dhi->blacklistVector.elemCount; i++ ) {
+			if ( !strcmp( CkListAccess( &dhi->blacklistVector, i ), name ) )
+				return;
 		}
-	}
+
+	nameLength = strlen( name ) + 1;
+	blacklist = CkArenaAllocate( dhi->arena, nameLength );
+	strcpy_s( blacklist, nameLength, name );
+	CkListAdd( &dhi->blacklistVector, blacklist );
 }
+
+void CkDiagnosticWhitelist( CkDiagnosticHandlerInstance *dhi, char *name )
+{
+	CK_ARG_NON_NULL( dhi )
+		CK_ARG_NON_NULL( name )
+
+		for ( size_t i = 0; i < dhi->blacklistVector.elemCount; i++ ) {
+			char *base = CkListAccess( &dhi->blacklistVector, i );
+			if ( !strcmp( base, name ) ) {
+				CkListRemove( &dhi->blacklistVector, i );
+				return;
+			}
+		}
+}
+
+static char s_prefixBuffer[MAXDIAGLENGTH];  // The prefix buffer
+static char s_messageBuffer[MAXDIAGLENGTH]; // The message buffer
 
 void CkDiagnosticThrow(
 	CkDiagnosticHandlerInstance *dhi,
@@ -76,16 +79,14 @@ void CkDiagnosticThrow(
 	uint8_t severity,
 	char *name,
 	const char *restrict format,
-	...)
+	... )
 {
 	va_list va_args;
 	CkThrownDiagnostic diag; // The diagnostic entry to write to
 
-	char *prefixBuffer;   // The prefix buffer
-	char *messageBuffer;  // The message buffer
-	size_t prefixLength;  // The length of the prefix buffer
-	size_t messageLength; // The length of the message buffer
-	size_t totalLength;   // The diagnostic message length
+	size_t prefixLength;                 // The length of the prefix buffer
+	size_t messageLength;                // The length of the message buffer
+	size_t totalLength;                  // The diagnostic message length
 
 	// position in 2D text coordinates
 	size_t pos2DRow;
@@ -93,66 +94,64 @@ void CkDiagnosticThrow(
 
 	const char *severityTxt; // The severity of the diagnostic, as text.
 
-	CK_ARG_NON_NULL(dhi)
-	CK_ARG_NON_NULL(name)
-	CK_ARG_NON_NULL(format)
+	CK_ARG_NON_NULL( dhi )
+		CK_ARG_NON_NULL( name )
+		CK_ARG_NON_NULL( format )
 
-	switch (severity) {
-	case CK_DIAG_SEVERITY_MESSAGE:
-		severityTxt = "message";
-		break;
-	case CK_DIAG_SEVERITY_WARNING:
-		severityTxt = "warning";
-		break;
-	case CK_DIAG_SEVERITY_ERROR:
-		severityTxt = "error";
-		break;
-	default:
-		abort();
-	}
+		switch ( severity ) {
+		case CK_DIAG_SEVERITY_MESSAGE:
+			severityTxt = "message";
+			break;
+		case CK_DIAG_SEVERITY_WARNING:
+			severityTxt = "warning";
+			break;
+		case CK_DIAG_SEVERITY_ERROR:
+			severityTxt = "error";
+			break;
+		default:
+			abort();
+		}
 
 	// Blacklist check
-	if (severity == CK_DIAG_SEVERITY_WARNING) {
-		for (size_t i = 0; i < dhi->blacklistVector.elemCount; i++) {
+	if ( severity == CK_DIAG_SEVERITY_WARNING ) {
+		for ( size_t i = 0; i < dhi->blacklistVector.elemCount; i++ ) {
 			// Blacklisted warnings are ignored
-			char **base = CkListAccess(&dhi->blacklistVector, i);
-			if (!strcmp(name, *base))
+			char **base = CkListAccess( &dhi->blacklistVector, i );
+			if ( !strcmp( name, *base ) )
 				return;
 		}
 	}
 
-	va_start(va_args, format);
-	CkGetRowColString(dhi->pPassedSource->source, position, &pos2DRow, &pos2DCol);
+	va_start( va_args, format );
+	CkGetRowColString( dhi->pPassedSource->source, position, &pos2DRow, &pos2DCol );
 
 	// Allocating and writing to the sub-buffers
-	prefixBuffer = _malloca(MAXDIAGLENGTH);
-	messageBuffer = _malloca(MAXDIAGLENGTH);
-	sprintf_s(prefixBuffer, MAXDIAGLENGTH, DIAGNOSTICPREFIXFORMAT, severityTxt, pos2DRow, pos2DCol);
-	vsnprintf_s(messageBuffer, MAXDIAGLENGTH, MAXDIAGLENGTH - 1, format, va_args);
+	sprintf_s( s_prefixBuffer, MAXDIAGLENGTH, DIAGNOSTICPREFIXFORMAT, severityTxt, pos2DRow, pos2DCol );
+	vsnprintf_s( s_messageBuffer, MAXDIAGLENGTH, MAXDIAGLENGTH - 1, format, va_args );
 
 	// Getting the length of the sub-buffers and final buffer length
-	prefixLength = strnlen_s(prefixBuffer, MAXDIAGLENGTH);
-	messageLength = strnlen_s(messageBuffer, MAXDIAGLENGTH);
+	prefixLength = strnlen_s( s_prefixBuffer, MAXDIAGLENGTH );
+	messageLength = strnlen_s( s_messageBuffer, MAXDIAGLENGTH );
 	totalLength = prefixLength + messageLength;
 
 	// Allocating and writing to the final buffer
-	diag.message = CkArenaAllocate(dhi->arena, totalLength + 1);
+	diag.message = CkArenaAllocate( dhi->arena, totalLength + 1 );
 	diag.severity = severity;
-	strcpy_s(diag.message, totalLength + 1, prefixBuffer);
-	strcat_s(diag.message, totalLength + 1, messageBuffer);
-	_freea(prefixBuffer);
-	_freea(messageBuffer);
+	strcpy_s( diag.message, totalLength + 1, s_prefixBuffer );
+	strcat_s( diag.message, totalLength + 1, s_messageBuffer );
+	memset( s_prefixBuffer, 0, MAXDIAGLENGTH );
+	memset( s_messageBuffer, 0, MAXDIAGLENGTH );
 
-	CkListAdd(&dhi->thrownDiagnosticsVector, &diag);
+	CkListAdd( &dhi->thrownDiagnosticsVector, &diag );
 
-	va_end(va_args);
+	va_end( va_args );
 }
 
-void CkDiagnosticDisplay(CkDiagnosticHandlerInstance *dhi)
+void CkDiagnosticDisplay( CkDiagnosticHandlerInstance *dhi )
 {
-	CK_ARG_NON_NULL(dhi)
-	for (size_t i = 0; i < dhi->thrownDiagnosticsVector.elemCount; i++) {
-		const CkThrownDiagnostic *diagnostic = CkListAccess(&dhi->thrownDiagnosticsVector, i);
-		puts(diagnostic->message);
-	}
+	CK_ARG_NON_NULL( dhi )
+		for ( size_t i = 0; i < dhi->thrownDiagnosticsVector.elemCount; i++ ) {
+			const CkThrownDiagnostic *diagnostic = CkListAccess( &dhi->thrownDiagnosticsVector, i );
+			puts( diagnostic->message );
+		}
 }

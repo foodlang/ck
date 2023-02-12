@@ -5,8 +5,8 @@
 #ifndef CK_LEX_H_
 #define CK_LEX_H_
 
-#include "../Types.h"
-#include "../Arena.h"
+#include <ckmem/Types.h>
+#include <ckmem/Arena.h>
 
 /// <summary>
 /// Stores the state of a lexer.

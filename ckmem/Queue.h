@@ -3,8 +3,8 @@
  * an irregular rate.
 */
 
-#ifndef CK_ASYNC_QUEUE_H_
-#define CK_ASYNC_QUEUE_H
+#ifndef CK_QUEUE_H_
+#define CK_QUEUE_H_
 
 #include "Arena.h"
 

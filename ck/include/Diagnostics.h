@@ -6,8 +6,8 @@
 #define CK_ERROR_H_
 
 #include "Syntax/Lex.h"
-#include "Arena.h"
-#include "List.h"
+#include <ckmem/Arena.h>
+#include <ckmem/List.h>
 
 enum
 {

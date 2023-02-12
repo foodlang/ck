@@ -1,5 +1,5 @@
 #include <include/Syntax/Parser.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 #include <string.h>
 
 void CkParserCreateInstance(

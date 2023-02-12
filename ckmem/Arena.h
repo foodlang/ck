@@ -81,4 +81,16 @@ void CkArenaWriteLock(CkArenaFrame *frame);
 /// <param name="frame">The frame of the arena.</param>
 void CkArenaWriteUnlock(CkArenaFrame *frame);
 
+/// <summary>
+/// Disables execution permissions for the arena. This uses the MMU.
+/// </summary>
+/// <param name="frame"></param>
+void CkArenaExecLock( CkArenaFrame *frame );
+
+/// <summary>
+/// Enables execution permissions for the arena. This uses the MMU.
+/// </summary>
+/// <param name="frame"></param>
+void CkArenaExecUnlock( CkArenaFrame *frame );
+
 #endif

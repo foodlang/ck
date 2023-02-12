@@ -6,7 +6,7 @@
 #ifndef CK_CONFIGS_H_
 #define CK_CONFIGS_H_
 
-#include "List.h"
+#include <ckmem/List.h>
 
 // The filename of a build config file, relative to the directory specified.
 #define CK_BUILD_FILE_RELATIVE "__ckbuild.json"

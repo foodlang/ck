@@ -1,7 +1,7 @@
 #include <include/Syntax/ParserStatements.h>
 #include <include/Syntax/ParserExpressions.h>
 #include <include/Syntax/Semantics.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 
 static void s_IfStatement(CkParserInstance *parser, CkTACFunctionDecl *function)
 {

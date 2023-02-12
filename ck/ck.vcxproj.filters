@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\Types.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Syntax\Lex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -42,22 +39,13 @@
     <ClInclude Include="include\Diagnostics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\CDebug.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Syntax\ParserTypes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Arena.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Syntax\Semantics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Configs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Intermediate\IL.h">
@@ -67,9 +55,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Intermediate\Emitter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\List.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -104,16 +89,10 @@
     <ClCompile Include="src\Syntax\ParserTypes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Arena.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Syntax\Semantics.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Configs.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Queue.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Syntax\ParserStatements.c">
@@ -122,7 +101,7 @@
     <ClCompile Include="src\Intermediate\Emitter.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\List.c">
+    <ClCompile Include="src\Intermediate\IL.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

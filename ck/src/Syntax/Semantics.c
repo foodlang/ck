@@ -1,5 +1,5 @@
 #include <include/Syntax/Semantics.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 
 #include <assert.h>
 

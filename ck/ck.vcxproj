@@ -73,22 +73,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)\bin\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;</IncludePath>
+    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;$(SolutionDir)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)\bin\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;</IncludePath>
+    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;$(SolutionDir)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\bin\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;</IncludePath>
+    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;$(SolutionDir)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\bin\$(Platform)-$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\obj\$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;</IncludePath>
+    <IncludePath>$(LLVMInstallDir)\lib\clang\$(LLVMToolsVersion)\include;$(IncludePath);$(ProjectDir);$(SolutionDir)lua\src\;$(SolutionDir)\cJSON\;$(SolutionDir)\cwalk\;$(SolutionDir)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <VcpkgEnabled>false</VcpkgEnabled>
@@ -217,11 +217,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\Arena.h" />
     <ClInclude Include="include\Intermediate\Emitter.h" />
-    <ClInclude Include="include\List.h" />
-    <ClInclude Include="include\Queue.h" />
-    <ClInclude Include="include\CDebug.h" />
     <ClInclude Include="include\Configs.h" />
     <ClInclude Include="include\Driver.h" />
     <ClInclude Include="include\FileIO.h" />
@@ -234,19 +230,16 @@
     <ClInclude Include="include\Syntax\ParserStatements.h" />
     <ClInclude Include="include\Syntax\ParserTypes.h" />
     <ClInclude Include="include\Syntax\Semantics.h" />
-    <ClInclude Include="include\Types.h" />
     <ClInclude Include="include\Intermediate\IL.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Arena.c" />
     <ClCompile Include="src\Configs.c" />
     <ClCompile Include="src\Diagnostics.c" />
     <ClCompile Include="src\Driver.c" />
     <ClCompile Include="src\FileIO.c" />
     <ClCompile Include="src\Food.c" />
     <ClCompile Include="src\Intermediate\Emitter.c" />
-    <ClCompile Include="src\List.c" />
-    <ClCompile Include="src\Queue.c" />
+    <ClCompile Include="src\Intermediate\IL.c" />
     <ClCompile Include="src\Syntax\Expression.c" />
     <ClCompile Include="src\Syntax\Lex.c" />
     <ClCompile Include="src\Main.c" />
@@ -263,8 +256,14 @@
     <ProjectReference Include="..\cJSON\cJSON.vcxproj">
       <Project>{2dc338d8-8f1e-41d7-b591-e6b5a1413186}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\ckmem\ckmem.vcxproj">
+      <Project>{2ac97a20-c5e8-4ff8-993e-367bad438f26}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\cwalk\cwalk.vcxproj">
       <Project>{f58c432e-2f46-4390-b683-941cbd335f50}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\fflib\fflib.vcxproj">
+      <Project>{a94e6a2a-f709-400e-ba44-735a168196ba}</Project>
     </ProjectReference>
     <ProjectReference Include="..\lua\lua.vcxproj">
       <Project>{c989f8cd-47c7-402d-a277-f3278048bb07}</Project>

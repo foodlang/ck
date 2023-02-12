@@ -7,7 +7,7 @@
 
 #include "Expression.h"
 #include "../Diagnostics.h"
-#include "../Arena.h"
+#include <ckmem/Arena.h>
 
 /// <summary>
 /// A parser instance stores data about an individual parser

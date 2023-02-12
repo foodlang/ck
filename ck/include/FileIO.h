@@ -5,8 +5,8 @@
 #ifndef CK_FILEIO_H_
 #define CK_FILEIO_H_
 
-#include "Types.h"
-#include <include/Arena.h>
+#include <ckmem/Types.h>
+#include <ckmem/Arena.h>
 
 /// <summary>
 /// Reads a file and puts the contents into a buffer.

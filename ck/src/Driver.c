@@ -3,9 +3,9 @@
 #include <include/Syntax/Parser.h>
 #include <include/Syntax/ParserExpressions.h>
 #include <include/Syntax/Semantics.h>
-#include <include/Queue.h>
+#include <ckmem/Queue.h>
 #include <include/Diagnostics.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 
 #include <malloc.h>
 #include <stdio.h>

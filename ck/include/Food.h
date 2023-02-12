@@ -6,8 +6,8 @@
 #ifndef CK_FOOD_H_
 #define CK_FOOD_H_
 
-#include "Types.h"
-#include "Arena.h"
+#include <ckmem/Types.h>
+#include <ckmem/Arena.h>
 
 #define CK_QUALIFIER_CONST_BIT    1
 #define CK_QUALIFIER_VOLATILE_BIT 2

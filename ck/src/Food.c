@@ -1,5 +1,5 @@
 #include <include/Food.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 
 CkFoodType *CkFoodCreateTypeInstance(
 	CkArenaFrame *arena,

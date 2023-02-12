@@ -1,5 +1,5 @@
-#include <include/List.h>
-#include <include/CDebug.h>
+#include "../List.h"
+#include "../CDebug.h"
 
 #include <string.h>
 #include <stdio.h>

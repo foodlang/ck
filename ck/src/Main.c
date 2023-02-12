@@ -1,6 +1,6 @@
 #include <include/Driver.h>
 #include <include/Configs.h>
-#include <include/Arena.h>
+#include <ckmem/Arena.h>
 #include <include/FileIO.h>
 
 #include <stdio.h>
@@ -106,10 +106,8 @@ int main(int argc, char *argv[], char **envp)
 		CkDriverCompile(&driverArena, &driverResult, &driverStart);
 
 		// Resetting the frame for the next file
-		//CkArenaResetFrame(&driverArena);
+		CkArenaResetFrame(&driverArena);
 	}
-
-	while (TRUE) {}
 
 	CkArenaEndFrame(&configArena);
 	CkArenaEndFrame(&driverArena);

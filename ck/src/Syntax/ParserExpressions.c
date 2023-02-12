@@ -1,7 +1,7 @@
 #include <include/Syntax/ParserExpressions.h>
 #include <include/Syntax/ParserTypes.h>
 #include <include/FileIO.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 
 #include <stdio.h>
 #include <string.h>

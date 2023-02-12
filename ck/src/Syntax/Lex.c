@@ -1,5 +1,5 @@
 #include <include/Syntax/Lex.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>

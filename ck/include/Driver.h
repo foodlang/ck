@@ -5,8 +5,8 @@
 #ifndef CK_DRIVER_H_
 #define CK_DRIVER_H_
 
-#include "Types.h"
-#include "Arena.h"
+#include <ckmem/Arena.h>
+#include <ckmem/Types.h>
 
 /// <summary>
 /// Stores the configuration for a Ck compilation driver.

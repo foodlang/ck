@@ -1,5 +1,5 @@
 #include <include/Syntax/Expression.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>

@@ -5,9 +5,10 @@
 #ifndef CK_IL_H_
 #define CK_IL_H_
 
-#include "../Types.h"
+#include <ckmem/Types.h>
 #include "../Food.h"
-#include "../Queue.h"
+#include <ckmem/Queue.h>
+#include <ckmem/List.h>
 
 /// <summary>
 /// The opcode of the instruction.
@@ -30,7 +31,7 @@ typedef enum CkTACInstructionOpcode
 	CK_TAC_STORE,
 
 	/// <summary>
-	/// -t1 :: Negates a value.
+	/// t1 = -t2 :: Negates a value.
 	/// </summary>
 	CK_TAC_NEGATE,
 
@@ -174,16 +175,6 @@ typedef enum CkTACInstructionOpcode
 	/// </summary>
 	CK_TAC_LOAD_ARG,
 
-	/// <summary>
-	/// Declares a label.
-	/// </summary>
-	CK_TAC_LABEL,
-
-	/// <summary>
-	/// Binds a local reference to an argument.
-	/// </summary>
-	CK_TAC_ARGUMENT,
-
 } CkTACInstructionOpcode;
 
 /// <summary>
@@ -226,6 +217,88 @@ typedef enum CkTACReferenceKind
 } CkTACReferenceKind;
 
 /// <summary>
+/// The type of storage that contains the reference.
+/// </summary>
+typedef enum CkTACReferenceStorage
+{
+	/// <summary>
+	/// The reference is stored in a module.
+	/// </summary>
+	CK_TAC_MODULE,
+
+	/// <summary>
+	/// The reference is stored in a function.
+	/// This also applies to local functions.
+	/// </summary>
+	CK_TAC_FUNC,
+
+} CkTACReferenceStorage;
+
+/// <summary>
+/// A module declaration.
+/// </summary>
+typedef struct CkTACModuleDecl
+{
+	/// <summary>
+	/// An index to the mdoule table corresponding to
+	/// the module definition.
+	/// </summary>
+	uint64_t name;
+
+	/// <summary>
+	/// If true, the function will be exposed to other libraries
+	/// or programs.
+	/// </summary>
+	bool_t public;
+
+	/// <summary>
+	/// The functions of the module.
+	/// </summary>
+	CkList functions;
+
+	/// <summary>
+	/// The references in the module.
+	/// </summary>
+	CkList references;
+
+} CkTACModuleDecl;
+
+/// <summary>
+/// A function declaration.
+/// </summary>
+typedef struct CkTACFunctionDecl
+{
+	/// <summary>
+	/// A list storing all of the instructions.
+	/// </summary>
+	CkList instructions;
+
+	/// <summary>
+	/// An index to the symbol table corresponding to the
+	/// function definition.
+	/// </summary>
+	uint64_t name;
+
+	/// <summary>
+	/// If true, the function will be exposed to other modules.
+	/// </summary>
+	bool_t public;
+
+	/// <summary>
+	/// Stores a list of all of the local references, including
+	/// variables.
+	/// </summary>
+	CkList localReferences;
+
+	/// <summary>
+	/// Stores a list of all of the local labels. This exclude
+	/// this function's call label.
+	/// </summary>
+	CkList localLabels;
+
+} CkTACFunctionDecl;
+
+/// <summary>
 /// A reference to a symbol, a variable or an intermediate value.
 /// </summary>
 typedef struct CkTACReference
@@ -245,6 +318,24 @@ typedef struct CkTACReference
 	/// index to its entry in the function table.
 	/// </summary>
 	uint64_t name;
+
+	/// <summary>
+	/// The storage location of the reference. This is used to
+	/// emit names properly.
+	/// </summary>
+	CkTACReferenceStorage storage;
+
+	/// <summary>
+	/// This union stores a pointer to where to the owner of the
+	/// reference. If the storage is a module and the pointer is
+	/// null, it is stored globally in the program.
+	/// </summary>
+	union {
+		/// <summary>
+		/// The owner as a function.
+		/// </summary>
+		CkTACFunctionDecl *func;
+	} pOwner;
 
 } CkTACReference;
 
@@ -276,29 +367,29 @@ typedef struct CkTACInstruction
 } CkTACInstruction;
 
 /// <summary>
-/// A function declaration.
+/// Allocates a new function declaration.
 /// </summary>
-typedef struct CkTACFunctionDecl
-{
-	/// <summary>
-	/// A queue storing all of the instructions.
-	/// </summary>
-	CkQueue instructionQueue;
+/// <param name="public">If this true, the function is public and can be exported to the API of the library.</param>
+/// <param name="name">The name of the function.</param>
+/// <param name="IQSize">The size (in instructions) of the instruction queue.</param>
+/// <param name="LRSize"></param>
+/// <param name="LLSize"></param>
+/// <returns></returns>
+CkTACFunctionDecl *CkTACAllocFunction(bool_t public, char *name, size_t IQSize, size_t LRSize, size_t LLSize);
 
-	/// <summary>
-	/// An index to the symbol table corresponding to the
-	/// function definition.
-	/// </summary>
-	uint64_t name;
+/// <summary>
+/// Allocates a local reference.
+/// </summary>
+/// <param name="func">The function scope responsible for this reference.</param>
+/// <param name="usage">The purpose of the reference.</param>
+/// <returns></returns>
+CkTACReference *CkTACAllocLocalRef(CkTACFunctionDecl *func, CkTACReferenceKind usage, CkFoodType *type);
 
-	/// <summary>
-	/// If true, the function will be exposed to other libraries
-	/// or programs.
-	/// </summary>
-	bool_t public;
-
-
-
-} CkTACFunctionDecl;
+/// <summary>
+/// Frees a local reference. This reference must be a temporary reference.
+/// </summary>
+/// <param name="func">The function scope responsible for this reference.</param>
+/// <param name="ref">The temporary reference to free.</param>
+void CkTACFreeLocalRef(CkTACFunctionDecl *func, CkTACReference *ref);
 
 #endif

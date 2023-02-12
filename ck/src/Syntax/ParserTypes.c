@@ -1,5 +1,5 @@
 #include <include/Syntax/ParserTypes.h>
-#include <include/CDebug.h>
+#include <ckmem/CDebug.h>
 
 /// <summary>
 /// A type ID pair.
