@@ -35,44 +35,6 @@ typedef struct CkLexInstance
 
 } CkLexInstance;
 
-/// <summary>
-/// Represents a token, an indivisible bit of text that is used to
-/// represent the syntax of the source code.
-/// </summary>
-typedef struct CkToken
-{
-
-	/// <summary>
-	/// Where the token is located.
-	/// </summary>
-	size_t position;
-
-	/// <summary>
-	/// The kind of the token.
-	/// </summary>
-	uint64_t kind;
-
-	/// <summary>
-	/// An additional value stored with the token.
-	/// </summary>
-	union {
-		bool_t boolean;
-		int8_t i8;
-		uint8_t u8;
-		int16_t i16;
-		uint16_t u16;
-		int32_t i32;
-		uint32_t u32;
-		int64_t i64;
-		uint64_t u64;
-		float f32;
-		double f64;
-		char *cstr;
-		void *ptr;
-	} value;
-
-} CkToken;
-
 enum
 {
 	KW_ALIGNOF = 34647,

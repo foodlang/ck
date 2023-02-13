@@ -217,7 +217,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\Intermediate\Emitter.h" />
     <ClInclude Include="include\Configs.h" />
     <ClInclude Include="include\Driver.h" />
     <ClInclude Include="include\FileIO.h" />
@@ -230,7 +229,6 @@
     <ClInclude Include="include\Syntax\ParserStatements.h" />
     <ClInclude Include="include\Syntax\ParserTypes.h" />
     <ClInclude Include="include\Syntax\Semantics.h" />
-    <ClInclude Include="include\Intermediate\IL.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Configs.c" />
@@ -238,8 +236,6 @@
     <ClCompile Include="src\Driver.c" />
     <ClCompile Include="src\FileIO.c" />
     <ClCompile Include="src\Food.c" />
-    <ClCompile Include="src\Intermediate\Emitter.c" />
-    <ClCompile Include="src\Intermediate\IL.c" />
     <ClCompile Include="src\Syntax\Expression.c" />
     <ClCompile Include="src\Syntax\Lex.c" />
     <ClCompile Include="src\Main.c" />

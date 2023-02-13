@@ -120,17 +120,17 @@ typedef struct CkBuildConfig
 	/// A list of CkBuildConfig structs that store the
 	/// individual build profiles.
 	/// </summary>
-	CkList profiles;
+	CkList *profiles;
 
 	/// <summary>
 	/// A list of relative source filepaths.
 	/// </summary>
-	CkList sources;
+	CkList *sources;
 
 	/// <summary>
 	/// A list of paths to Food libraries.
 	/// </summary>
-	CkList libraries;
+	CkList *libraries;
 
 } CkBuildConfig;
 

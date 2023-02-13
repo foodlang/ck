@@ -24,9 +24,6 @@
     <ClInclude Include="include\Driver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Syntax\Expression.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Syntax\Parser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -48,13 +45,10 @@
     <ClInclude Include="include\Configs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Intermediate\IL.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Syntax\ParserStatements.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Intermediate\Emitter.h">
+    <ClInclude Include="include\Syntax\Expression.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -96,12 +90,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Syntax\ParserStatements.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Intermediate\Emitter.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Intermediate\IL.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

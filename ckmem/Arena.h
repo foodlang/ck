@@ -44,13 +44,13 @@ typedef struct CkArenaFrame
 /// </summary>
 /// <param name="dest">The destination arena frame structure.</param>
 /// <param name="maxSize">The maximum size of the arena. If set to 0, will default to 256 megabytes.</param>
-void CkArenaStartFrame(CkArenaFrame *dest, size_t maxSize);
+void CkArenaStartFrame( CkArenaFrame *dest, size_t maxSize );
 
 /// <summary>
 /// Ends and deallocates an arena frame. All subframes are deallocated to prevent memory leaks.
 /// </summary>
 /// <param name="frame">The frame to deallocate.</param>
-void CkArenaEndFrame(CkArenaFrame *frame);
+void CkArenaEndFrame( CkArenaFrame *frame );
 
 /// <summary>
 /// Resets an arena frame, without deallocating it.
@@ -58,7 +58,7 @@ void CkArenaEndFrame(CkArenaFrame *frame);
 /// CkArenaStartFrame().
 /// </summary>
 /// <param name="frame"></param>
-void CkArenaResetFrame(CkArenaFrame *frame);
+void CkArenaResetFrame( CkArenaFrame *frame );
 
 /// <summary>
 /// Allocates a new memory block on the current arena frame.
@@ -67,19 +67,19 @@ void CkArenaResetFrame(CkArenaFrame *frame);
 /// <param name="frame">The frame to allocate memory from.</param>
 /// <param name="bytes">The amount of bytes to allocate. Padding may be applied.</param>
 /// <returns>A pointer to the newly allocated memory.</returns>
-void *CkArenaAllocate(CkArenaFrame *frame, size_t bytes);
+void *CkArenaAllocate( CkArenaFrame *frame, size_t bytes );
 
 /// <summary>
 /// Locks an arena and prevents writing. This uses the MMU.
 /// </summary>
 /// <param name="frame">The frame of the arena.</param>
-void CkArenaWriteLock(CkArenaFrame *frame);
+void CkArenaWriteLock( CkArenaFrame *frame );
 
 /// <summary>
 /// Unlocks an arena and allows writing. This uses the MMU.
 /// </summary>
 /// <param name="frame">The frame of the arena.</param>
-void CkArenaWriteUnlock(CkArenaFrame *frame);
+void CkArenaWriteUnlock( CkArenaFrame *frame );
 
 /// <summary>
 /// Disables execution permissions for the arena. This uses the MMU.

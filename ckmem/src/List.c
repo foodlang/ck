@@ -6,61 +6,63 @@
 #include <stdlib.h>
 #include <malloc.h>
 
-void CkListStart(
-	CkList *desc,
+CkList *CkListStart(
 	CkArenaFrame *allocator,
-	size_t elemSize,
-	size_t capacity)
+	size_t elemSize )
 {
-	CK_ARG_NON_NULL(desc);
 	CK_ARG_NON_NULL(allocator);
 
-	desc->capacity = capacity;
-	desc->elemCount = 0;
-	desc->elemSize = ( elemSize + ( -elemSize & ( ARENA_ALLOC_ALIGN - 1 ) ) );
-	desc->peakReached = 0;
-	desc->base = CkArenaAllocate(allocator, desc->elemSize * capacity);
-}
-
-void CkListClear(CkList *desc)
-{
-	CK_ARG_NON_NULL(desc);
-	memset(desc->base, 0, desc->elemSize * desc->peakReached);
+	elemSize += -elemSize & (ARENA_ALLOC_ALIGN - 1);
+	CkList *new = CkArenaAllocate( allocator, sizeof( CkList ) + elemSize );
+	new->allocator = allocator;
+	new->elemSize = elemSize;
+	new->next = NULL;
+	new->prev = NULL;
+	new->used = FALSE;
+	return new;
 }
 
 void CkListAdd(CkList *desc, void *source)
 {
-	const size_t index = desc->elemCount++;
-	void *m = CkListAccess(desc, index);
+	CkListNode *head = desc;
 
 	CK_ARG_NON_NULL(desc);
 	CK_ARG_NON_NULL(source);
+	
+	while ( head->next )
+		head = head->next;
 
-	if (desc->peakReached == desc->elemCount)
-		desc->peakReached++;
-
-	if (desc->elemCount > desc->capacity) {
-		fprintf_s(stderr, "ck: Attempting to allocate beyond a list's capacity, which causes arena corruption.\n");
-		abort();
+	if ( head == desc ) {
+		head->used = TRUE;
+		memcpy_s( head + sizeof( CkListNode ), head->elemSize, source, head->elemSize );
 	}
-
-	memcpy_s(m, desc->elemSize, source, desc->elemSize);
+	else {
+		head->next = CkListStart( head->allocator, head->elemSize );
+		head->next->prev = head;
+		memcpy_s( head->next + sizeof( CkListNode ), head->elemSize, source, head->elemSize );
+	}
 }
 
 void *CkListAccess(CkList *desc, size_t index)
 {
-	CK_ARG_NON_NULL(desc);
-	if (index >= desc->elemCount) {
-		fprintf_s(stderr, "ck: Attempting to read outside of allocated element bounds of a list.\n");
-		abort();
+	CkListNode *head = desc;
+
+	CK_ARG_NON_NULL( desc );
+
+	for ( size_t i = 0; i < index; i++ ) {
+		if ( !head->next ) {
+			fprintf_s( stderr, "ck internal error: Attempting to read out of list bounds (max = %llu, index = %llu\n", i, index );
+			abort();
+		}
+		head = head->next;
 	}
 
-	return (char *)desc->base + index * desc->elemSize;
+	return head + sizeof( CkListNode );
 }
 
-void CkListRemove(CkList *desc, size_t index)
+CkList *CkListRemove(CkList *desc, size_t index)
 {
-	size_t subbufferSize = ( desc->elemCount - index ) * desc->elemSize;
+	/*size_t subbufferSize = (desc->elemCount - index) * desc->elemSize;
 	char *subbuffer;
 	CK_ARG_NON_NULL(desc);
 
@@ -82,5 +84,48 @@ void CkListRemove(CkList *desc, size_t index)
 	memcpy_s(CkListAccess(desc, index), subbufferSize, subbuffer, subbufferSize);
 	memset(CkListAccess(desc, desc->elemCount - 1), 0, desc->elemSize);
 	desc->elemCount--;
-	_freea(subbuffer);
+	_freea(subbuffer);*/
+	CkListNode *head = desc;
+
+	CK_ARG_NON_NULL( desc );
+
+	for ( size_t i = 0; i < index; i++ ) {
+		if ( !head->next ) {
+			fprintf_s( stderr, "ck internal error: Attempting to read out of list bounds (max = %llu, index = %llu\n", i, index );
+			abort();
+		}
+		head = head->next;
+	}
+
+	// Detaching the object
+	if ( !head->prev ) {
+		if ( head->next ) {
+			head->next->prev = NULL;
+			return head->next;
+		} else;
+	}  else {
+		if ( !head->next )
+			head->prev->next = NULL;
+		else head->prev->next = head->next;
+	}
+	return head;
+}
+
+size_t CkListLength( CkList *desc )
+{
+	size_t index = 1;
+
+	if ( !desc ) return 0;
+
+	if ( !desc->prev ) {
+		if ( desc->used )
+			return 1;
+		return 0;
+	}
+
+	while ( desc->next ) {
+		index++;
+		desc = desc->next;
+	}
+	return index;
 }

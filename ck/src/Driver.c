@@ -18,7 +18,7 @@
 void CkDriverCompile(
 	CkArenaFrame *threadArena,
 	CkDriverCompilationResult *result,
-	CkDriverStartupConfiguration *startupConfig)
+	CkDriverStartupConfiguration *startupConfig )
 {
 	lua_State *luavm;
 
@@ -29,9 +29,9 @@ void CkDriverCompile(
 	CkLexInstance lexer;            // The lexer.
 	CkParserInstance parser;        // The parser.
 
-	CK_ARG_NON_NULL(threadArena);
-	CK_ARG_NON_NULL(result);
-	CK_ARG_NON_NULL(startupConfig);
+	CK_ARG_NON_NULL( threadArena );
+	CK_ARG_NON_NULL( result );
+	CK_ARG_NON_NULL( startupConfig );
 
 	luavm = luaL_newstate();
 
@@ -39,42 +39,42 @@ void CkDriverCompile(
 	result->successful = TRUE;
 
 	// 2. Allocating memory for the token buffer
-	CkArenaStartFrame(&tokenListArena, 0);
+	CkArenaStartFrame( &tokenListArena, 0 );
 
 	// 3. Lexical Analysis
-	CkLexCreateInstance(threadArena, &lexer, startupConfig->source);
-	CkDiagnosticHandlerCreateInstance(threadArena, &dh, &lexer);
-	while (TRUE) {
-		register CkToken *current = CkArenaAllocate(&tokenListArena, sizeof(CkToken));
-		if (!CkLexReadToken(&lexer, current)) {
-			fprintf_s(stderr, "ck: Lexer failed to parse token (%c)\n", current->kind);
+	CkLexCreateInstance( threadArena, &lexer, startupConfig->source );
+	CkDiagnosticHandlerCreateInstance( threadArena, &dh, &lexer );
+	while ( TRUE ) {
+		register CkToken *current = CkArenaAllocate( &tokenListArena, sizeof( CkToken ) );
+		if ( !CkLexReadToken( &lexer, current ) ) {
+			fprintf_s( stderr, "ck: Lexer failed to parse token (%c)\n", current->kind );
 			result->successful = FALSE;
 		}
-		if (!current->kind)
+		if ( !current->kind )
 			break;
 		tokenCount++;
 	}
 	// Locking pages at MMU level to prevent write operations
-	CkArenaWriteLock(&tokenListArena);
+	CkArenaWriteLock( &tokenListArena );
 
 	// 4. Parsing
-	CkParserCreateInstance(threadArena, &parser, (CkToken *)tokenListArena.base, tokenCount, &dh);
-	CkExpressionPrint(CkSemanticsProcessExpression(&dh, threadArena, CkParserExpression(&parser)));
+	CkParserCreateInstance( threadArena, &parser, (CkToken *)tokenListArena.base, tokenCount, &dh );
+	CkExpressionPrint( CkSemanticsProcessExpression( &dh, threadArena, CkParserExpression( &parser ) ) );
 
 	// Displaying diagnostics
-	CkDiagnosticDisplay(&dh);
+	CkDiagnosticDisplay( &dh );
 
-	if (dh.anyErrors)
+	if ( dh.anyErrors )
 		result->successful = FALSE;
-	else if (startupConfig->wError && dh.anyWarnings)
+	else if ( startupConfig->wError && dh.anyWarnings )
 		result->successful = FALSE;
 
-	printf_s("ck: Finished compiling %s\n", startupConfig->name);
+	printf_s( "ck: Finished compiling %s\n", startupConfig->name );
 
 	// Cleanup
-	CkArenaEndFrame(&tokenListArena);
-	CkLexDestroyInstance(&lexer);
-	CkParserDelete(&parser);
-	CkDiagnosticHandlerDestroyInstance(&dh);
-	lua_close(luavm);
+	CkArenaEndFrame( &tokenListArena );
+	CkLexDestroyInstance( &lexer );
+	CkParserDelete( &parser );
+	CkDiagnosticHandlerDestroyInstance( &dh );
+	lua_close( luavm );
 }

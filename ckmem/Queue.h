@@ -52,13 +52,13 @@ void CkQueueStart(
 	CkArenaFrame *allocator,
 	CkQueue *queueDescriptor,
 	size_t elemSize,
-	size_t limit);
+	size_t limit );
 
 /// <summary>
 /// Resets a queue. This deletes all pushed objects that weren't popped yet.
 /// </summary>
 /// <param name="queueDescriptor">A pointer to the destination queue descriptor.</param>
-void CkQueueReset(CkQueue *queueDescriptor);
+void CkQueueReset( CkQueue *queueDescriptor );
 
 /// <summary>
 /// Pushes an object onto the queue.
@@ -66,7 +66,7 @@ void CkQueueReset(CkQueue *queueDescriptor);
 /// <param name="queueDescriptor">A pointer to the destination queue descriptor.</param>
 /// <param name="pushBase">The base of the object to push. Its size is already defined in the queue descriptor.</param>
 /// <returns>Returns false if the object cannot be pushed.</returns>
-bool_t CkQueuePush(CkQueue *queueDescriptor, void *pushBase);
+bool_t CkQueuePush( CkQueue *queueDescriptor, void *pushBase );
 
 /// <summary>
 /// Pops an object off the queue.
@@ -74,6 +74,6 @@ bool_t CkQueuePush(CkQueue *queueDescriptor, void *pushBase);
 /// <param name="queueDescriptor">A pointer to the destination queue descriptor.</param>
 /// <param name="popBase">The base of the buffer that will store the popped object.</param>
 /// <returns>Returns false if the object cannot be popped.</returns>
-bool_t CkQueuePop(CkQueue *queueDescriptor, void *popBase);
+bool_t CkQueuePop( CkQueue *queueDescriptor, void *popBase );
 
 #endif

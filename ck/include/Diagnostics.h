@@ -63,12 +63,12 @@ typedef struct CkDiagnosticHandlerInstance
 	/// <summary>
 	/// Stores all of the blacklisted diagnostics (diagnostics to skip over.)
 	/// </summary>
-	CkList blacklistVector;
+	CkList *blacklistVector;
 
 	/// <summary>
 	/// Stores all of the thrown diagnotics.
 	/// </summary>
-	CkList thrownDiagnosticsVector;
+	CkList *thrownDiagnosticsVector;
 
 	/// <summary>
 	/// True if the diagnostics encounters any errors.

@@ -9,7 +9,7 @@ typedef struct KwTypeIDPair
 	/// <summary>
 	/// The keyword.
 	/// </summary>
-	
+
 	/// <summary>
 	/// The type ID.
 	/// </summary>
@@ -39,68 +39,68 @@ static const KwTypeIDPair s_kwTypeIDPair[] =
 	{ KW_STRING, CK_FOOD_STRING },
 };
 
-static uint8_t s_ParseQualifiers(CkParserInstance *parser)
+static uint8_t s_ParseQualifiers( CkParserInstance *parser )
 {
 	CkToken token;
 	uint8_t attr = 0;
 
-	CK_ARG_NON_NULL(parser)
+	CK_ARG_NON_NULL( parser )
 
-	while (TRUE) {
-		CkParserReadToken(parser, &token);
-		switch (token.kind) {
-			// Const qualifier
-		case KW_CONST:
+		while ( TRUE ) {
+			CkParserReadToken( parser, &token );
+			switch ( token.kind ) {
+				// Const qualifier
+			case KW_CONST:
 
-			// Const is already specified
-			if (attr & CK_QUALIFIER_CONST_BIT) {
-				CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-					"Duplicate const qualifier.");
+				// Const is already specified
+				if ( attr & CK_QUALIFIER_CONST_BIT ) {
+					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+						"Duplicate const qualifier." );
+				}
+				attr |= CK_QUALIFIER_CONST_BIT;
+				break;
+
+				// Volatile qualifier
+			case KW_VOLATILE:
+
+				// Volatile is already specified
+				if ( attr & CK_QUALIFIER_VOLATILE_BIT ) {
+					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+						"Duplicate volatile qualifier." );
+				}
+				attr |= CK_QUALIFIER_VOLATILE_BIT;
+				break;
+
+				// Restrict qualifier
+			case KW_RESTRICT:
+
+				// Restrict is already specified
+				if ( attr & CK_QUALIFIER_RESTRICT_BIT ) {
+					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+						"Duplicate restrict qualifier." );
+				}
+				attr |= CK_QUALIFIER_RESTRICT_BIT;
+				break;
+
+				// Atomic qualifier
+			case KW_ATOMIC:
+				if ( attr & CK_QUALIFIER_ATOMIC_BIT ) {
+					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+						"Duplicate atomic qualifier." );
+				}
+				attr |= CK_QUALIFIER_ATOMIC_BIT;
+				break;
+
+			default:
+				goto Leave;
 			}
-			attr |= CK_QUALIFIER_CONST_BIT;
-			break;
-
-			// Volatile qualifier
-		case KW_VOLATILE:
-
-			// Volatile is already specified
-			if (attr & CK_QUALIFIER_VOLATILE_BIT) {
-				CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-					"Duplicate volatile qualifier.");
-			}
-			attr |= CK_QUALIFIER_VOLATILE_BIT;
-			break;
-
-			// Restrict qualifier
-		case KW_RESTRICT:
-
-			// Restrict is already specified
-			if (attr & CK_QUALIFIER_RESTRICT_BIT) {
-				CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-					"Duplicate restrict qualifier.");
-			}
-			attr |= CK_QUALIFIER_RESTRICT_BIT;
-			break;
-
-			// Atomic qualifier
-		case KW_ATOMIC:
-			if (attr & CK_QUALIFIER_ATOMIC_BIT) {
-				CkDiagnosticThrow(parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-					"Duplicate atomic qualifier.");
-			}
-			attr |= CK_QUALIFIER_ATOMIC_BIT;
-			break;
-
-		default:
-			goto Leave;
 		}
-	}
 Leave:
-	CkParserRewind(parser, 1);
+	CkParserRewind( parser, 1 );
 	return attr;
 }
 
-CkFoodType *CkParserType(CkParserInstance *parser)
+CkFoodType *CkParserType( CkParserInstance *parser )
 {
 	CkToken token;
 	CkFoodType *acc;
@@ -108,35 +108,35 @@ CkFoodType *CkParserType(CkParserInstance *parser)
 	uint8_t id = 0;
 
 	// Attempts to parse qualifiers
-	attr = s_ParseQualifiers(parser);
+	attr = s_ParseQualifiers( parser );
 
 	// Type parsing
-	CkParserReadToken(parser, &token);
-	for (size_t i = 0; i < sizeof(s_kwTypeIDPair) / sizeof(KwTypeIDPair); i++) {
+	CkParserReadToken( parser, &token );
+	for ( size_t i = 0; i < sizeof( s_kwTypeIDPair ) / sizeof( KwTypeIDPair ); i++ ) {
 		const KwTypeIDPair *pPair = s_kwTypeIDPair + i;
-		if (token.kind == pPair->kw) {
+		if ( token.kind == pPair->kw ) {
 			id = pPair->id;
 			break;
 		}
 	}
 	// TODO: Handle user-defined types and function pointers
-	if (id == 0) return NULL;
-	acc = CkFoodCreateTypeInstance(parser->arena, id, attr, NULL);
+	if ( id == 0 ) return NULL;
+	acc = CkFoodCreateTypeInstance( parser->arena, id, attr, NULL );
 
 	// Handle pointers and references
 	// TODO: Handle arrays
-	while (TRUE) {
-		attr = s_ParseQualifiers(parser);
-		CkParserReadToken(parser, &token);
-		if (token.kind == '*') {
+	while ( TRUE ) {
+		attr = s_ParseQualifiers( parser );
+		CkParserReadToken( parser, &token );
+		if ( token.kind == '*' ) {
 			id = CK_FOOD_POINTER;
-			acc = CkFoodCreateTypeInstance(parser->arena, id, attr, acc);
-		} else if (token.kind == '&') {
+			acc = CkFoodCreateTypeInstance( parser->arena, id, attr, acc );
+		} else if ( token.kind == '&' ) {
 			id = CK_FOOD_REFERENCE;
-			acc = CkFoodCreateTypeInstance(parser->arena, id, attr, acc);
+			acc = CkFoodCreateTypeInstance( parser->arena, id, attr, acc );
 			break; // References cannot be subtypes
 		} else {
-			CkParserRewind(parser, 1);
+			CkParserRewind( parser, 1 );
 			break;
 		}
 	}

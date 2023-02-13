@@ -114,9 +114,9 @@ static KeywordEntryPair s_keywordDict[] =
 /// </summary>
 /// <param name="lexer"></param>
 /// <returns></returns>
-static inline char s_nextChar(CkLexInstance *lexer)
+static inline char s_nextChar( CkLexInstance *lexer )
 {
-	if (lexer->cursor >= lexer->sourceLength)
+	if ( lexer->cursor >= lexer->sourceLength )
 		return 0;
 	return lexer->source[lexer->cursor];
 }
@@ -126,10 +126,10 @@ static inline char s_nextChar(CkLexInstance *lexer)
 /// </summary>
 /// <param name="cur"></param>
 /// <returns></returns>
-static inline uint8_t s_escapeSequence(CkLexInstance *lexer)
+static inline uint8_t s_escapeSequence( CkLexInstance *lexer )
 {
-	char cur = s_nextChar(lexer);
-	switch (cur) {
+	char cur = s_nextChar( lexer );
+	switch ( cur ) {
 	case 'a':
 	case 'A':
 		return 0x07;
@@ -166,20 +166,20 @@ static inline uint8_t s_escapeSequence(CkLexInstance *lexer)
 		uint8_t accumulator = 0;
 		uint8_t elapsedChars = 1;
 		lexer->cursor++;
-		cur = s_nextChar(lexer);
-		while ((isdigit(cur)
-			|| ( cur <= 'F' && cur >= 'A' )
-			|| ( cur <= 'f' && cur >= 'a' ))
-			&& elapsedChars <= 2) {
+		cur = s_nextChar( lexer );
+		while ( (isdigit( cur )
+			|| (cur <= 'F' && cur >= 'A')
+			|| (cur <= 'f' && cur >= 'a'))
+			&& elapsedChars <= 2 ) {
 			accumulator <<= 4;
-			if (isdigit(cur))
-				accumulator += (uint64_t)( cur - '0' );
-			else if (cur <= 'F' && cur >= 'A')
-				accumulator += (uint64_t)( cur - 'A' + 10 );
-			else if (cur <= 'f' && cur >= 'a')
-				accumulator += (uint64_t)( cur - 'a' + 10 );
+			if ( isdigit( cur ) )
+				accumulator += (uint64_t)(cur - '0');
+			else if ( cur <= 'F' && cur >= 'A' )
+				accumulator += (uint64_t)(cur - 'A' + 10);
+			else if ( cur <= 'f' && cur >= 'a' )
+				accumulator += (uint64_t)(cur - 'a' + 10);
 			lexer->cursor++;
-			cur = s_nextChar(lexer);
+			cur = s_nextChar( lexer );
 			elapsedChars++;
 		}
 		lexer->cursor--;
@@ -197,60 +197,60 @@ static inline uint8_t s_escapeSequence(CkLexInstance *lexer)
 	{
 		uint8_t accumulator = 0;
 		uint8_t elapsedChars = 1;
-		cur = s_nextChar(lexer);
-		while ((cur <= '7' && cur >= '0')
+		cur = s_nextChar( lexer );
+		while ( (cur <= '7' && cur >= '0')
 			&& elapsedChars <= 3
-			&& ((uint16_t)accumulator << 4) + 7 <= 255) {
+			&& ((uint16_t)accumulator << 4) + 7 <= 255 ) {
 			accumulator <<= 3;
-			accumulator += ( cur - '0' );
+			accumulator += (cur - '0');
 			lexer->cursor++;
-			cur = s_nextChar(lexer);
+			cur = s_nextChar( lexer );
 			elapsedChars++;
 		}
 		lexer->cursor--;
 		return accumulator;
 	}
 	default:
-		fprintf(stderr, "Unknown escape sequence \\%c\n", cur);
+		fprintf( stderr, "Unknown escape sequence \\%c\n", cur );
 		return 0;
 	}
 }
 
-void CkLexCreateInstance(CkArenaFrame *arena, CkLexInstance *dest, char *source)
+void CkLexCreateInstance( CkArenaFrame *arena, CkLexInstance *dest, char *source )
 {
-	CK_ARG_NON_NULL(arena)
-	CK_ARG_NON_NULL(dest)
-	CK_ARG_NON_NULL(source)
+	CK_ARG_NON_NULL( arena )
+		CK_ARG_NON_NULL( dest )
+		CK_ARG_NON_NULL( source )
 
-	dest->cursor = 0;
-	dest->sourceLength = strlen(source);
-	dest->source = CkArenaAllocate(arena, dest->sourceLength + 1);
+		dest->cursor = 0;
+	dest->sourceLength = strlen( source );
+	dest->source = CkArenaAllocate( arena, dest->sourceLength + 1 );
 	dest->arena = arena;
-	strcpy_s(dest->source, dest->sourceLength + 1, source);
+	strcpy_s( dest->source, dest->sourceLength + 1, source );
 }
 
-void CkLexDestroyInstance(CkLexInstance *lexer)
+void CkLexDestroyInstance( CkLexInstance *lexer )
 {
 	(void)lexer;
 }
 
-bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
+bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 {
 	char cur;
 	size_t base;
 
-	CK_ARG_NON_NULL(lexer)
-	CK_ARG_NON_NULL(token)
+	CK_ARG_NON_NULL( lexer )
+		CK_ARG_NON_NULL( token )
 
-	cur = s_nextChar(lexer);
+		cur = s_nextChar( lexer );
 
-	while (isspace(cur)) {
+	while ( isspace( cur ) ) {
 		lexer->cursor++;
-		cur = s_nextChar(lexer);
+		cur = s_nextChar( lexer );
 	}
 	base = lexer->cursor;
 
-	if (!cur) {
+	if ( !cur ) {
 		// EOF
 		token->position = lexer->cursor;
 		token->kind = 0;
@@ -258,7 +258,7 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 	}
 
 	// Operators
-	switch (cur) {
+	switch ( cur ) {
 
 		// Single-character tokens
 	case '(':
@@ -282,12 +282,12 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 	{
 		char next;
 		lexer->cursor++;
-		next = s_nextChar(lexer);
-		if (next == cur) {
-			token->kind = CKTOK2(cur, cur);
+		next = s_nextChar( lexer );
+		if ( next == cur ) {
+			token->kind = CKTOK2( cur, cur );
 			lexer->cursor++;
-		} else if (next == '=') {
-			token->kind = CKTOK2(cur, '=');
+		} else if ( next == '=' ) {
+			token->kind = CKTOK2( cur, '=' );
 			lexer->cursor++;
 		} else token->kind = (uint64_t)cur;
 
@@ -295,21 +295,21 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		return TRUE;
 	}
 
-		// Tokens that use $$, $=, $> and $
+	// Tokens that use $$, $=, $> and $
 	case '-':
 	case '=':
 	{
 		char next;
 		lexer->cursor++;
-		next = s_nextChar(lexer);
-		if (next == cur) {
-			token->kind = CKTOK2(cur, cur);
+		next = s_nextChar( lexer );
+		if ( next == cur ) {
+			token->kind = CKTOK2( cur, cur );
 			lexer->cursor++;
-		} else if (next == '=') {
-			token->kind = CKTOK2(cur, '=');
+		} else if ( next == '=' ) {
+			token->kind = CKTOK2( cur, '=' );
 			lexer->cursor++;
-		} else if (next == '>') {
-			token->kind = CKTOK2(cur, '>');
+		} else if ( next == '>' ) {
+			token->kind = CKTOK2( cur, '>' );
 			lexer->cursor++;
 		} else token->kind = (uint64_t)cur;
 
@@ -317,7 +317,7 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		return TRUE;
 	}
 
-		// Tokens that use $= and $
+	// Tokens that use $= and $
 	case '*':
 	case '/':
 	case '%':
@@ -326,9 +326,9 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 	{
 		char next;
 		lexer->cursor++;
-		next = s_nextChar(lexer);
-		if (next == '=') {
-			token->kind = CKTOK2(cur, '=');
+		next = s_nextChar( lexer );
+		if ( next == '=' ) {
+			token->kind = CKTOK2( cur, '=' );
 			lexer->cursor++;
 		} else token->kind = (uint64_t)cur;
 
@@ -336,21 +336,21 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		return TRUE;
 	}
 
-		// Tokens that use $$, $$=, $= and $
+	// Tokens that use $$, $$=, $= and $
 	case '<':
 	case '>':
 	{
 		char next;
 		lexer->cursor++;
-		next = s_nextChar(lexer);
-		if (next == cur) {
+		next = s_nextChar( lexer );
+		if ( next == cur ) {
 			lexer->cursor++;
-			if (s_nextChar(lexer) == '=') {
-				token->kind = CKTOK3(cur, cur, '=');
+			if ( s_nextChar( lexer ) == '=' ) {
+				token->kind = CKTOK3( cur, cur, '=' );
 				lexer->cursor++;
-			} else token->kind = CKTOK2(cur, cur);
-		} else if (next == '=') {
-			token->kind = CKTOK2(cur, '=');
+			} else token->kind = CKTOK2( cur, cur );
+		} else if ( next == '=' ) {
+			token->kind = CKTOK2( cur, '=' );
 			lexer->cursor++;
 		} else token->kind = (uint64_t)cur;
 
@@ -358,14 +358,14 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		return TRUE;
 	}
 
-		// Tokens that use $$ and $
+	// Tokens that use $$ and $
 	case ':':
 	{
 		char next;
 		lexer->cursor++;
-		next = s_nextChar(lexer);
-		if (next == cur) {
-			token->kind = CKTOK2(cur, cur);
+		next = s_nextChar( lexer );
+		if ( next == cur ) {
+			token->kind = CKTOK2( cur, cur );
 			lexer->cursor++;
 		} else token->kind = (uint64_t)cur;
 
@@ -373,18 +373,18 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		return TRUE;
 	}
 
-		// Tokens that use $$, $$$ and $
+	// Tokens that use $$, $$$ and $
 	case '.':
 	{
 		char next;
 		lexer->cursor++;
-		next = s_nextChar(lexer);
-		if (next == cur) {
+		next = s_nextChar( lexer );
+		if ( next == cur ) {
 			lexer->cursor++;
-			if (s_nextChar(lexer) == cur) {
-				token->kind = CKTOK3(cur, cur, cur);
+			if ( s_nextChar( lexer ) == cur ) {
+				token->kind = CKTOK3( cur, cur, cur );
 				lexer->cursor++;
-			} else token->kind = CKTOK2(cur, cur);
+			} else token->kind = CKTOK2( cur, cur );
 		} else token->kind = (uint64_t)cur;
 
 		token->position = base;
@@ -395,48 +395,48 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 	}
 
 	// Number literals (ints and floats)
-	if (isdigit(cur)) {
+	if ( isdigit( cur ) ) {
 		uint64_t accumulator = 0;
 
 		// Parse octal, binary and hexadecimal
-		if (cur == '0') {
+		if ( cur == '0' ) {
 			lexer->cursor++;
-			cur = s_nextChar(lexer);
+			cur = s_nextChar( lexer );
 
 			// Binary
-			if (cur == 'b' || cur == 'B') {
+			if ( cur == 'b' || cur == 'B' ) {
 				lexer->cursor++;
-				cur = s_nextChar(lexer);
-				while (cur == '0' || cur == '1') {
+				cur = s_nextChar( lexer );
+				while ( cur == '0' || cur == '1' ) {
 					accumulator <<= 1;
-					accumulator += (uint64_t)( cur - '0' );
+					accumulator += (uint64_t)(cur - '0');
 					lexer->cursor++;
-					cur = s_nextChar(lexer);
+					cur = s_nextChar( lexer );
 				}
-			// Hexadecimal
-			} else if (cur == 'x' || cur == 'X') {
+				// Hexadecimal
+			} else if ( cur == 'x' || cur == 'X' ) {
 				lexer->cursor++;
-				cur = s_nextChar(lexer);
-				while (isdigit(cur)
-				   || ( cur <= 'F' && cur >= 'A' )
-				   || ( cur <= 'f' && cur >= 'a' )) {
+				cur = s_nextChar( lexer );
+				while ( isdigit( cur )
+					|| (cur <= 'F' && cur >= 'A')
+					|| (cur <= 'f' && cur >= 'a') ) {
 					accumulator <<= 4;
-					if (cur <= '9' && cur >= '0')
-						accumulator += (uint64_t)( cur - '0' );
-					else if (cur <= 'F' && cur >= 'A')
-						accumulator += (uint64_t)( cur - 'A' + 10 );
-					else if (cur <= 'f' && cur >= 'a')
-						accumulator += (uint64_t)( cur - 'a' + 10 );
+					if ( cur <= '9' && cur >= '0' )
+						accumulator += (uint64_t)(cur - '0');
+					else if ( cur <= 'F' && cur >= 'A' )
+						accumulator += (uint64_t)(cur - 'A' + 10);
+					else if ( cur <= 'f' && cur >= 'a' )
+						accumulator += (uint64_t)(cur - 'a' + 10);
 					lexer->cursor++;
-					cur = s_nextChar(lexer);
+					cur = s_nextChar( lexer );
 				}
-			// Octal
+				// Octal
 			} else {
-				while (cur <= '7' && cur >= '0') {
+				while ( cur <= '7' && cur >= '0' ) {
 					accumulator <<= 3;
-					accumulator += (uint64_t)( cur - '0' );
+					accumulator += (uint64_t)(cur - '0');
 					lexer->cursor++;
-					cur = s_nextChar(lexer);
+					cur = s_nextChar( lexer );
 				}
 			}
 			token->kind = '0';
@@ -446,59 +446,59 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		}
 
 		// Decimal
-		while (isdigit(cur)) {
+		while ( isdigit( cur ) ) {
 			accumulator *= 10;
-			accumulator += (uint64_t)( cur - '0' );
+			accumulator += (uint64_t)(cur - '0');
 			lexer->cursor++;
-			cur = s_nextChar(lexer);
+			cur = s_nextChar( lexer );
 		}
 		// Float
-		if (cur == '.') {
+		if ( cur == '.' ) {
 			long double scale = 0.1;
 			long double accFloat = 0.0;
 			accFloat = (long double)accumulator;
 			lexer->cursor++;
-			cur = s_nextChar(lexer);
-			while (isdigit(cur)) {
-				accFloat += (long double)( cur - '0' ) * scale;
+			cur = s_nextChar( lexer );
+			while ( isdigit( cur ) ) {
+				accFloat += (long double)(cur - '0') * scale;
 				scale *= 0.1;
 				lexer->cursor++;
-				cur = s_nextChar(lexer);
+				cur = s_nextChar( lexer );
 			}
-			if (cur == 'e' || cur == 'E') {
+			if ( cur == 'e' || cur == 'E' ) {
 				long double exponent = 0.0;
 				long double sign = 1;
 				lexer->cursor++;
-				cur = s_nextChar(lexer);
-				if (cur == '-') {
+				cur = s_nextChar( lexer );
+				if ( cur == '-' ) {
 					lexer->cursor++;
-					cur = s_nextChar(lexer);
+					cur = s_nextChar( lexer );
 					sign = -1;
 				}
-				while (isdigit(cur)) {
+				while ( isdigit( cur ) ) {
 					exponent *= 10;
-					exponent += (long double)( cur - '0' );
+					exponent += (long double)(cur - '0');
 					lexer->cursor++;
-					cur = s_nextChar(lexer);
+					cur = s_nextChar( lexer );
 				}
-				accFloat *= (long double)pow(10, exponent * sign);
-			} else if (cur == 'p' || cur == 'P') {
+				accFloat *= (long double)pow( 10, exponent * sign );
+			} else if ( cur == 'p' || cur == 'P' ) {
 				long double exponent = 0.0;
 				long double sign = 1;
 				lexer->cursor++;
-				cur = s_nextChar(lexer);
-				if (cur == '-') {
+				cur = s_nextChar( lexer );
+				if ( cur == '-' ) {
 					lexer->cursor++;
-					cur = s_nextChar(lexer);
+					cur = s_nextChar( lexer );
 					sign = -1;
 				}
-				while (isdigit(cur)) {
+				while ( isdigit( cur ) ) {
 					exponent *= 10;
-					exponent += (long double)( cur - '0' );
+					exponent += (long double)(cur - '0');
 					lexer->cursor++;
-					cur = s_nextChar(lexer);
+					cur = s_nextChar( lexer );
 				}
-				accFloat *= (long double)pow(2, exponent * sign);
+				accFloat *= (long double)pow( 2, exponent * sign );
 			}
 			token->position = base;
 			token->kind = 'F';
@@ -513,20 +513,20 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 	}
 
 	// Identifiers and keywords
-	if (isalpha(cur) || cur == '_') {
+	if ( isalpha( cur ) || cur == '_' ) {
 		size_t length = 0;
 		char *strbuf;
-		while (isalnum(cur) || cur == '_') {
+		while ( isalnum( cur ) || cur == '_' ) {
 			lexer->cursor++;
-			cur = s_nextChar(lexer);
+			cur = s_nextChar( lexer );
 			length++;
 		}
 
-		strbuf = CkArenaAllocate(lexer->arena, length + 1);
-		memcpy_s(strbuf, length + 1, lexer->source + base, length);
+		strbuf = CkArenaAllocate( lexer->arena, length + 1 );
+		memcpy_s( strbuf, length + 1, lexer->source + base, length );
 		strbuf[length] = 0;
-		for (size_t i = 0; i < sizeof(s_keywordDict) / sizeof(KeywordEntryPair); i++) {
-			if (!strcmp(strbuf, s_keywordDict[i].key)) {
+		for ( size_t i = 0; i < sizeof( s_keywordDict ) / sizeof( KeywordEntryPair ); i++ ) {
+			if ( !strcmp( strbuf, s_keywordDict[i].key ) ) {
 				token->position = base;
 				token->kind = s_keywordDict[i].value;
 				return TRUE;
@@ -539,24 +539,24 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 	}
 
 	// Character literal
-	if (cur == '\'') {
+	if ( cur == '\'' ) {
 		uint64_t accumulator = 0;
 		lexer->cursor++;
-		cur = s_nextChar(lexer);
-		while (cur != '\'' && cur != 0) {
+		cur = s_nextChar( lexer );
+		while ( cur != '\'' && cur != 0 ) {
 			uint8_t value = (uint8_t)cur;
 			accumulator <<= 8;
-			if (value == '\\') {
+			if ( value == '\\' ) {
 				lexer->cursor++;
-				cur = s_nextChar(lexer);
-				if (cur == 0) {
+				cur = s_nextChar( lexer );
+				if ( cur == 0 ) {
 					return FALSE;
 				}
-				value = s_escapeSequence(lexer);
+				value = s_escapeSequence( lexer );
 			}
 			accumulator += value;
 			lexer->cursor++;
-			cur = s_nextChar(lexer);
+			cur = s_nextChar( lexer );
 		}
 		lexer->cursor++;
 		token->position = base;
@@ -565,28 +565,28 @@ bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *token)
 		return TRUE;
 	}
 
-	if (cur == '\"') {
+	if ( cur == '\"' ) {
 		size_t length = 0;
 		size_t end = 0;
 		lexer->cursor++;
-		cur = s_nextChar(lexer);
-		while (cur != '\"' && cur != 0) {
-			if (cur == '\\') {
+		cur = s_nextChar( lexer );
+		while ( cur != '\"' && cur != 0 ) {
+			if ( cur == '\\' ) {
 				lexer->cursor++;
-				(void)s_escapeSequence(lexer);
+				(void)s_escapeSequence( lexer );
 			}
 			lexer->cursor++;
 			length++;
-			cur = s_nextChar(lexer);
+			cur = s_nextChar( lexer );
 		}
 		end = lexer->cursor + 1;
-		token->value.cstr = CkArenaAllocate(lexer->arena, length + 1);
+		token->value.cstr = CkArenaAllocate( lexer->arena, length + 1 );
 		lexer->cursor = base;
-		for (size_t i = 0; i <= length; i++) {
-			token->value.cstr[i] = s_nextChar(lexer);
-			if (cur == '\\') {
+		for ( size_t i = 0; i <= length; i++ ) {
+			token->value.cstr[i] = s_nextChar( lexer );
+			if ( cur == '\\' ) {
 				lexer->cursor++;
-				token->value.cstr[i] = (char)s_escapeSequence(lexer);
+				token->value.cstr[i] = (char)s_escapeSequence( lexer );
 			}
 			lexer->cursor++;
 		}
