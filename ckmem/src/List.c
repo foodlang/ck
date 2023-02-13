@@ -62,29 +62,6 @@ void *CkListAccess(CkList *desc, size_t index)
 
 CkList *CkListRemove(CkList *desc, size_t index)
 {
-	/*size_t subbufferSize = (desc->elemCount - index) * desc->elemSize;
-	char *subbuffer;
-	CK_ARG_NON_NULL(desc);
-
-	if (index == desc->elemCount) {
-		fprintf_s(stderr, "ck: Attempting to remove a list element that does not exist.\n");
-		abort();
-	}
-
-	// If the index is at the end of list
-	if (index + 1 == desc->elemCount) {
-		void *m = CkListAccess(desc, index);
-		memset(m, 0, desc->elemSize);
-		desc->elemCount--;
-		return;
-	}
-
-	subbuffer = _malloca(subbufferSize);
-	memcpy_s(subbuffer, subbufferSize, CkListAccess(desc, index + 1), subbufferSize);
-	memcpy_s(CkListAccess(desc, index), subbufferSize, subbuffer, subbufferSize);
-	memset(CkListAccess(desc, desc->elemCount - 1), 0, desc->elemSize);
-	desc->elemCount--;
-	_freea(subbuffer);*/
 	CkListNode *head = desc;
 
 	CK_ARG_NON_NULL( desc );

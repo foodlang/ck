@@ -13,34 +13,6 @@
 /// </summary>
 typedef struct CkListNode
 {
-	/*/// <summary>
-	/// The base of the list.
-	/// </summary>
-	void *base;
-
-	/// <summary>
-	/// The size of an individual element.
-	/// </summary>
-	size_t elemSize;
-
-	/// <summary>
-	/// The amount of elements available.
-	/// </summary>
-	size_t elemCount;
-
-	/// <summary>
-	/// The maximum capacity of the array,
-	/// in elements.
-	/// </summary>
-	size_t capacity;
-
-	/// <summary>
-	/// The peak index. This index can only
-	/// go up (it is the highest element
-	/// that has been written to in the list.)
-	/// </summary>
-	size_t peakReached;*/
-
 	/// <summary>
 	/// The arena used for the allocations.
 	/// </summary>
