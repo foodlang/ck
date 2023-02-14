@@ -3,7 +3,7 @@
 
 CkFoodType *CkFoodCreateTypeInstance(
 	CkArenaFrame *arena,
-	uint8_t id,
+	FoodTypeID id,
 	uint8_t qualifiers,
 	CkFoodType *child )
 {

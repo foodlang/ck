@@ -10,7 +10,7 @@
 
 // CK_ARG_NON_NULL: Check argument for nullity
 
-#if _DEBUG
+#ifdef _DEBUG
 #define CK_ARG_NON_NULL(x)   \
 	if (!(x)) {              \
 		fprintf(             \
@@ -20,7 +20,7 @@
 		abort();             \
 	}
 #else
-#define CK_ARG_NON_NULL(x)
+#define CK_ARG_NON_NULL(x) (void)x
 #endif
 
 #endif

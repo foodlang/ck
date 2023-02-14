@@ -51,6 +51,9 @@
     <ClInclude Include="include\Syntax\Expression.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Util\Time.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.c">
@@ -90,6 +93,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Syntax\ParserStatements.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Util\Time.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

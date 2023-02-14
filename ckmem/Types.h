@@ -79,7 +79,7 @@ typedef struct CkToken
 
 } CkToken;
 
-enum
+typedef enum FoodTypeID
 {
 	CK_FOOD_VOID = 1,
 	CK_FOOD_BOOL,
@@ -105,7 +105,7 @@ enum
 	CK_FOOD_STRUCT,
 	CK_FOOD_UNION,
 	CK_FOOD_STRING,
-};
+} FoodTypeID;
 
 /// <summary>
 /// Represents a type in the Food programming language.
@@ -118,7 +118,7 @@ typedef struct CkFoodType
 	/// The type identifier. Must be equal to one of the
 	/// CK_FOOD_(typename) macros.
 	/// </summary>
-	uint8_t id;
+	FoodTypeID id;
 
 	/// <summary>
 	/// A bit array storing the type qualifiers.

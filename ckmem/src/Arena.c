@@ -8,7 +8,7 @@
 #endif
 
 // Default maximum arena size
-#define DEFAULT_MAXSIZE 268435456
+#define DEFAULT_MAXSIZE 536870912
 
 void CkArenaStartFrame( CkArenaFrame *dest, size_t maxSize )
 {

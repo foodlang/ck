@@ -365,9 +365,6 @@ LSkipLookup:
 		}
 	}
 
-	for ( size_t i = 0; i < baseSourcesCount + selectedSourcesCount; i++ )
-		printf_s( "'%s'\n", CkListAccess( total->sources, i ) );
-
 	// Libraries
 	total->libraries = CkListStart( allocator, sizeof( char * ) );
 	baseLibrariesCount = CkListLength( base->libraries );

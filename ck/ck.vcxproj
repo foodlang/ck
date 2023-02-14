@@ -229,6 +229,7 @@
     <ClInclude Include="include\Syntax\ParserStatements.h" />
     <ClInclude Include="include\Syntax\ParserTypes.h" />
     <ClInclude Include="include\Syntax\Semantics.h" />
+    <ClInclude Include="include\Util\Time.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Configs.c" />
@@ -244,6 +245,7 @@
     <ClCompile Include="src\Syntax\ParserStatements.c" />
     <ClCompile Include="src\Syntax\ParserTypes.c" />
     <ClCompile Include="src\Syntax\Semantics.c" />
+    <ClCompile Include="src\Util\Time.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="tests\test.txt" />

@@ -10,10 +10,13 @@ CkList *CkListStart(
 	CkArenaFrame *allocator,
 	size_t elemSize )
 {
+	CkList *new;
+
 	CK_ARG_NON_NULL(allocator);
 
-	elemSize += -elemSize & (ARENA_ALLOC_ALIGN - 1);
-	CkList *new = CkArenaAllocate( allocator, sizeof( CkList ) + elemSize );
+	// \e: Removed alignment because UB
+	// elemSize += -elemSize & (ARENA_ALLOC_ALIGN - 1);
+	new = CkArenaAllocate( allocator, sizeof( CkList ) + elemSize );
 	new->allocator = allocator;
 	new->elemSize = elemSize;
 	new->next = NULL;
@@ -32,14 +35,14 @@ void CkListAdd(CkList *desc, void *source)
 	while ( head->next )
 		head = head->next;
 
-	if ( head == desc ) {
+	if ( head == desc && !head->used ) {
 		head->used = TRUE;
-		memcpy_s( head + sizeof( CkListNode ), head->elemSize, source, head->elemSize );
+		memcpy_s( head + 1, head->elemSize, source, head->elemSize );
 	}
 	else {
 		head->next = CkListStart( head->allocator, head->elemSize );
 		head->next->prev = head;
-		memcpy_s( head->next + sizeof( CkListNode ), head->elemSize, source, head->elemSize );
+		memcpy_s( head->next + 1, head->elemSize, source, head->elemSize );
 	}
 }
 
@@ -57,7 +60,7 @@ void *CkListAccess(CkList *desc, size_t index)
 		head = head->next;
 	}
 
-	return head + sizeof( CkListNode );
+	return head + 1;
 }
 
 CkList *CkListRemove(CkList *desc, size_t index)
@@ -94,7 +97,7 @@ size_t CkListLength( CkList *desc )
 
 	if ( !desc ) return 0;
 
-	if ( !desc->prev ) {
+	if ( !desc->next ) {
 		if ( desc->used )
 			return 1;
 		return 0;

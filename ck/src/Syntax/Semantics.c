@@ -12,9 +12,9 @@ CkExpression *CkSemanticsProcessExpression(
 	CkExpression *newRight = NULL;
 	CkExpression *newExtra = NULL;
 	CkExpression *new;
-	uint8_t lType;
-	uint8_t rType;
-	uint8_t eType;
+	FoodTypeID lType;
+	FoodTypeID rType;
+	FoodTypeID eType;
 
 	CK_ARG_NON_NULL( dhi );
 	CK_ARG_NON_NULL( outputArena );
@@ -155,7 +155,7 @@ CkExpression *CkSemanticsProcessExpression(
 	case CK_EXPRESSION_MUL:
 	case CK_EXPRESSION_DIV:
 	{
-		uint8_t oType = lType < rType ? rType : lType;
+		FoodTypeID oType = lType < rType ? rType : lType;
 
 		assert( newLeft );
 		assert( newRight );
@@ -177,7 +177,7 @@ CkExpression *CkSemanticsProcessExpression(
 	// Modulo
 	case CK_EXPRESSION_MOD:
 	{
-		uint8_t oType = lType < rType ? rType : lType;
+		FoodTypeID oType = lType < rType ? rType : lType;
 
 		assert( newLeft );
 		assert( newRight );
@@ -200,7 +200,7 @@ CkExpression *CkSemanticsProcessExpression(
 	case CK_EXPRESSION_ADD:
 	case CK_EXPRESSION_SUB:
 	{
-		uint8_t oType = lType < rType ? rType : lType;
+		FoodTypeID oType = lType < rType ? rType : lType;
 		CkFoodType *subPtrT = NULL;
 
 		assert( newLeft );
@@ -241,7 +241,7 @@ CkExpression *CkSemanticsProcessExpression(
 	case CK_EXPRESSION_LEFT_SHIFT:
 	case CK_EXPRESSION_RIGHT_SHIFT:
 	{
-		uint8_t oType = lType < rType ? rType : lType;
+		FoodTypeID oType = lType < rType ? rType : lType;
 
 		assert( newLeft );
 		assert( newRight );
@@ -313,7 +313,7 @@ CkExpression *CkSemanticsProcessExpression(
 	case CK_EXPRESSION_BITWISE_OR:
 	case CK_EXPRESSION_BITWISE_XOR:
 	{
-		uint8_t oType = lType < rType ? rType : lType;
+		FoodTypeID oType = lType < rType ? rType : lType;
 		CkFoodType *subPtrT = NULL;
 
 		assert( newLeft );
@@ -369,7 +369,7 @@ CkExpression *CkSemanticsProcessExpression(
 		// Conditional expressions
 	case CK_EXPRESSION_CONDITIONAL:
 	{
-		uint8_t oType = lType < rType ? rType : lType;
+		FoodTypeID oType = lType < rType ? rType : lType;
 		CkFoodType *subPtrT = NULL;
 
 		assert( newLeft );

@@ -1,7 +1,11 @@
 #include <include/Driver.h>
 #include <include/Configs.h>
-#include <ckmem/Arena.h>
 #include <include/FileIO.h>
+#include <include/Util/Time.h>
+
+#include <ckmem/Arena.h>
+
+#include <fflib/FFStruct.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -11,8 +15,8 @@
 
 int main( int argc, char *argv[], char **envp )
 {
-	CkArenaFrame configArena; // The arena used for config/profile-related allocations.
-	CkArenaFrame driverArena; // The arena used for driver allocations. Reset for each driver.
+	CkArenaFrame configGenerationArena; // The arena used for config/profile-related + generation allocations.
+	CkArenaFrame driverArena;           // The arena used for driver allocations. Reset for each driver.
 
 	CkDriverStartupConfiguration driverStart; // Driver startup configuration
 	CkDriverCompilationResult driverResult;   // Driver result
@@ -24,6 +28,12 @@ int main( int argc, char *argv[], char **envp )
 	char *profileName = NULL;    // The name of the profile to use.
 
 	size_t sourceCount = 0; // Used for iterating through all source files
+
+	FFLibrary *result;           // The resulting library.
+	FFModule *temp_driverModule; // (TEMPORARY) The module for the current driver.
+
+	CkTimePoint compilerStart; // The start of the compilation
+	CkTimePoint compilerEnd;   // The end of the compilation
 
 	puts( "CK, The Official Food Compiler" );
 	puts( "Copyright (C) 2023 The Food Project & outside contributors" );
@@ -38,22 +48,24 @@ int main( int argc, char *argv[], char **envp )
 		return 0;
 	}
 
-	CkArenaStartFrame( &configArena, 0 );
+	CkTimeGetCurrent( &compilerStart );
+
+	CkArenaStartFrame( &configGenerationArena, 0 );
 	CkArenaStartFrame( &driverArena, 0 );
 
 	if ( argc >= 2 ) buildDirectory = argv[1];
 	if ( argc >= 3 ) profileName = argv[2];
 	if ( argc > 3 ) puts( "ck: Parameters beyond <profile> are ignored." );
 
-	base = CkConfigGetBuildConfig( &configArena, buildDirectory );
+	base = CkConfigGetBuildConfig( &configGenerationArena, buildDirectory );
 	if ( !base ) {
 		puts( "ck: Failed to parse build configuration, exiting.\n" );
-		CkArenaEndFrame( &configArena );
+		CkArenaEndFrame( &configGenerationArena );
 		CkArenaEndFrame( &driverArena );
 		return -1;
 	}
 
-	applied = CkConfigApplied( &configArena, base, profileName );
+	applied = CkConfigApplied( &configGenerationArena, base, profileName );
 	if ( !applied ) {
 		if ( !profileName )
 			puts( "ck: A profile must be used for this configuration, as it lacks mandatory settings.\n" );
@@ -62,12 +74,12 @@ int main( int argc, char *argv[], char **envp )
 		return -1;
 	}
 
-	(void)envp;
+	result = FFCreateLibrary( &configGenerationArena, applied->name );
 
 	CkArenaStartFrame( &driverArena, 0 );
 	sourceCount = CkListLength( applied->sources );
 	for ( size_t i = 0; i < sourceCount; i++ ) {
-		const char *source = CkConfigGetSource( applied, i );
+		char *source = CkConfigGetSource( applied, i );
 		char *sourceTotal;
 		size_t nameLen;
 		size_t sourceLen;
@@ -106,13 +118,24 @@ int main( int argc, char *argv[], char **envp )
 		driverStart.wError = applied->wError;
 
 		// Driver compilation
-		CkDriverCompile( &driverArena, &driverResult, &driverStart );
+		temp_driverModule = FFCreateModule( &configGenerationArena, result, source, TRUE, TRUE );
+		CkDriverCompile( &driverArena, &configGenerationArena, temp_driverModule, &driverResult, &driverStart );
 
 		// Resetting the frame for the next file
 		CkArenaResetFrame( &driverArena );
 	}
 
-	CkArenaEndFrame( &configArena );
+	FFPrintAST( result );
+
+	CkArenaEndFrame( &configGenerationArena );
 	CkArenaEndFrame( &driverArena );
+
+	CkTimeGetCurrent( &compilerEnd );
+	printf_s(
+		"Full compilation time: %llf ms",
+		(double)(CkTimeElapsed_mcs(&compilerStart, &compilerEnd)) / 1000.0 );
+
+	(void)envp;
+
 	return 0;
 }

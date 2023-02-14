@@ -4,12 +4,14 @@
 
 void CkParserCreateInstance(
 	CkArenaFrame *arena,
+	CkArenaFrame *genArena,
 	CkParserInstance *dest,
-	CkToken *pPassedTokens,
+	CkList *pPassedTokens,
 	size_t passedCount,
 	CkDiagnosticHandlerInstance *pDhi )
 {
 	CK_ARG_NON_NULL( arena );
+	CK_ARG_NON_NULL( genArena );
 	CK_ARG_NON_NULL( dest );
 	CK_ARG_NON_NULL( pPassedTokens );
 	CK_ARG_NON_NULL( pDhi );
@@ -18,6 +20,7 @@ void CkParserCreateInstance(
 	dest->pPassedTokens = pPassedTokens;
 	dest->pDhi = pDhi;
 	dest->arena = arena;
+	dest->genArena = genArena;
 }
 
 void CkParserDelete( CkParserInstance *dest )
@@ -25,16 +28,12 @@ void CkParserDelete( CkParserInstance *dest )
 	(void)dest;
 }
 
-#define TOKEN_SIZE_ALIGNED ( sizeof(CkToken) + (-sizeof(CkToken) & (ARENA_ALLOC_ALIGN - 1)) )
-
 void CkParserReadToken( CkParserInstance *parser, CkToken *token )
 {
-	char *source;
+	CkToken *source;
 
 	CK_ARG_NON_NULL( parser );
 	CK_ARG_NON_NULL( token );
-
-	source = (char *)parser->pPassedTokens + parser->position * TOKEN_SIZE_ALIGNED;
 
 	// A EOF token will be returned if the parser tries
 	// to read a non-existing token.
@@ -45,6 +44,7 @@ void CkParserReadToken( CkParserInstance *parser, CkToken *token )
 		return;
 	}
 
+	source = CkListAccess( parser->pPassedTokens, parser->position );
 	memcpy_s( token, sizeof( CkToken ), source, sizeof( CkToken ) );
 	parser->position++;
 }

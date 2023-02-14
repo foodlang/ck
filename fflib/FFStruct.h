@@ -280,7 +280,6 @@ typedef union FFStatementData
 	FFStatementData_Sponge     sponge;
 
 } FFStatementData;
-#define s sizeof(FFStatementData)
 
 /// <summary>
 /// A scope is the frame that stores functions and variables.
@@ -426,6 +425,11 @@ typedef struct FFFunction
 	/// </summary>
 	FFStatement *body;
 
+	/// <summary>
+	/// The list of all of the arguments. Passed.
+	/// </summary>
+	CkList *passedArguments;
+
 } FFFunction;
 
 /// <summary>
@@ -451,14 +455,20 @@ void FFAllocateVariable( FFScope *scope, CkFoodType *type, char *passedName );
 /// Attempts to allocate a new function in a scope.
 /// </summary>
 /// <returns></returns>
-void FFAllocateFunction( FFScope *scope, CkFoodType *returnType, char *passedName, CkList *pPassedArgumentList );
+void FFAllocateFunction(
+	FFScope *scope,
+	bool_t bPublic,
+	CkFoodType *returnType,
+	char *passedName,
+	CkList *pPassedArgumentList,
+	FFStatement *body );
 
 /// <summary>
 /// Creates a new library that is ready to use.
 /// </summary>
 /// <param name="name">The name of the library.</param>
 /// <returns></returns>
-FFLibrary *FFCreateLibrary( char *passedName );
+FFLibrary *FFCreateLibrary( CkArenaFrame *allocator, char *passedName );
 
 /// <summary>
 /// Creates a new module that is ready to use.
@@ -467,6 +477,17 @@ FFLibrary *FFCreateLibrary( char *passedName );
 /// <param name="isPublic">If this is true, the module should be exported outside of the library.</param>
 /// <param name="isStatic">If this is true, only once state of the module can exist in the program's lifetime.</param>
 /// <returns></returns>
-FFModule *FFCreateModule( char *passedName, bool_t isPublic, bool_t isStatic );
+FFModule *FFCreateModule(
+	CkArenaFrame *allocator,
+	FFLibrary *parent,
+	char *passedName,
+	bool_t isPublic,
+	bool_t isStatic );
+
+/// <summary>
+/// Prints a whole library's structure.
+/// </summary>
+/// <param name="library"></param>
+void FFPrintAST( FFLibrary *library );
 
 #endif

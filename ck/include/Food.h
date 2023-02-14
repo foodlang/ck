@@ -19,7 +19,7 @@
 /// <returns>A heap-allocated type instance.</returns>
 CkFoodType *CkFoodCreateTypeInstance(
 	CkArenaFrame *arena,
-	uint8_t id,
+	FoodTypeID id,
 	uint8_t qualifiers,
 	CkFoodType *child);
 

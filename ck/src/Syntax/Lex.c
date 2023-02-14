@@ -218,11 +218,11 @@ static inline uint8_t s_escapeSequence( CkLexInstance *lexer )
 
 void CkLexCreateInstance( CkArenaFrame *arena, CkLexInstance *dest, char *source )
 {
-	CK_ARG_NON_NULL( arena )
-		CK_ARG_NON_NULL( dest )
-		CK_ARG_NON_NULL( source )
+	CK_ARG_NON_NULL( arena );
+	CK_ARG_NON_NULL( dest );
+	CK_ARG_NON_NULL( source );
 
-		dest->cursor = 0;
+	dest->cursor = 0;
 	dest->sourceLength = strlen( source );
 	dest->source = CkArenaAllocate( arena, dest->sourceLength + 1 );
 	dest->arena = arena;
@@ -239,10 +239,10 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 	char cur;
 	size_t base;
 
-	CK_ARG_NON_NULL( lexer )
-		CK_ARG_NON_NULL( token )
+	CK_ARG_NON_NULL( lexer );
+	CK_ARG_NON_NULL( token );
 
-		cur = s_nextChar( lexer );
+	cur = s_nextChar( lexer );
 
 	while ( isspace( cur ) ) {
 		lexer->cursor++;

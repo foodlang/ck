@@ -8,6 +8,8 @@
 #include <ckmem/Arena.h>
 #include <ckmem/Types.h>
 
+#include <fflib/FFStruct.h>
+
 /// <summary>
 /// Stores the configuration for a Ck compilation driver.
 /// This includes the source, the parsing and output settings.
@@ -57,6 +59,8 @@ typedef struct CkDriverCompilationResult
 /// <param name="startupConfig">The startup configuration.</param>
 void CkDriverCompile(
 	CkArenaFrame *threadArena,
+	CkArenaFrame *genArena,
+	FFModule *temp_dest,
 	CkDriverCompilationResult *result,
 	CkDriverStartupConfiguration *startupConfig);
 

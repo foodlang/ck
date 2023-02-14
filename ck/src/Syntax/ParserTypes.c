@@ -44,57 +44,57 @@ static uint8_t s_ParseQualifiers( CkParserInstance *parser )
 	CkToken token;
 	uint8_t attr = 0;
 
-	CK_ARG_NON_NULL( parser )
+	CK_ARG_NON_NULL( parser );
 
-		while ( TRUE ) {
-			CkParserReadToken( parser, &token );
-			switch ( token.kind ) {
-				// Const qualifier
-			case KW_CONST:
+	while ( TRUE ) {
+		CkParserReadToken( parser, &token );
+		switch ( token.kind ) {
+			// Const qualifier
+		case KW_CONST:
 
-				// Const is already specified
-				if ( attr & CK_QUALIFIER_CONST_BIT ) {
-					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-						"Duplicate const qualifier." );
-				}
-				attr |= CK_QUALIFIER_CONST_BIT;
-				break;
-
-				// Volatile qualifier
-			case KW_VOLATILE:
-
-				// Volatile is already specified
-				if ( attr & CK_QUALIFIER_VOLATILE_BIT ) {
-					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-						"Duplicate volatile qualifier." );
-				}
-				attr |= CK_QUALIFIER_VOLATILE_BIT;
-				break;
-
-				// Restrict qualifier
-			case KW_RESTRICT:
-
-				// Restrict is already specified
-				if ( attr & CK_QUALIFIER_RESTRICT_BIT ) {
-					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-						"Duplicate restrict qualifier." );
-				}
-				attr |= CK_QUALIFIER_RESTRICT_BIT;
-				break;
-
-				// Atomic qualifier
-			case KW_ATOMIC:
-				if ( attr & CK_QUALIFIER_ATOMIC_BIT ) {
-					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-						"Duplicate atomic qualifier." );
-				}
-				attr |= CK_QUALIFIER_ATOMIC_BIT;
-				break;
-
-			default:
-				goto Leave;
+			// Const is already specified
+			if ( attr & CK_QUALIFIER_CONST_BIT ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Duplicate const qualifier." );
 			}
+			attr |= CK_QUALIFIER_CONST_BIT;
+			break;
+
+			// Volatile qualifier
+		case KW_VOLATILE:
+
+			// Volatile is already specified
+			if ( attr & CK_QUALIFIER_VOLATILE_BIT ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Duplicate volatile qualifier." );
+			}
+			attr |= CK_QUALIFIER_VOLATILE_BIT;
+			break;
+
+			// Restrict qualifier
+		case KW_RESTRICT:
+
+			// Restrict is already specified
+			if ( attr & CK_QUALIFIER_RESTRICT_BIT ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Duplicate restrict qualifier." );
+			}
+			attr |= CK_QUALIFIER_RESTRICT_BIT;
+			break;
+
+			// Atomic qualifier
+		case KW_ATOMIC:
+			if ( attr & CK_QUALIFIER_ATOMIC_BIT ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Duplicate atomic qualifier." );
+			}
+			attr |= CK_QUALIFIER_ATOMIC_BIT;
+			break;
+
+		default:
+			goto Leave;
 		}
+	}
 Leave:
 	CkParserRewind( parser, 1 );
 	return attr;

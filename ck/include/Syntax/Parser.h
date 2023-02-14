@@ -16,10 +16,10 @@
 typedef struct CkParserInstance
 {
 	/// <summary>
-	/// A passed pointer that points to a linear
-	/// buffer of tokens to be used by the parser.
+	/// A passed pointer that points to a linked list
+	/// of tokens.
 	/// </summary>
-	CkToken *pPassedTokens;
+	CkList *pPassedTokens;
 
 	/// <summary>
 	/// The amount of tokens stored in the passed
@@ -43,6 +43,11 @@ typedef struct CkParserInstance
 	/// </summary>
 	CkArenaFrame *arena;
 
+	/// <summary>
+	/// The arena that will be used for generated code.
+	/// </summary>
+	CkArenaFrame *genArena;
+
 } CkParserInstance;
 
 /// <summary>
@@ -50,13 +55,14 @@ typedef struct CkParserInstance
 /// for the lifetime of the pointer.
 /// </summary>
 /// <param name="dest">A pointer to where the parser instance should be written.</param>
-/// <param name="pPassedTokens">The token buffer pointer to pass.</param>
+/// <param name="pPassedTokens">The token list to pass.</param>
 /// <param name="passedCount">The amount of tokens passed.</param>
 /// <param name="pDhi">The diagnostic handler to report errors to. This is passed, meaning the parser doesn't own it.</param>
 void CkParserCreateInstance(
 	CkArenaFrame *arena,
+	CkArenaFrame *genArena,
 	CkParserInstance *dest,
-	CkToken *pPassedTokens,
+	CkList *pPassedTokens,
 	size_t passedCount,
 	CkDiagnosticHandlerInstance *pDhi);
 

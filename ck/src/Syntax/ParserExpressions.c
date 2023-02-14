@@ -367,7 +367,7 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 		accumulator = CkExpressionCreateUnary( parser->arena, &token, kind, NULL, s_ParseLevel2( parser ) );
 		break;
 
-		// TODO: Implement C-style casting
+		// C-style casting
 	case '(':
 	{
 		CkFoodType *t = CkParserType( parser );
@@ -554,6 +554,6 @@ static CkExpression *s_ParseCompound( CkParserInstance *parser )
 
 CkExpression *CkParserExpression( CkParserInstance *parser )
 {
-	CK_ARG_NON_NULL( parser )
-		return s_ParseCompound( parser );
+	CK_ARG_NON_NULL( parser );
+	return s_ParseCompound( parser );
 }
