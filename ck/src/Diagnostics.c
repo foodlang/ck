@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #define MAXDIAGLENGTH                 512
-#define DIAGNOSTICPREFIXFORMAT        "ck %s issued from (L%llu, C%llu): "
+#define DIAGNOSTICPREFIXFORMAT        "ck %s issued from (L%zu, C%zu): "
 
 void CkDiagnosticHandlerCreateInstance(
 	CkArenaFrame *arena,

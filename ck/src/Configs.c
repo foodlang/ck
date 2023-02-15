@@ -396,7 +396,7 @@ char *CkConfigGetSource( CkBuildConfig *cfg, size_t index )
 	CK_ARG_NON_NULL( cfg );
 
 	if ( CkListLength( cfg->sources ) <= index ) {
-		fprintf( stderr, "ck: Project '%s' doesn't have %llu source files.\n", cfg->name, index );
+		fprintf( stderr, "ck: Project '%s' doesn't have %zu source files.\n", cfg->name, index );
 		return NULL;
 	}
 	return CkListAccess( cfg->sources, index );
