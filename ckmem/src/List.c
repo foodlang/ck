@@ -37,12 +37,12 @@ void CkListAdd(CkList *desc, void *source)
 
 	if ( head == desc && !head->used ) {
 		head->used = TRUE;
-		memcpy_s( head + 1, head->elemSize, source, head->elemSize );
+		memcpy( head + 1, source, head->elemSize );
 	}
 	else {
 		head->next = CkListStart( head->allocator, head->elemSize );
 		head->next->prev = head;
-		memcpy_s( head->next + 1, head->elemSize, source, head->elemSize );
+		memcpy( head->next + 1, source, head->elemSize );
 	}
 }
 
@@ -54,7 +54,7 @@ void *CkListAccess(CkList *desc, size_t index)
 
 	for ( size_t i = 0; i < index; i++ ) {
 		if ( !head->next ) {
-			fprintf_s( stderr, "ck internal error: Attempting to read out of list bounds (max = %llu, index = %llu\n", i, index );
+			fprintf( stderr, "ck internal error: Attempting to read out of list bounds (max = %llu, index = %llu\n", i, index );
 			abort();
 		}
 		head = head->next;
@@ -71,7 +71,7 @@ CkList *CkListRemove(CkList *desc, size_t index)
 
 	for ( size_t i = 0; i < index; i++ ) {
 		if ( !head->next ) {
-			fprintf_s( stderr, "ck internal error: Attempting to read out of list bounds (max = %llu, index = %llu\n", i, index );
+			fprintf( stderr, "ck internal error: Attempting to read out of list bounds (max = %llu, index = %llu\n", i, index );
 			abort();
 		}
 		head = head->next;

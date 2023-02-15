@@ -45,7 +45,7 @@ void CkParserReadToken( CkParserInstance *parser, CkToken *token )
 	}
 
 	source = CkListAccess( parser->pPassedTokens, parser->position );
-	memcpy_s( token, sizeof( CkToken ), source, sizeof( CkToken ) );
+	memcpy( token, source, sizeof( CkToken ) );
 	parser->position++;
 }
 

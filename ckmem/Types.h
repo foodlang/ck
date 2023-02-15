@@ -6,7 +6,16 @@
 #define CK_TYPES_H_
 
 #include <stdint.h>
+#include <stddef.h>
 #include <math.h>
+
+#ifdef __GNUC__
+#define ALIGN(x) __attribute__(( __aligned__(x) ))
+#define PACKED __attribute__((packed))
+#else
+#define ALIGN(x) __declspec(align(x))
+#define PACKED __declspec(align(1))
+#endif
 
 typedef signed char bool_t;
 
@@ -34,7 +43,7 @@ typedef struct m256_t
 	uint64_t low;
 	uint64_t high;
 
-} __declspec(align(1)) m256_t;
+} PACKED m256_t;
 
 #define CK_QUALIFIER_CONST_BIT    1
 #define CK_QUALIFIER_VOLATILE_BIT 2

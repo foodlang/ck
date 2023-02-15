@@ -6,7 +6,6 @@
 #include <include/Syntax/Semantics.h>
 #include <include/Util/Time.h>
 
-#include <ckmem/Queue.h>
 #include <ckmem/CDebug.h>
 
 #include <malloc.h>
@@ -50,7 +49,7 @@ void CkDriverCompile(
 	CkDiagnosticHandlerCreateInstance( threadArena, &dh, &lexer );
 	while ( TRUE ) {
 		if ( !CkLexReadToken( &lexer, &current ) ) {
-			fprintf_s( stderr, "ck: Lexer failed to parse token (%c)\n", &current.kind );
+			fprintf( stderr, "ck: Lexer failed to parse token (%c)\n", (char)current.kind );
 			result->successful = FALSE;
 		}
 		if ( !current.kind )
@@ -83,8 +82,8 @@ void CkDriverCompile(
 	CkDiagnosticHandlerDestroyInstance( &dh );
 
 	CkTimeGetCurrent( &driverEnd );
-	printf_s(
-		"ck: Finished compiling %s (%llf ms)\n",
+	printf(
+		"ck: Finished compiling %s (%f ms)\n",
 		startupConfig->name,
 		(double)(CkTimeElapsed_mcs( &driverStart, &driverEnd )) / 1000.0
 	);

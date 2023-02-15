@@ -30,7 +30,7 @@ CkExpression *CkExpressionCreateLiteral(
 	CK_ARG_NON_NULL( token );
 
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
-	memcpy_s( &expr->token, sizeof( CkToken ), token, sizeof( CkToken ) );
+	memcpy( &expr->token, token, sizeof( CkToken ) );
 	expr->type = type;
 	expr->kind = kind;
 	return expr;
@@ -49,7 +49,7 @@ CkExpression *CkExpressionCreateUnary(
 	CK_ARG_NON_NULL( operator );
 
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
-	memcpy_s( &expr->token, sizeof( CkToken ), operator, sizeof( CkToken ) );
+	memcpy( &expr->token, operator, sizeof( CkToken ) );
 	expr->left = operand;
 	expr->type = type;
 	expr->kind = kind;
@@ -70,7 +70,7 @@ CkExpression *CkExpressionCreateBinary(
 	CK_ARG_NON_NULL( operator );
 
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
-	memcpy_s( &expr->token, sizeof( CkToken ), operator, sizeof( CkToken ) );
+	memcpy( &expr->token, operator, sizeof( CkToken ) );
 	expr->left = left;
 	expr->right = right;
 	expr->type = type;
@@ -93,7 +93,7 @@ CkExpression *CkExpressionCreateTernary(
 	CK_ARG_NON_NULL( operator );
 
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
-	memcpy_s( &expr->token, sizeof( CkToken ), operator, sizeof( CkToken ) );
+	memcpy( &expr->token, operator, sizeof( CkToken ) );
 	expr->left = left;
 	expr->right = right;
 	expr->extra = extra;
@@ -113,7 +113,7 @@ CkExpression *CkExpressionDuplicate( CkArenaFrame *arena, CkExpression *source )
 		dest->extra = CkExpressionDuplicate( arena, source->extra );
 	dest->kind = source->kind;
 	dest->isLValue = source->isLValue;
-	memcpy_s( &dest->token, sizeof( CkToken ), &source->token, sizeof( CkToken ) );
+	memcpy( &dest->token, &source->token, sizeof( CkToken ) );
 	dest->type = CkFoodCopyTypeInstance( arena, source->type );
 	return dest;
 }
@@ -122,7 +122,7 @@ static void s_ExprPrintTab( int tab, CkExpression *expression )
 {
 	for ( int i = 0; i < tab; i++ )
 		printf( "  " );
-	printf_s( "%c:%llu\n", (char)expression->token.kind, expression->token.value.u64 );
+	printf( "%c:%llu\n", (char)expression->token.kind, expression->token.value.u64 );
 	if ( expression->extra )
 		s_ExprPrintTab( tab + 1, expression->extra );
 	if ( expression->left )

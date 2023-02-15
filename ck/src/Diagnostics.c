@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #define MAXDIAGLENGTH                 512
-#define DIAGNOSTICPREFIXFORMAT        "ck %s issued from (L%d, C%d): "
+#define DIAGNOSTICPREFIXFORMAT        "ck %s issued from (L%llu, C%llu): "
 
 void CkDiagnosticHandlerCreateInstance(
 	CkArenaFrame *arena,
@@ -50,7 +50,7 @@ void CkDiagnosticBlacklist( CkDiagnosticHandlerInstance *dhi, char *name )
 
 	nameLength = strlen( name ) + 1;
 	blacklist = CkArenaAllocate( dhi->arena, nameLength );
-	strcpy_s( blacklist, nameLength, name );
+	strcpy( blacklist, name );
 	CkListAdd( dhi->blacklistVector, blacklist );
 }
 
@@ -128,19 +128,19 @@ void CkDiagnosticThrow(
 	CkGetRowColString( dhi->pPassedSource->source, position, &pos2DRow, &pos2DCol );
 
 	// Allocating and writing to the sub-buffers
-	sprintf_s( s_prefixBuffer, MAXDIAGLENGTH, DIAGNOSTICPREFIXFORMAT, severityTxt, pos2DRow, pos2DCol );
-	vsnprintf_s( s_messageBuffer, MAXDIAGLENGTH, MAXDIAGLENGTH - 1, format, va_args );
+	sprintf( s_prefixBuffer, DIAGNOSTICPREFIXFORMAT, severityTxt, pos2DRow, pos2DCol );
+	vsprintf( s_messageBuffer, format, va_args );
 
 	// Getting the length of the sub-buffers and final buffer length
-	prefixLength = strnlen_s( s_prefixBuffer, MAXDIAGLENGTH );
-	messageLength = strnlen_s( s_messageBuffer, MAXDIAGLENGTH );
+	prefixLength = strlen( s_prefixBuffer );
+	messageLength = strlen( s_messageBuffer );
 	totalLength = prefixLength + messageLength;
 
 	// Allocating and writing to the final buffer
 	diag.message = CkArenaAllocate( dhi->arena, totalLength + 1 );
 	diag.severity = severity;
-	strcpy_s( diag.message, totalLength + 1, s_prefixBuffer );
-	strcat_s( diag.message, totalLength + 1, s_messageBuffer );
+	strcpy( diag.message, s_prefixBuffer );
+	strcat( diag.message, s_messageBuffer );
 	memset( s_prefixBuffer, 0, MAXDIAGLENGTH );
 	memset( s_messageBuffer, 0, MAXDIAGLENGTH );
 

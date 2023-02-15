@@ -4,31 +4,45 @@
 #include <malloc.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#define universal_fseek(f, c, o) _fseeki64_nolock(f, c, o)
+#define universal_ftell(f) _ftelli64_nolock(f)
+#define universal_fread(b, z, n, f) _fread_nolock(b, z, n, f)
+#define universal_fclose(f) _fclose_nolock(f)
+typedef size_t off_t;
+#else
+#define universal_fseek(f, c, o) fseek(f, c, o)
+#define universal_ftell(f) ftell(f)
+#define universal_fread(b, z, n, f) fread(b, z, n, f)
+#define universal_fclose(f) fclose(f)
+#endif
+
 char *CkReadFileContents( CkArenaFrame *arena, const char *path )
 {
 	FILE *fileStruct;
-	register size_t fileLength;
+	register off_t fileLength;
 	register char *cstrBuffer;
 
 	CK_ARG_NON_NULL( arena );
 	CK_ARG_NON_NULL( path );
 
 	// 1. Opening the file and getting the length
-	if ( fopen_s( &fileStruct, path, "rb" ) ) {
-		fprintf_s( stderr, "ck: '%s' does not exist, or cannot be read from.\n", path );
+	fileStruct = fopen( path, "rb" );
+	if ( !fileStruct ) {
+		fprintf( stderr, "ck: '%s' does not exist, or cannot be read from.\n", path );
 		return NULL;
 	}
-	_fseeki64_nolock( fileStruct, 0, SEEK_END );
-	fileLength = (size_t)_ftelli64_nolock( fileStruct );
-	_fseeki64_nolock( fileStruct, 0, SEEK_SET );
+	universal_fseek( fileStruct, 0, SEEK_END );
+	fileLength = (off_t)universal_ftell( fileStruct );
+	universal_fseek( fileStruct, 0, SEEK_SET );
 
 	// 2. Creating buffer
 	cstrBuffer = CkArenaAllocate( arena, fileLength + 1 );
 
 	// 3. Reading & closing the file
-	_fread_nolock_s( cstrBuffer, fileLength + 1, 1, fileLength, fileStruct );
+	universal_fread( cstrBuffer, 1, fileLength, fileStruct );
 	cstrBuffer[fileLength] = 0;
-	_fclose_nolock( fileStruct );
+	universal_fclose( fileStruct );
 
 	return cstrBuffer;
 }

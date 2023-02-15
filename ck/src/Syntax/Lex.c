@@ -226,7 +226,7 @@ void CkLexCreateInstance( CkArenaFrame *arena, CkLexInstance *dest, char *source
 	dest->sourceLength = strlen( source );
 	dest->source = CkArenaAllocate( arena, dest->sourceLength + 1 );
 	dest->arena = arena;
-	strcpy_s( dest->source, dest->sourceLength + 1, source );
+	strcpy( dest->source, source );
 }
 
 void CkLexDestroyInstance( CkLexInstance *lexer )
@@ -523,7 +523,7 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 		}
 
 		strbuf = CkArenaAllocate( lexer->arena, length + 1 );
-		memcpy_s( strbuf, length + 1, lexer->source + base, length );
+		memcpy( strbuf, lexer->source + base, length );
 		strbuf[length] = 0;
 		for ( size_t i = 0; i < sizeof( s_keywordDict ) / sizeof( KeywordEntryPair ); i++ ) {
 			if ( !strcmp( strbuf, s_keywordDict[i].key ) ) {

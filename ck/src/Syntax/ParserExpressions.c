@@ -198,8 +198,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 	case KW_SIZEOF:
 	{
 		CkFoodType *type;
-		CkToken exprToken;
-		memcpy_s( &exprToken, sizeof( CkToken ), &token, sizeof( CkToken ) );
+		CkToken exprToken = token;
 		CkParserReadToken( parser, &token );
 		if ( token.kind != '(' ) {
 			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
@@ -226,8 +225,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 	case KW_ALIGNOF:
 	{
 		CkFoodType *type;
-		CkToken exprToken;
-		memcpy_s( &exprToken, sizeof( CkToken ), &token, sizeof( CkToken ) );
+		CkToken exprToken = token;
 		CkParserReadToken( parser, &token );
 		if ( token.kind != '(' ) {
 			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
@@ -469,7 +467,7 @@ static CkExpression *s_ParseConditional( CkParserInstance *parser )
 	CkExpression *extra = s_ParseFoodCast( parser );
 
 	CkParserReadToken( parser, &token );
-	memcpy_s( &op, sizeof( CkToken ), &token, sizeof( CkToken ) );
+	op = token;
 
 	// If it not a conditional expression
 	if ( token.kind != '?' ) {

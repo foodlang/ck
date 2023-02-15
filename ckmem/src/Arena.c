@@ -1,6 +1,7 @@
 #include "../Arena.h"
 #include "../CDebug.h"
 #include <stdio.h>
+#include <string.h>
 #if _WIN32
 #include <Windows.h>
 #else
@@ -45,7 +46,7 @@ void *CkArenaAllocate( CkArenaFrame *frame, size_t bytes )
 	bytes += -bytes & (ARENA_ALLOC_ALIGN - 1);
 	frame->offsetFree += bytes;
 	if ( frame->offsetFree > frame->size ) {
-		fprintf( stderr, "ck: Allocating beyond arena frame (limit = %llu bytes)\n", frame->size );
+		fprintf( stderr, "ck: Allocating beyond arena frame (limit = %zx bytes)\n", frame->size );
 		abort();
 	}
 	return yield;

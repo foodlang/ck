@@ -44,7 +44,7 @@ int main( int argc, char *argv[], char **envp )
 	if ( argc == 1 ) {
 		puts( "Usage: ck <build_dir> <profile>" );
 		puts( "\tbuild_dir\tThe directory where the build file is located." );
-		puts( "\tprofile\tThe name of the profile to use. This parameter is optional." );
+		puts( "\tprofile\t\tThe name of the profile to use. This parameter is optional." );
 		return 0;
 	}
 
@@ -85,7 +85,7 @@ int main( int argc, char *argv[], char **envp )
 		size_t sourceLen;
 
 		if ( !source ) {
-			fprintf_s( stderr, "ck: Attempted to read out of bounds of file list.\n" );
+			fprintf( stderr, "ck: Attempted to read out of bounds of file list.\n" );
 			abort();
 		}
 
@@ -97,9 +97,9 @@ int main( int argc, char *argv[], char **envp )
 
 		// Name (ProjectName::FileName)
 		driverStart.name = CkArenaAllocate( &driverArena, nameLen + 1 );
-		strcpy_s( driverStart.name, nameLen + 1, applied->name );
-		strcat_s( driverStart.name, nameLen + 1, "::" );
-		strcat_s( driverStart.name, nameLen + 1, source );
+		strcpy( driverStart.name, applied->name );
+		strcat( driverStart.name, "::" );
+		strcat( driverStart.name, source );
 
 		// Source filepath (SourceDir/Filepath)
 		sourceTotal = CkArenaAllocate( &driverArena, sourceLen + 1 );
@@ -109,7 +109,7 @@ int main( int argc, char *argv[], char **envp )
 		// Source loading
 		driverStart.source = CkReadFileContents( &driverArena, sourceTotal );
 		if ( !driverStart.source ) {
-			fprintf_s( stderr, "ck: Project '%s' does not have source file '%s'.\n", applied->name, sourceTotal );
+			fprintf( stderr, "ck: Project '%s' does not have source file '%s'.\n", applied->name, sourceTotal );
 			CkArenaResetFrame( &driverArena );
 			continue;
 		}
@@ -131,8 +131,8 @@ int main( int argc, char *argv[], char **envp )
 	CkArenaEndFrame( &driverArena );
 
 	CkTimeGetCurrent( &compilerEnd );
-	printf_s(
-		"Full compilation time: %llf ms",
+	printf(
+		"Full compilation time: %f ms",
 		(double)(CkTimeElapsed_mcs(&compilerStart, &compilerEnd)) / 1000.0 );
 
 	(void)envp;

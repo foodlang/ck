@@ -9,7 +9,7 @@ void CkTimeGetCurrent( CkTimePoint *dest )
 #if _WIN32
 	QueryPerformanceCounter( dest );
 #else
-	clock_gettime( CLOCK_MONOTOMIC, dest );
+	clock_gettime( CLOCK_MONOTONIC, dest );
 #endif
 }
 
@@ -28,7 +28,7 @@ int64_t CkTimeElapsed_ms( CkTimePoint *start, CkTimePoint *end )
 #else
 
 	result = ((end->tv_sec * 1000) + (end->tv_nsec / 1000000))
-		- ((start->tv_sec * 1000) + (start->tv_nsec / 1000000);
+		- ((start->tv_sec * 1000) + (start->tv_nsec / 1000000));
 
 #endif
 	return result;
