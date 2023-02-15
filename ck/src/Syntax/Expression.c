@@ -122,7 +122,11 @@ static void s_ExprPrintTab( int tab, CkExpression *expression )
 {
 	for ( int i = 0; i < tab; i++ )
 		printf( "  " );
+#if _WIN32
 	printf( "%c:%llu\n", (char)expression->token.kind, expression->token.value.u64 );
+#else
+	printf( "%c:%lu\n", (char)expression->token.kind, expression->token.value.u64 );
+#endif
 	if ( expression->extra )
 		s_ExprPrintTab( tab + 1, expression->extra );
 	if ( expression->left )
