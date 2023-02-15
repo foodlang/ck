@@ -46,7 +46,7 @@ void *CkArenaAllocate( CkArenaFrame *frame, size_t bytes )
 	bytes += -bytes & (ARENA_ALLOC_ALIGN - 1);
 	frame->offsetFree += bytes;
 	if ( frame->offsetFree > frame->size ) {
-		fprintf( stderr, "ck: Allocating beyond arena frame (limit = %zx bytes)\n", frame->size );
+		fprintf( stderr, "ck: Allocating beyond arena frame (limit = %zu bytes)\n", frame->size );
 		abort();
 	}
 	return yield;

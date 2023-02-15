@@ -14,8 +14,6 @@ CkList *CkListStart(
 
 	CK_ARG_NON_NULL(allocator);
 
-	// \e: Removed alignment because UB
-	// elemSize += -elemSize & (ARENA_ALLOC_ALIGN - 1);
 	new = CkArenaAllocate( allocator, sizeof( CkList ) + elemSize );
 	new->allocator = allocator;
 	new->elemSize = elemSize;
@@ -54,7 +52,7 @@ void *CkListAccess(CkList *desc, size_t index)
 
 	for ( size_t i = 0; i < index; i++ ) {
 		if ( !head->next ) {
-			fprintf( stderr, "ck internal error: Attempting to read out of list bounds (max = %llu, index = %llu\n", i, index );
+			fprintf( stderr, "ck internal error: Attempting to read out of list bounds (max = %zu, index = %zu\n", i, index );
 			abort();
 		}
 		head = head->next;
@@ -71,7 +69,7 @@ CkList *CkListRemove(CkList *desc, size_t index)
 
 	for ( size_t i = 0; i < index; i++ ) {
 		if ( !head->next ) {
-			fprintf( stderr, "ck internal error: Attempting to read out of list bounds (max = %llu, index = %llu\n", i, index );
+			fprintf( stderr, "ck internal error: Attempting to read out of list bounds (max = %zu, index = %zu\n", i, index );
 			abort();
 		}
 		head = head->next;
