@@ -36,8 +36,8 @@ TARGETDIR = bin/Debug-linux-x86/ck
 TARGET = $(TARGETDIR)/ck
 OBJDIR = obj/Debug-linux-x86/ck
 DEFINES += -D_DEBUG
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -ffloat-store -Og -g -std=gnu11
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -ffloat-store -Og -g -fsanitize=address
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -ffloat-store -Og -g -std=gnu11 -Wno-warn_unused_result
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -ffloat-store -Og -g -fsanitize=address -Wno-warn_unused_result
 LIBS += sbin/Debug-linux-x86/cJSON/libcJSON.a sbin/Debug-linux-x86/cwalk/libcwalk.a sbin/Debug-linux-x86/lua/liblua.a sbin/Debug-linux-x86/ckmem/libckmem.a sbin/Debug-linux-x86/fflib/libfflib.a -lm
 LDDEPS += sbin/Debug-linux-x86/cJSON/libcJSON.a sbin/Debug-linux-x86/cwalk/libcwalk.a sbin/Debug-linux-x86/lua/liblua.a sbin/Debug-linux-x86/ckmem/libckmem.a sbin/Debug-linux-x86/fflib/libfflib.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32
@@ -47,8 +47,8 @@ TARGETDIR = bin/Debug-linux-x86_64/ck
 TARGET = $(TARGETDIR)/ck
 OBJDIR = obj/Debug-linux-x86_64/ck
 DEFINES += -D_DEBUG
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -ffloat-store -Og -g -std=gnu11
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -ffloat-store -Og -g -fsanitize=address
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -ffloat-store -Og -g -std=gnu11 -Wno-warn_unused_result
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -ffloat-store -Og -g -fsanitize=address -Wno-warn_unused_result
 LIBS += sbin/Debug-linux-x86_64/cJSON/libcJSON.a sbin/Debug-linux-x86_64/cwalk/libcwalk.a sbin/Debug-linux-x86_64/lua/liblua.a sbin/Debug-linux-x86_64/ckmem/libckmem.a sbin/Debug-linux-x86_64/fflib/libfflib.a -lm
 LDDEPS += sbin/Debug-linux-x86_64/cJSON/libcJSON.a sbin/Debug-linux-x86_64/cwalk/libcwalk.a sbin/Debug-linux-x86_64/lua/liblua.a sbin/Debug-linux-x86_64/ckmem/libckmem.a sbin/Debug-linux-x86_64/fflib/libfflib.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64
@@ -58,8 +58,8 @@ TARGETDIR = bin/Release-linux-x86/ck
 TARGET = $(TARGETDIR)/ck
 OBJDIR = obj/Release-linux-x86/ck
 DEFINES +=
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -std=gnu11
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -fno-stack-protector
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -std=gnu11 -Wno-warn_unused_result
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -fno-stack-protector -Wno-warn_unused_result
 LIBS += sbin/Release-linux-x86/cJSON/libcJSON.a sbin/Release-linux-x86/cwalk/libcwalk.a sbin/Release-linux-x86/lua/liblua.a sbin/Release-linux-x86/ckmem/libckmem.a sbin/Release-linux-x86/fflib/libfflib.a -lm
 LDDEPS += sbin/Release-linux-x86/cJSON/libcJSON.a sbin/Release-linux-x86/cwalk/libcwalk.a sbin/Release-linux-x86/lua/liblua.a sbin/Release-linux-x86/ckmem/libckmem.a sbin/Release-linux-x86/fflib/libfflib.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32 -flto -s
@@ -69,8 +69,8 @@ TARGETDIR = bin/Release-linux-x86_64/ck
 TARGET = $(TARGETDIR)/ck
 OBJDIR = obj/Release-linux-x86_64/ck
 DEFINES +=
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -std=gnu11
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -fno-stack-protector
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -std=gnu11 -Wno-warn_unused_result
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -fno-stack-protector -Wno-warn_unused_result
 LIBS += sbin/Release-linux-x86_64/cJSON/libcJSON.a sbin/Release-linux-x86_64/cwalk/libcwalk.a sbin/Release-linux-x86_64/lua/liblua.a sbin/Release-linux-x86_64/ckmem/libckmem.a sbin/Release-linux-x86_64/fflib/libfflib.a -lm
 LDDEPS += sbin/Release-linux-x86_64/cJSON/libcJSON.a sbin/Release-linux-x86_64/cwalk/libcwalk.a sbin/Release-linux-x86_64/lua/liblua.a sbin/Release-linux-x86_64/ckmem/libckmem.a sbin/Release-linux-x86_64/fflib/libfflib.a
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64 -flto -s

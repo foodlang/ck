@@ -38,8 +38,8 @@ TARGETDIR = sbin/Debug-linux-x86/lua
 TARGET = $(TARGETDIR)/liblua.a
 OBJDIR = obj/Debug-linux-x86/lua
 DEFINES += -D_DEBUG
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -ffloat-store -Og -g -std=gnu11
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -ffloat-store -Og -g -fsanitize=address
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -ffloat-store -Og -g -std=gnu11 -Wno-warn_unused_result
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -ffloat-store -Og -g -fsanitize=address -Wno-warn_unused_result
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32
 
 else ifeq ($(config),debug_x86_64)
@@ -47,8 +47,8 @@ TARGETDIR = sbin/Debug-linux-x86_64/lua
 TARGET = $(TARGETDIR)/liblua.a
 OBJDIR = obj/Debug-linux-x86_64/lua
 DEFINES += -D_DEBUG
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -ffloat-store -Og -g -std=gnu11
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -ffloat-store -Og -g -fsanitize=address
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -ffloat-store -Og -g -std=gnu11 -Wno-warn_unused_result
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -ffloat-store -Og -g -fsanitize=address -Wno-warn_unused_result
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64
 
 else ifeq ($(config),release_x86_32)
@@ -56,8 +56,8 @@ TARGETDIR = sbin/Release-linux-x86/lua
 TARGET = $(TARGETDIR)/liblua.a
 OBJDIR = obj/Release-linux-x86/lua
 DEFINES +=
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -std=gnu11
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -fno-stack-protector
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -std=gnu11 -Wno-warn_unused_result
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -fno-stack-protector -Wno-warn_unused_result
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32 -flto -s
 
 else ifeq ($(config),release_x86_64)
@@ -65,8 +65,8 @@ TARGETDIR = sbin/Release-linux-x86_64/lua
 TARGET = $(TARGETDIR)/liblua.a
 OBJDIR = obj/Release-linux-x86_64/lua
 DEFINES +=
-ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -std=gnu11
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -fno-stack-protector
+ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -std=gnu11 -Wno-warn_unused_result
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -flto -ffloat-store -fomit-frame-pointer -O3 -fno-stack-protector -Wno-warn_unused_result
 ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib64 -m64 -flto -s
 
 endif

@@ -37,6 +37,7 @@ workspace "ck"
 	filter "system:Linux"
 		toolset "gcc"
 		cdialect "gnu11"
+		buildoptions { "-Wno-warn_unused_result" }
 		links { "m" }
 
 	filter {}
