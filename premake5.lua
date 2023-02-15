@@ -10,7 +10,6 @@ workspace "ck"
 	intrinsics "On"
 	stringpooling "On"
 	staticruntime "On"
-	flags { "FatalWarnings" }
 
 	filter "configurations:Debug"
 		symbols "On"
@@ -37,7 +36,6 @@ workspace "ck"
 	filter "system:Linux"
 		toolset "gcc"
 		cdialect "gnu11"
-		buildoptions { "-Wno-warn_unused_result" }
 		links { "m" }
 
 	filter {}
