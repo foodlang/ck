@@ -40,8 +40,8 @@ workspace "ck"
 
 	filter {}
 
--- The output target
 local output_target = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+local vendorsrc = "vendor/%{prj.name}/"
 
 project "cwalk"
 	language "C"
@@ -51,8 +51,8 @@ project "cwalk"
 	objdir( "obj/" .. output_target .. "/%{prj.name}" )
 
 	files {
-		"%{prj.name}/**.h",
-		"%{prj.name}/**.c"
+		( vendorsrc .. "**.h" ),
+		( vendorsrc .. "**.c" )
 	}
 
 project "cJSON"
@@ -63,8 +63,8 @@ project "cJSON"
 	objdir( "obj/" .. output_target .. "/%{prj.name}" )
 
 	files {
-		"%{prj.name}/**.h",
-		"%{prj.name}/**.c"
+		( vendorsrc .. "**.h" ),
+		( vendorsrc .. "**.c" )
 	}
 
 project "lua"
@@ -75,50 +75,21 @@ project "lua"
 	objdir( "obj/" .. output_target .. "/%{prj.name}" )
 
 	files {
-		"%{prj.name}/src/**.h",
-		"%{prj.name}/src/**.c"
+		(vendorsrc .. "src/**.h"),
+		(vendorsrc .. "src/**.c")
 	}
-
-project "ckmem"
-	language "C"
-	kind "StaticLib"
-
-	targetdir( "sbin/" .. output_target .. "/%{prj.name}" )
-	objdir( "obj/" .. output_target .. "/%{prj.name}" )
-
-	files {
-		"%{prj.name}/**.h",
-		"%{prj.name}/src/**.c"
-	}
-
-	includedirs { "%{prj.name}/", "." }
-
-project "fflib"
-	language "C"
-	kind "StaticLib"
-
-	targetdir( "sbin/" .. output_target .. "/%{prj.name}" )
-	objdir( "obj/" .. output_target .. "/%{prj.name}" )
-
-	files {
-		"%{prj.name}/**.h",
-		"%{prj.name}/src/**.c"
-	}
-
-	includedirs { "%{prj.name}/", "." }
 
 project "ck"
 	language "C"
 	kind "ConsoleApp"
-
-	targetdir( "bin/" .. output_target .. "/%{prj.name}" )
+	targetdir( "bin/" )
 	objdir( "obj/" .. output_target .. "/%{prj.name}" )
 
 	files {
-		"%{prj.name}/include/**.h",
-		"%{prj.name}/src/**.c"
+		"src/**.c",
+		"include/**.h"
 	}
 
-	includedirs { "%{prj.name}/", ".", "cwalk/", "cJSON/", "lua/src/" }
+	includedirs { "include/", "vendor/cwalk/", "vendor/cJSON/", "vendor/lua/src/" }
 
-	links { "cJSON", "cwalk", "lua", "ckmem", "fflib" }
+	links { "cJSON", "cwalk", "lua" }
