@@ -1,80 +1,60 @@
-/*
- * Fast Food program structure (AST and scopes)
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header defines structures and functions for the Fast Food AST.
+ * Fast Food is the name given to the AST format. A fast food library
+ * can contain many modules.
+ *
+***************************************************************************/
 
 #ifndef FFLIB_FFSTRUCT_H_
 #define FFLIB_FFSTRUCT_H_
 
 #include <Memory/List.h>
 
-/// <summary>
-/// The kind of a statement.
-/// </summary>
+// The kind of a statement.
 typedef enum FFStatementKind
 {
-	/// <summary>
-	/// An empty statement.
-	/// </summary>
+	// An empty statement.
 	FF_STMT_EMPTY,
 
-	/// <summary>
-	/// An expression statement.
-	/// </summary>
+	// An expression statement.
 	FF_STMT_EXPRESSION,
 
-	/// <summary>
-	/// A block statement.
-	/// </summary>
+	// A block statement.
 	FF_STMT_BLOCK,
 
-	/// <summary>
-	/// An if statement.
-	/// </summary>
+	// An if statement.
 	FF_STMT_IF,
 
-	/// <summary>
-	/// A while statement.
-	/// </summary>
+	// A while statement.
 	FF_STMT_WHILE,
 
-	/// <summary>
-	/// A do ... while statement.
-	/// </summary>
+	// A do ... while statement.
 	FF_STMT_DO_WHILE,
 
-	/// <summary>
-	/// A for statement.
-	/// </summary>
+	// A for statement.
 	FF_STMT_FOR,
 
-	/// <summary>
-	/// A switch statement.
-	/// </summary>
+	// A switch statement.
 	FF_STMT_SWITCH,
 
-	/// <summary>
-	/// A break statement.
-	/// </summary>
+	// A break statement.
 	FF_STMT_BREAK,
 
-	/// <summary>
-	/// A continue statement.
-	/// </summary>
+	// A continue statement.
 	FF_STMT_CONTINUE,
 
-	/// <summary>
-	/// A goto statement.
-	/// </summary>
+	// A goto statement.
 	FF_STMT_GOTO,
 
-	/// <summary>
-	/// An assert statement.
-	/// </summary>
+	// An assert statement.
 	FF_STMT_ASSERT,
 
-	/// <summary>
-	/// A sponge statement.
-	/// </summary>
+	// A sponge statement.
 	FF_STMT_SPONGE,
 
 } FFStatementKind;
@@ -82,58 +62,39 @@ typedef enum FFStatementKind
 typedef struct FFStatement FFStatement;
 typedef struct FFScope FFScope;
 
-/// <summary>
-/// A variable declaration.
-/// </summary>
+// A variable declaration.
 typedef struct FFVariable
 {
-	/// <summary>
-	/// The name of the variable.
-	/// </summary>
+	// The name of the variable.
 	char *name;
 
-	/// <summary>
-	/// The scope that contains the variable.
-	/// </summary>
+	// The scope that contains the variable.
 	FFScope *parentScope;
 
-	/// <summary>
-	/// The type of the variable.
-	/// </summary>
+	// The type of the variable.
 	CkFoodType *type;
 
 } FFVariable;
 
-/// <summary>
-/// An address to code.
-/// </summary>
+
+// An address to code.
 typedef struct FFLabel
 {
-	/// <summary>
-	/// The scope that contains the label.
-	/// </summary>
+	// The scope that contains the label.
 	FFScope *parentScope;
 
-	/// <summary>
-	/// The index to the statement to go to.
-	/// </summary>
+	// The index to the statement to go to.
 	size_t stmtIndex;
 
 } FFLabel;
 
-/// <summary>
-/// A switch case entry.
-/// </summary>
+// A switch case entry.
 typedef struct FFSwitchCase
 {
-	/// <summary>
-	/// The constant value to check for.
-	/// </summary>
+	// The constant value to check for.
 	uint64_t checkFor;
 
-	/// <summary>
-	/// The label to go to.
-	/// </summary>
+	// The label to go to.
 	FFLabel label;
 
 } FFSwitchCase;
@@ -143,90 +104,62 @@ typedef CkExpression *FFStatementData_Expression; // Expression statement data
 
 typedef struct FFStatementData_Block // Block statement data
 {
-	/// <summary>
-	/// The statements of the block statement.
-	/// </summary>
+	// The statements of the block statement.
 	CkList *stmts;
 
-	/// <summary>
-	/// The scope of the block statement.
-	/// </summary>
+	// The scope of the block statement.
 	FFScope *scope;
 
 } FFStatementData_Block;
 
 typedef struct FFStatementData_If // If statement data
 {
-	/// <summary>
-	/// The condition of the if statement.
-	/// </summary>
+	// The condition of the if statement.
 	CkExpression *condition;
 
-	/// <summary>
-	/// The statement to execute when the condition is true.
-	/// </summary>
+	// The statement to execute when the condition is true.
 	FFStatement *cThen;
 
-	/// <summary>
-	/// The statement to execute if the condition is false. Optional.
-	/// </summary>
+	// The statement to execute if the condition is false. Optional.
 	FFStatement *cElse;
 
 } FFStatementData_If;
 
 typedef struct FFStatementData_While // While statement data
 {
-	/// <summary>
-	/// The condition of the while statement.
-	/// </summary>
+	// The condition of the while statement.
 	CkExpression *condition;
 
-	/// <summary>
-	/// The statement to be executed while the condition is true.
-	/// </summary>
+	// The statement to be executed while the condition is true.
 	FFStatement *cWhile;
 
 } FFStatementData_While;
 
 typedef struct FFStatementData_For // For statement data
 {
-	/// <summary>
-	/// This is executed once.
-	/// </summary>
+	// This is executed once.
 	FFStatement *cInit;
 
-	/// <summary>
-	/// The condition that is checked before calling the body.
-	/// </summary>
+	// The condition that is checked before calling the body.
 	CkExpression *condition;
 
-	/// <summary>
-	/// This expression will be performed after the body.
-	/// </summary>
+	// This expression will be performed after the body.
 	CkExpression *lead;
 
-	/// <summary>
-	/// The body of the for loop.
-	/// </summary>
+	// The body of the for loop.
 	FFStatement *body;
 
 } FFStatementData_For;
 
 typedef struct FFStatementData_Switch // Switch statement data
 {
-	/// <summary>
-	/// The expression to check against the cases.
-	/// </summary>
+	// The expression to check against the cases.
 	CkExpression *expression;
 
-	/// <summary>
-	/// The list of cases to check against. Element type: FFSwitchCase
-	/// </summary>
+	// The list of cases to check against. Element type: FFSwitchCase
 	CkList *caseList;
 
-	/// <summary>
-	/// A block statement that stores the body of the switch.
-	/// </summary>
+	// A block statement that stores the body of the switch.
 	FFStatement *block;
 
 } FFStatementData_Switch;
@@ -236,33 +169,26 @@ typedef char FFStatementData_Continue; // Continue statement data (no data)
 
 typedef struct FFStatementData_Goto // Goto statement data
 {
-	/// <summary>
-	/// The label to go to.
-	/// </summary>
+	// The label to go to.
 	FFLabel destination;
 
 } FFStatementData_Goto;
 
 typedef struct FFStatementData_Assert // Assert statement data. Static assert is done at parser-level
 {
-	/// <summary>
-	/// The expression to check.
-	/// </summary>
+	// The expression to check.
 	CkExpression *expression;
 
 } FFStatementData_Assert;
 
 typedef struct FFStatementData_Sponge // Sponge statement data
 {
-	/// <summary>
-	/// The statement.
-	/// </summary>
+	// The statement.
 	FFStatement *statement;
 } FFStatementData_Sponge;
 
-/// <summary>
-/// The data passed along a statement.
-/// </summary>
+
+// The data passed along a statement.
 typedef union FFStatementData
 {
 	FFStatementData_Empty      empty;
@@ -281,180 +207,113 @@ typedef union FFStatementData
 
 } FFStatementData;
 
-/// <summary>
-/// A scope is the frame that stores functions and variables.
-/// </summary>
+// A scope is the frame that stores functions and variables.
 typedef struct FFScope
 {
-	/// <summary>
-	/// The scope containing this one. If there's no higher scope, then this
-	/// is NULL.
-	/// </summary>
+	// The scope containing this one. If there's no higher scope, then this
+	// is NULL.
 	struct FFScope *parent;
 
-	/// <summary>
-	/// If this is true, the scope supports labels (e.g. function bodies)
-	/// </summary>
+	// If this is true, the scope supports labels (e.g. function bodies)
 	bool_t supportsLabels;
 
-	/// <summary>
-	/// If this is true, the scope can contain function declarations (e.g. modules,
-	/// libraries and base function scopes)
-	/// </summary>
+	// If this is true, the scope can contain function declarations (e.g. modules,
+	// libraries and base function scopes)
 	bool_t supportsFunctions;
 
-	/// <summary>
-	/// The variables declared in this scope.
-	/// </summary>
+	// The variables declared in this scope.
 	CkList *variableList;
 
-	/// <summary>
-	/// The labels in the current scope. If supportsLabels is FALSE, this list is
-	/// not created.
-	/// </summary>
+	// The labels in the current scope. If supportsLabels is FALSE, this list is
+	// not created.
 	CkList *labelList;
 
-	/// <summary>
-	/// The list of functions in the current scope.
-	/// </summary>
+	// The list of functions in the current scope.
 	CkList *functionList;
 
 } FFScope;
 
-/// <summary>
-/// A statement is a piece of code that performs operations.
-/// </summary>
+// A statement is a piece of code that performs operations.
 typedef struct FFStatement
 {
-	/// <summary>
-	/// The statement.
-	/// </summary>
+	// The statement.
 	FFStatementKind stmt;
 
-	/// <summary>
-	/// The data stored with the statement.
-	/// </summary>
+	// The data stored with the statement.
 	FFStatementData data;
 
 } FFStatement;
 
-/// <summary>
-/// A library contains many modules. Keep in mind that an
-/// executable file is also a library.
-/// </summary>
+// A library contains many modules. Keep in mind that an
+// executable file is also a library.
 typedef struct FFLibrary
 {
-	/// <summary>
-	/// The namespace of the library (e.g. Food) and its name.
-	/// </summary>
+	// The namespace of the library (e.g. Food) and its name.
 	char *name;
 
-	/// <summary>
-	/// A list containing the library's modules. Element Type = FFModule *
-	/// </summary>
+	// A list containing the library's modules. Element Type = FFModule *
 	CkList *moduleList;
 
-	/// <summary>
-	/// A list containing all of the library's other library dependencies. Element Type = char *
-	/// </summary>
+	// A list containing all of the library's other library dependencies. Element Type = char *
 	CkList *dependenciesList;
 
-	/// <summary>
-	/// The global scope of the library.
-	/// </summary>
+	// The global scope of the library.
 	FFScope *scope;
 
 } FFLibrary;
 
-/// <summary>
-/// A module is an instanceable unit of code that performs a precise
-/// function.
-/// </summary>
+// A module is an instanceable unit of code that performs a precise
+// function.
 typedef struct FFModule
 {
-	/// <summary>
-	/// The name of the module. This is not the name of an instance.
-	/// </summary>
+	// The name of the module. This is not the name of an instance.
 	char *name;
 
-	/// <summary>
-	/// If this is true, the module is public.
-	/// </summary>
+	// If this is true, the module is public.
 	bool_t bPublic;
 
-	/// <summary>
-	/// If this is true, the module cannot be instanced (only one state
-	/// should ever exist.)
-	/// </summary>
+	// If this is true, the module cannot be instanced (only one state
+	// should ever exist.)
 	bool_t bStatic;
 
-	/// <summary>
-	/// The scope of the module.
-	/// </summary>
+	// The scope of the module.
 	FFScope *scope;
 
 } FFModule;
 
-/// <summary>
-/// A function is a calleable block of code.
-/// </summary>
+// A function is a calleable block of code.
 typedef struct FFFunction
 {
-	/// <summary>
-	/// The parent scope of the function.
-	/// </summary>
+	// The parent scope of the function.
 	FFScope *parent;
 
-	/// <summary>
-	/// The return type of the function.
-	/// </summary>
+	// The return type of the function.
 	CkFoodType *returnType;
 
-	/// <summary>
-	/// The name of the function.
-	/// </summary>
+	// The name of the function.
 	char *name;
 
-	/// <summary>
-	/// If this is true, the module is public.
-	/// </summary>
+	// If this is true, the module is public.
 	bool_t bPublic;
 
-	/// <summary>
-	/// The body of the function.
-	/// </summary>
+	// The body of the function.
 	FFStatement *body;
 
-	/// <summary>
-	/// The list of all of the arguments. Passed.
-	/// </summary>
+	// The list of all of the arguments. Passed.
 	CkList *passedArguments;
 
 } FFFunction;
 
-/// <summary>
-/// Creates and starts a new scope.
-/// </summary>
-/// <returns></returns>
+// Creates and starts a new scope.
 FFScope *FFStartScope( CkArenaFrame *allocator, FFScope *optionalParent, bool_t allowedLabels, bool_t allowedFunctions );
 
-/// <summary>
-/// Attempts to leave the current scope. If this function fails, the current scope is returned.
-/// </summary>
-/// <param name="current"></param>
-/// <returns></returns>
+// Attempts to leave the current scope. If this function fails, the current scope is returned.
 FFScope *FFLeaveScope( FFScope *current );
 
-/// <summary>
-/// Attempts to allocate a variable in a scope.
-/// </summary>
-/// <returns></returns>
+// Attempts to allocate a variable in a scope.
 void FFAllocateVariable( FFScope *scope, CkFoodType *type, char *passedName );
 
-/// <summary>
-/// Attempts to allocate a new function in a scope.
-/// </summary>
-/// <returns></returns>
+// Attempts to allocate a new function in a scope.
 void FFAllocateFunction(
 	FFScope *scope,
 	bool_t bPublic,
@@ -463,20 +322,10 @@ void FFAllocateFunction(
 	CkList *pPassedArgumentList,
 	FFStatement *body );
 
-/// <summary>
-/// Creates a new library that is ready to use.
-/// </summary>
-/// <param name="name">The name of the library.</param>
-/// <returns></returns>
+// Creates a new library that is ready to use.
 FFLibrary *FFCreateLibrary( CkArenaFrame *allocator, char *passedName );
 
-/// <summary>
-/// Creates a new module that is ready to use.
-/// </summary>
-/// <param name="name">The name of the module.</param>
-/// <param name="isPublic">If this is true, the module should be exported outside of the library.</param>
-/// <param name="isStatic">If this is true, only once state of the module can exist in the program's lifetime.</param>
-/// <returns></returns>
+// Creates a new module that is ready to use.
 FFModule *FFCreateModule(
 	CkArenaFrame *allocator,
 	FFLibrary *parent,
@@ -484,10 +333,7 @@ FFModule *FFCreateModule(
 	bool_t isPublic,
 	bool_t isStatic );
 
-/// <summary>
-/// Prints a whole library's structure.
-/// </summary>
-/// <param name="library"></param>
+// Prints a whole library's structure.
 void FFPrintAST( FFLibrary *library );
 
 #endif

@@ -1,7 +1,14 @@
-/*
- * Defines various structures, macros and functions
- * for the Food programming language implementation.
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header declares various functions concerning Food-related types.
+ * These types are used to represent some of the front-end & back-end syntax
+ * (such as FoodType.)
+ *
+ ***************************************************************************/
 
 #ifndef CK_FOOD_H_
 #define CK_FOOD_H_
@@ -9,25 +16,14 @@
 #include <Types.h>
 #include <Memory/Arena.h>
 
-/// <summary>
-/// Allocates and creates a new type instance on the heap.
-/// </summary>
-/// <param name="id">The type identifier. Must be equal to one of the CK_FOOD_(typename) macros.</param>
-/// <param name="qualifiers">A bit array storing the type qualifiers.</param>
-/// <param name="child">(optional) The child type node. Set this arg to NULL if no child node is present. The child
-/// is now owned by this node.</param>
-/// <returns>A heap-allocated type instance.</returns>
+// Allocates and creates a new type instance on the heap.
 CkFoodType *CkFoodCreateTypeInstance(
 	CkArenaFrame *arena,
 	FoodTypeID id,
 	uint8_t qualifiers,
 	CkFoodType *child);
 
-/// <summary>
-/// Duplicates a type instance.
-/// </summary>
-/// <param name="instance">The instance to duplicate.</param>
-/// <returns></returns>
+// Duplicates a type instance.
 CkFoodType *CkFoodCopyTypeInstance(CkArenaFrame *arena, CkFoodType *instance);
 
 #endif

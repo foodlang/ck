@@ -1,6 +1,12 @@
-/*
- * Provides functions for file/string operations.
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header provides file/string I/O helper functions.
+ *
+ ***************************************************************************/
 
 #ifndef CK_FILEIO_H_
 #define CK_FILEIO_H_
@@ -8,19 +14,10 @@
 #include <Types.h>
 #include <Memory/Arena.h>
 
-/// <summary>
-/// Reads a file and puts the contents into a buffer.
-/// </summary>
-/// <param name="path"></param>
-/// <returns></returns>
+// Reads a file and puts the contents into a buffer.
 char *CkReadFileContents(CkArenaFrame *arena, const char *path);
 
-/// <summary>
-/// Gets the colum and row from a 1D position in a string.
-/// </summary>
-/// <param name="string"></param>
-/// <param name="pCol"></param>
-/// <param name="pRow"></param>
+// Gets the colum and row from a 1D position in a string.
 void CkGetRowColString(const char *string, size_t pos, size_t *pRow, size_t *pCol);
 
 #endif

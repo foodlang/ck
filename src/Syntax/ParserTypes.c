@@ -1,26 +1,18 @@
 #include <Syntax/ParserTypes.h>
 #include <CDebug.h>
 
-/// <summary>
-/// A type ID pair.
-/// </summary>
+// A type ID pair.
 typedef struct KwTypeIDPair
 {
-	/// <summary>
-	/// The keyword.
-	/// </summary>
+	// The keyword.
 
-	/// <summary>
-	/// The type ID.
-	/// </summary>
+	// The type ID.
 	uint64_t kw;
 	uint8_t  id;
 
 } KwTypeIDPair;
 
-/// <summary>
-/// A dictionary to look up type IDs from specific keywords.
-/// </summary>
+// A dictionary to look up type IDs from specific keywords.
 static const KwTypeIDPair s_kwTypeIDPair[] =
 {
 	{ KW_VOID, CK_FOOD_VOID },

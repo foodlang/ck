@@ -1,6 +1,13 @@
-/*
- * Debugging macros for the CK compiler (internal)
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header declares debugging macros and functions (for the debug version
+ * of CK, not compiling Food projects for debugging.)
+ *
+ ***************************************************************************/
 
 #ifndef CK_CDEBUG_H_
 #define CK_CDEBUG_H_

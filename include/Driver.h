@@ -1,6 +1,14 @@
-/*
- * Provides functions and types for Ck compilation drivers.
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header declares the driver structs and functions. A compilation driver
+ * takes in source code, parses the code and generates IL. Multiple drivers
+ * should be runnable at the same time.
+ *
+ ***************************************************************************/
 
 #ifndef CK_DRIVER_H_
 #define CK_DRIVER_H_
@@ -10,53 +18,34 @@
 
 #include <IL/FFStruct.h>
 
-/// <summary>
-/// Stores the configuration for a Ck compilation driver.
-/// This includes the source, the parsing and output settings.
-/// </summary>
+// Stores the configuration for a Ck compilation driver.
+// This includes the source, the parsing and output settings.
 typedef struct CkDriverStartupConfiguration
 {
-	/// <summary>
-	/// The name of the driver.
-	/// </summary>
+	// The name of the driver.
 	char *name;
 
-	/// <summary>
-	/// The source code.
-	/// </summary>
+	// The source code.
 	char *source;
 
-	/// <summary>
-	/// If true, warnings act as errors (prevent compilation).
-	/// </summary>
+	// If true, warnings act as errors (prevent compilation).
 	bool_t wError;
 
 } CkDriverStartupConfiguration;
 
-/// <summary>
-/// Returned by a driver after running. Contains debugging information,
-/// symbols and other information.
-/// </summary>
+// Returned by a driver after running. Contains debugging information,
+// symbols and other information.
 typedef struct CkDriverCompilationResult
 {
-	/// <summary>
-	/// If true, the compilation unit compiled successfully.
-	/// </summary>
+	// If true, the compilation unit compiled successfully.
 	bool_t successful;
 
-	/// <summary>
-	/// The time elapsed (in milliseconds) for the driver to run.
-	/// </summary>
+	// The time elapsed (in milliseconds) for the driver to run.
 	double executionTime;
 
 } CkDriverCompilationResult;
 
-/// <summary>
-/// Runs a compilation driver.
-/// </summary>
-/// <param name="threadArena">The arena for this thread of execution.</param>
-/// <param name="result">The result of the driver.</param>
-/// <param name="startupConfig">The startup configuration.</param>
+// Runs a compilation driver.
 void CkDriverCompile(
 	CkArenaFrame *threadArena,
 	CkArenaFrame *genArena,

@@ -38,7 +38,7 @@ CkExpression *CkExpressionCreateLiteral(
 
 CkExpression *CkExpressionCreateUnary(
 	CkArenaFrame *arena,
-	const CkToken *operator,
+	const CkToken *op,
 	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *operand )
@@ -46,10 +46,10 @@ CkExpression *CkExpressionCreateUnary(
 	CkExpression *expr;
 
 	CK_ARG_NON_NULL( arena );
-	CK_ARG_NON_NULL( operator );
+	CK_ARG_NON_NULL( op );
 
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
-	memcpy( &expr->token, operator, sizeof( CkToken ) );
+	memcpy( &expr->token, op, sizeof( CkToken ) );
 	expr->left = operand;
 	expr->type = type;
 	expr->kind = kind;
@@ -58,7 +58,7 @@ CkExpression *CkExpressionCreateUnary(
 
 CkExpression *CkExpressionCreateBinary(
 	CkArenaFrame *arena,
-	const CkToken *operator,
+	const CkToken *op,
 	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *left,
@@ -67,10 +67,10 @@ CkExpression *CkExpressionCreateBinary(
 	CkExpression *expr;
 
 	CK_ARG_NON_NULL( arena );
-	CK_ARG_NON_NULL( operator );
+	CK_ARG_NON_NULL( op );
 
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
-	memcpy( &expr->token, operator, sizeof( CkToken ) );
+	memcpy( &expr->token, op, sizeof( CkToken ) );
 	expr->left = left;
 	expr->right = right;
 	expr->type = type;
@@ -80,7 +80,7 @@ CkExpression *CkExpressionCreateBinary(
 
 CkExpression *CkExpressionCreateTernary(
 	CkArenaFrame *arena,
-	const CkToken *operator,
+	const CkToken *op,
 	const CkExpressionKind kind,
 	CkFoodType *type,
 	CkExpression *left,
@@ -90,10 +90,10 @@ CkExpression *CkExpressionCreateTernary(
 	CkExpression *expr;
 
 	CK_ARG_NON_NULL( arena );
-	CK_ARG_NON_NULL( operator );
+	CK_ARG_NON_NULL( op );
 
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
-	memcpy( &expr->token, operator, sizeof( CkToken ) );
+	memcpy( &expr->token, op, sizeof( CkToken ) );
 	expr->left = left;
 	expr->right = right;
 	expr->extra = extra;

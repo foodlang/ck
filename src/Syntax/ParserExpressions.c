@@ -6,32 +6,22 @@
 #include <stdio.h>
 #include <string.h>
 
-/// <summary>
-/// An entry in the precedence table for binary operators.
-/// </summary>
+// An entry in the precedence table for binary operators.
 typedef struct BinaryOperatorPrecedenceEntry
 {
-	/// <summary>
-	/// The operator.
-	/// </summary>
+	// The operator.
 	uint64_t op;
 
-	/// <summary>
-	/// The precedence.
-	/// </summary>
+	// The precedence.
 	uint8_t  prec;
 
-	/// <summary>
-	/// The kind of the operator.
-	/// </summary>
+	// The kind of the operator.
 	CkExpressionKind kind;
 
 } BinaryOperatorPrecedenceEntry;
 
-/// <summary>
-/// A table having operators as its first entries and
-/// precedences as its second.
-/// </summary>
+// A table having operators as its first entries and
+// precedences as its second.
 static BinaryOperatorPrecedenceEntry s_binaryPrecedences[] =
 {
 	{ '*', 10, CK_EXPRESSION_MUL },
@@ -63,12 +53,8 @@ static BinaryOperatorPrecedenceEntry s_binaryPrecedences[] =
 	{ CKTOK2( '|', '|' ), 1, CK_EXPRESSION_LOGICAL_OR, },
 };
 
-/// <summary>
-/// Looks up in the binary precedence table and attempts to get 
-/// the precedence of a given operator.
-/// </summary>
-/// <param name="op">The operator to look up.</param>
-/// <returns></returns>
+// Looks up in the binary precedence table and attempts to get 
+// the precedence of a given operator.
 static uint8_t s_BinaryOpPrec( uint64_t op )
 {
 	for (
@@ -81,12 +67,8 @@ static uint8_t s_BinaryOpPrec( uint64_t op )
 	return 0;
 }
 
-/// <summary>
-/// Looks up the binary precedence table and attempts to get
-/// the expression kind of a given operator.
-/// </summary>
-/// <param name="op">The operator to look up.</param>
-/// <returns></returns>
+// Looks up the binary precedence table and attempts to get
+// the expression kind of a given operator.
 static CkExpressionKind s_BinaryOpKind( uint64_t op )
 {
 	for (
@@ -99,10 +81,7 @@ static CkExpressionKind s_BinaryOpKind( uint64_t op )
 	return CK_EXPRESSION_DUMMY;
 }
 
-/// <summary>
-/// Parses a primary value.
-/// </summary>
-/// <returns></returns>
+// Parses a primary value.
 static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 {
 	CkToken token;
@@ -263,11 +242,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 	}
 }
 
-/// <summary>
-/// Parses access, postfix increment and decrement operators.
-/// </summary>
-/// <param name="parser"></param>
-/// <returns></returns>
+// Parses access, postfix increment and decrement operators.
 static CkExpression *s_ParseLevel1( CkParserInstance *parser )
 {
 	CkToken token;
@@ -328,11 +303,7 @@ Leave:
 	return acc;
 }
 
-/// <summary>
-/// Parses prefix unary operators and casts.
-/// </summary>
-/// <param name="parser"></param>
-/// <returns></returns>
+// Parses prefix unary operators and casts.
 static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 {
 	CkToken token;
@@ -401,11 +372,7 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 	return accumulator;
 }
 
-/// <summary>
-/// Parses binary operators. Uses Pratt parsing.
-/// </summary>
-/// <param name="parser">A pointer to the parser.</param>
-/// <returns></returns>
+// Parses binary operators. Uses Pratt parsing.
 static CkExpression *s_ParseBinary( uint8_t parentPrec, CkParserInstance *parser )
 {
 	CkToken token;
@@ -429,11 +396,7 @@ static CkExpression *s_ParseBinary( uint8_t parentPrec, CkParserInstance *parser
 	return acc;
 }
 
-/// <summary>
-/// Parses a Food-style cast (expr => T)
-/// </summary>
-/// <param name="parser">A pointer to the parser.</param>
-/// <returns></returns>
+// Parses a Food-style cast (expr => T)
 static CkExpression *s_ParseFoodCast( CkParserInstance *parser )
 {
 	CkToken op;
@@ -453,11 +416,7 @@ static CkExpression *s_ParseFoodCast( CkParserInstance *parser )
 	return acc;
 }
 
-/// <summary>
-/// Parses a conditional expression.
-/// </summary>
-/// <param name="parser">A pointer to the parser.</param>
-/// <returns></returns>
+// Parses a conditional expression.
 static CkExpression *s_ParseConditional( CkParserInstance *parser )
 {
 	CkToken token;
@@ -486,11 +445,7 @@ static CkExpression *s_ParseConditional( CkParserInstance *parser )
 	return CkExpressionCreateTernary( parser->arena, &op, CK_EXPRESSION_CONDITIONAL, NULL, left, right, extra );
 }
 
-/// <summary>
-/// Parses an assignment expression.
-/// </summary>
-/// <param name="parser">A pointer to the parser.</param>
-/// <returns></returns>
+// Parses an assignment expression.
 static CkExpression *s_ParseAssign( CkParserInstance *parser )
 {
 	CkToken op;
@@ -531,11 +486,7 @@ static CkExpression *s_ParseAssign( CkParserInstance *parser )
 	}
 }
 
-/// <summary>
-/// Parses a compound expression.
-/// </summary>
-/// <param name="parser">A pointer to the parser.</param>
-/// <returns></returns>
+// Parses a compound expression.
 static CkExpression *s_ParseCompound( CkParserInstance *parser )
 {
 	CkToken op;

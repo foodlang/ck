@@ -1,6 +1,14 @@
-/*
- * Provides structs and functions for diagnostic management.
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header declares the diagnostic handler module. The diagnostic handler
+ * is used to report CK errors (related to the user code & linking). These
+ * errors can then be all displayed at once.
+ *
+ ***************************************************************************/
 
 #ifndef CK_ERROR_H_
 #define CK_ERROR_H_
@@ -9,124 +17,78 @@
 #include <Memory/Arena.h>
 #include <Memory/List.h>
 
-enum
+// The severity of the diagnostic.
+typedef enum CkDiagnosticSeverity
 {
-	/// <summary>
-	/// A suggestion or message given by the compiler.
-	/// </summary>
+	// A suggestion or message given by the compiler.
 	CK_DIAG_SEVERITY_MESSAGE,
 
-	/// <summary>
-	/// A warning about a potential bug to fix. Will not
-	/// prevent compilation (unless specified).
-	/// </summary>
+	// A warning about a potential bug to fix. Will not
+	// prevent compilation (unless specified).
 	CK_DIAG_SEVERITY_WARNING,
 
-	/// <summary>
-	/// An error is critical and will prevent compilation
-	/// in all cases, as the compiled results might not
-	/// reflect intended behaviour.
-	/// </summary>
+	// An error is critical and will prevent compilation
+	// in all cases, as the compiled results might not
+	// reflect intended behaviour.
 	CK_DIAG_SEVERITY_ERROR,
-};
 
-/// <summary>
-/// Stores essential data about a thrown diagnostic.
-/// </summary>
+} CkDiagnosticSeverity;
+
+// Stores essential data about a thrown diagnostic.
 typedef struct CkThrownDiagnostic
 {
-	/// <summary>
-	/// The message. This is already formatted and allocated on the heap.
-	/// </summary>
+	// The message. This is already formatted and allocated on the heap.
 	char *message;
 
-	/// <summary>
-	/// The severity of the diagnostic.
-	/// </summary>
+	// The severity of the diagnostic.
 	uint8_t severity;
 
 } CkThrownDiagnostic;
 
-/// <summary>
-/// An instance of a diagnostic handler. A diagnostic handler
-/// takes care of all of the diagnostics thrown by the compiler,
-/// and displays them nicely to the user.
-/// </summary>
+// An instance of a diagnostic handler. A diagnostic handler
+// takes care of all of the diagnostics thrown by the compiler,
+// and displays them nicely to the user.
 typedef struct CkDiagnosticHandlerInstance
 {
-	/// <summary>
-	/// A pointer to the lexer instance reading the source
-	/// code.
-	/// </summary>
+	// A pointer to the lexer instance reading the source
+	// code.
 	CkLexInstance *pPassedSource;
 
-	/// <summary>
-	/// Stores all of the blacklisted diagnostics (diagnostics to skip over.)
-	/// </summary>
+	// Stores all of the blacklisted diagnostics (diagnostics to skip over.)
 	CkList *blacklistVector;
 
-	/// <summary>
-	/// Stores all of the thrown diagnotics.
-	/// </summary>
+	// Stores all of the thrown diagnotics.
 	CkList *thrownDiagnosticsVector;
 
-	/// <summary>
-	/// True if the diagnostics encounters any errors.
-	/// </summary>
+	// True if the diagnostics encounters any errors.
 	bool_t anyErrors;
 
-	/// <summary>
-	/// True if the diagnostics encounters any non-blacklisted warnings.
-	/// </summary>
+	// True if the diagnostics encounters any non-blacklisted warnings.
 	bool_t anyWarnings;
 
-	/// <summary>
-	/// The arena used for allocations. Does not include the thrown diagnostics and the blacklist.
-	/// </summary>
+	// The arena used for allocations. Does not include the thrown diagnostics
+	// and the blacklist.
 	CkArenaFrame *arena;
 
 } CkDiagnosticHandlerInstance;
 
-/// <summary>
-/// Creates a new diagnostic handler instance.
-/// </summary>
-/// <param name="dhi">A pointer to the destination struct.</param>
-/// <param name="pPassedLexer">A pointer to the passed lexer instance.</param>
+// Creates a new diagnostic handler instance.
 void CkDiagnosticHandlerCreateInstance(CkArenaFrame *arena, CkDiagnosticHandlerInstance *dhi, CkLexInstance *pPassedLexer);
 
-/// <summary>
-/// Destroys a diagnostic handler and frees all used resources (except
-/// for the passed lexer.)
-/// </summary>
-/// <param name="dhi">A pointer to the diagnostic handler struct.</param>
+// Destroys a diagnostic handler and frees all used resources (except
+// for the passed lexer.)
 void CkDiagnosticHandlerDestroyInstance(CkDiagnosticHandlerInstance *dhi);
 
-/// <summary>
-/// Adds a diagnostic to the blacklist. The blacklist prevents warnings
-/// from being thrown. If the diagnostic is already added to the list,
-/// nothing happens.
-/// </summary>
-/// <param name="dhi">A pointer to the diagnostic handler struct.</param>
-/// <param name="name">The name of the diagnostic to blacklist. Case-sensitive.</param>
+// Adds a diagnostic to the blacklist. The blacklist prevents warnings
+// from being thrown. If the diagnostic is already added to the list,
+// nothing happens.
 void CkDiagnosticBlacklist(CkDiagnosticHandlerInstance *dhi, char *name);
 
-/// <summary>
-/// Attempts to remove a diagnostic from the blacklist. Does simply nothing
-/// if the diagnostic isn't already blacklisted.
-/// </summary>
-/// <param name="dhi">A pointer to the diagnostic handler struct.</param>
-/// <param name="name">The name of the diagnostic to whitelist. Case-sensitive.</param>
+// Attempts to remove a diagnostic from the blacklist. Does simply nothing
+// if the diagnostic isn't already blacklisted.
 void CkDiagnosticWhitelist(CkDiagnosticHandlerInstance *dhi, char *name);
 
-/// <summary>
-/// Throws a diagnostic.
-/// </summary>
-/// <param name="dhi">A pointer to the diagnostic handler struct.</param>
-/// <param name="position">The linear position that causes the diagnostic.</param>
-/// <param name="severity">The severity of the diagnostic.</param>
-/// <param name="name">The name of the diagnostic to throw. Case-sensitive.</param>
-/// <param name="format">The format of the message.</param>
-/// <param name="va_args">Params for the format.</param>
+// Throws a diagnostic.
 void CkDiagnosticThrow(
 	CkDiagnosticHandlerInstance *dhi,
 	uint64_t position,
@@ -135,10 +97,7 @@ void CkDiagnosticThrow(
 	const char *restrict format,
 	...);
 
-/// <summary>
-/// Displays all of the reported diagnostics.
-/// </summary>
-/// <param name="dhi">A pointer to the diagnostic handler struct.</param>
+// Displays all of the reported diagnostics.
 void CkDiagnosticDisplay(CkDiagnosticHandlerInstance *dhi);
 
 #endif

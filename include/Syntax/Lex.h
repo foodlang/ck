@@ -1,6 +1,14 @@
-/*
- * A lexer capable of parsing Food input.
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header defines the lexer module, which takes source code (as a string),
+ * and outputs tokens. Tokens describe the text in a manner that is
+ * understandable by the parser. Whitespaces and comments are removed here.
+ *
+ ***************************************************************************/
 
 #ifndef CK_LEX_H_
 #define CK_LEX_H_
@@ -8,34 +16,24 @@
 #include <Types.h>
 #include <Memory/Arena.h>
 
-/// <summary>
-/// Stores the state of a lexer.
-/// </summary>
+// Stores the state of a lexer.
 typedef struct CkLexInstance
 {
-	/// <summary>
-	/// The source buffer of the lexer.
-	/// </summary>
+	// The source buffer of the lexer.
 	char *source;
 
-	/// <summary>
-	/// The length of the source buffer.
-	/// </summary>
+	// The length of the source buffer.
 	size_t sourceLength;
 
-	/// <summary>
-	/// The current position of the lexer in the source buffer.
-	/// </summary>
+	// The current position of the lexer in the source buffer.
 	size_t cursor;
 
-	/// <summary>
-	/// The arena used for allocations.
-	/// </summary>
+	// The arena used for allocations.
 	CkArenaFrame *arena;
 
 } CkLexInstance;
 
-enum
+typedef enum CkKeyword
 {
 	KW_ALIGNOF = 34647,
 	KW_ATOMIC,
@@ -100,30 +98,20 @@ enum
 	KW_CATCH,
 	KW_THROW,
 	KW_TYPEOF,
-};
+
+} CkKeyword;
 
 #define CKTOK2(a, b)       (uint64_t)((a) << 8 | (b))
 #define CKTOK3(a, b, c)    (uint64_t)((a) << 16 | (b) << 8 | (c))
 #define CKTOK4(a, b, c, d) (uint64_t)((a) << 24 | (b) << 16 | (c) << 8 | (d))
 
-/// <summary>
-/// Creates a new lexer instance.
-/// </summary>
-/// <param name="dest">The destination lexer instance.</param>
-/// <param name="source">The source buffer. It is copied before passing it to the lexer.</param>
+// Creates a new lexer instance.
 void CkLexCreateInstance(CkArenaFrame *arena, CkLexInstance *dest, char *source);
 
-/// <summary>
-/// Reads a token from the lexer source code.
-/// </summary>
-/// <param name="lexer">The lexer to read the code from.</param>
-/// <param name="dest">The destination token buffer.</param>
+// Reads a token from the lexer source code.
 bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *dest);
 
-/// <summary>
-/// Destroys a lexer instance.
-/// </summary>
-/// <param name="lexer">The lexer to destroy.</param>
+// Destroys a lexer instance.
 void CkLexDestroyInstance(CkLexInstance *lexer);
 
 #endif

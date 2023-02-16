@@ -1,10 +1,16 @@
-/*
- * Semantics Analyzer for CK
- * Contains:
- *  -> l-value evaluator (Checks for l-value expressions)
- *  -> Type evaluator / checker (Evaluates the types of expressions)
- *  -> Reference validator (Validates the usage of reference types)
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header defines the semantics analyzer. The semantics analyzer
+ * verifies expressions and AST objects for semantic validity. It also
+ * performs type propagation. The semantics analyzer works closely with the
+ * parser. It also checks and adds lvalue statuses to expressions and
+ * validates the usage of references.
+ *
+ ***************************************************************************/
 
 #ifndef CK_SEMANTICS_H_
 #define CK_SEMANTICS_H_
@@ -22,13 +28,7 @@
 
 #define CK_TYPE_CLASSED_POINTER(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_FUNCPOINTER)
 
-/// <summary>
-/// Figures out the semantics of an expression.
-/// </summary>
-/// <param name="dhi">A pointer to the diagnostic handler to report errors and warnings to.</param>
-/// <param name="outputArena">A pointer to the arena descriptor that provides memory for the new expression.</param>
-/// <param name="expression">The input expression. This is left untouched and all writes are performed on the returning expression.</param>
-/// <returns>The expression that has been populated with various semantic data.</returns>
+// Figures out the semantics of an expression.
 CkExpression *CkSemanticsProcessExpression(
 	CkDiagnosticHandlerInstance *dhi,
 	CkArenaFrame *outputArena,

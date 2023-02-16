@@ -1,6 +1,12 @@
-/*
- * Implements a list of objects that all have the same size.
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header provides a linked list implementation.
+ *
+ ***************************************************************************/
 
 #ifndef CK_LIST_H_
 #define CK_LIST_H_
@@ -8,75 +14,42 @@
 #include <Types.h>
 #include "Arena.h"
 
-/// <summary>
-/// A linked list.
-/// </summary>
+// A linked list.
 typedef struct CkListNode
 {
-	/// <summary>
-	/// The arena used for the allocations.
-	/// </summary>
+	// The arena used for the allocations.
 	CkArenaFrame *allocator;
 
-	/// <summary>
-	/// The next node in the list. NULL means this is the end of the list.
-	/// </summary>
+	// The next node in the list. NULL means this is the end of the list.
 	struct CkListNode *next;
 
-	/// <summary>
-	/// The previous node in the list. NULL means this is the start of the list.
-	/// </summary>
+	// The previous node in the list. NULL means this is the start of the list.
 	struct CkListNode *prev;
 
-	/// <summary>
-	/// The size of the element stored at this node.
-	/// </summary>
+	// The size of the element stored at this node.
 	size_t elemSize;
 
-	/// <summary>
-	/// This is only used for the first element of a list. If this is true, then the first
-	/// node is used.
-	/// </summary>
+	// This is only used for the first element of a list. If this is true, then the first
+	// node is used.
 	bool_t used;
 
 } CkList, CkListNode;
 
-/// <summary>
-/// Allocates a new list inside of an arena.
-/// </summary>
-/// <param name="allocator">A pointer to the arena descriptor of the list.</param>
-/// <param name="elemSize">The size of an element in the list.</param>
+// Allocates a new list inside of an arena.
 CkList *CkListStart(
 	CkArenaFrame *allocator,
 	size_t elemSize);
 
-/// <summary>
-/// Adds an element to the list.
-/// </summary>
-/// <param name="desc">The list.</param>
-/// <param name="source">A pointer to the source element to add.</param>
+// Adds an element to the list.
 void CkListAdd(CkList *desc, void *source);
 
-/// <summary>
-/// Accesses an existing element on the list.
-/// </summary>
-/// <param name="desc">The list.</param>
-/// <param name="index">The index of the element to access.</param>
-/// <returns></returns>
+// Accesses an existing element on the list.
 void *CkListAccess(CkList *desc, size_t index);
 
-/// <summary>
-/// Removes an element from the list.
-/// </summary>
-/// <param name="desc">The list.</param>
-/// <param name="index">The index of the element to remove.</param>
-/// <returns>The new list.</returns>
+// Removes an element from the list.
 CkList *CkListRemove(CkList *desc, size_t index);
 
-/// <summary>
-/// Returns the length of a list.
-/// </summary>
-/// <param name="desc"></param>
+// Returns the length of a list.
 size_t CkListLength( CkList *desc );
 
 #endif

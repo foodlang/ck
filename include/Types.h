@@ -1,6 +1,13 @@
-/*
- * Basic typedefs.
-*/
+/***************************************************************************
+ * 
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ * 
+ * This header provides basic typedefs and constants used by the Food compiler.
+ * It also declares global macros.
+ * 
+ ***************************************************************************/
 
 #ifndef CK_TYPES_H_
 #define CK_TYPES_H_
@@ -31,6 +38,7 @@ typedef signed char bool_t;
 	#define NULL (void *)0
 #endif
 
+// Compares two floats for approximal equality.
 static inline bool_t FloatEqual(double a, double b)
 {
 	const double diff = fmax(a, b) - fmin(a, b);
@@ -38,6 +46,7 @@ static inline bool_t FloatEqual(double a, double b)
 	return diff < 0.00005 || diff > 0.00005;
 }
 
+// 256-bit integers
 typedef struct m256_t
 {
 	uint64_t low;
@@ -50,26 +59,18 @@ typedef struct m256_t
 #define CK_QUALIFIER_RESTRICT_BIT 4
 #define CK_QUALIFIER_ATOMIC_BIT   8
 
-/// <summary>
-/// Represents a token, an indivisible bit of text that is used to
-/// represent the syntax of the source code.
-/// </summary>
+// Represents a token, an indivisible bit of text that is used to
+// represent the syntax of the source code.
 typedef struct CkToken
 {
 
-	/// <summary>
-	/// Where the token is located.
-	/// </summary>
+	// Where the token is located.
 	size_t position;
 
-	/// <summary>
-	/// The kind of the token.
-	/// </summary>
+	// The kind of the token.
 	uint64_t kind;
 
-	/// <summary>
-	/// An additional value stored with the token.
-	/// </summary>
+	// An additional value stored with the token.
 	union {
 		bool_t boolean;
 		int8_t i8;
@@ -116,41 +117,29 @@ typedef enum FoodTypeID
 	CK_FOOD_STRING,
 } FoodTypeID;
 
-/// <summary>
-/// Represents a type in the Food programming language.
-/// Use CkFoodCreateTypeInstance() to create,
-/// and CkFoodDeleteTypeInstance() to delete.
-/// </summary>
+// Represents a type in the Food programming language.
+// Use CkFoodCreateTypeInstance() to create,
+// and CkFoodDeleteTypeInstance() to delete.
 typedef struct CkFoodType
 {
-	/// <summary>
-	/// The type identifier. Must be equal to one of the
-	/// CK_FOOD_(typename) macros.
-	/// </summary>
+	// The type identifier. Must be equal to one of the
+	// CK_FOOD_(typename) macros.
 	FoodTypeID id;
 
-	/// <summary>
-	/// A bit array storing the type qualifiers.
-	/// </summary>
+	// A bit array storing the type qualifiers.
 	uint8_t  qualifiers;
 
-	/// <summary>
-	/// Types can have subtypes. This points to this
-	/// type's direct subtype.
-	/// </summary>
+	// Types can have subtypes. This points to this
+	// type's direct subtype.
 	struct CkFoodType *child;
 
 } CkFoodType;
 
-/// <summary>
-/// The kind of an expression (its operator.)
-/// </summary>
+// The kind of an expression (its operator.)
 typedef enum CkExpressionKind
 {
 
-	/// <summary>
-	/// Misc. unknown expression identifier
-	/// </summary>
+	// Misc. unknown expression identifier
 	CK_EXPRESSION_DUMMY,
 
 	CK_EXPRESSION_COMPOUND_LITERAL,
@@ -229,53 +218,37 @@ typedef enum CkExpressionKind
 
 } CkExpressionKind;
 
-/// <summary>
-/// A parser expression.
-/// </summary>
+// A parser expression.
 typedef struct CkExpression
 {
-	/// <summary>
-	/// The main token of the expression.
-	/// Usually an operator, or the literal
-	/// value token with literal expressions.
-	/// </summary>
+	// The main token of the expression.
+	// Usually an operator, or the literal
+	// value token with literal expressions.
 	CkToken token;
 
-	/// <summary>
-	/// The kind of the expression (its operator.)
-	/// This cannot be stored with the token, cause the
-	/// main expression token of two operators can be the same.
-	/// (e.g. both x++ and ++x have ++ has their main token.)
-	/// </summary>
+	// The kind of the expression (its operator.)
+	// This cannot be stored with the token, cause the
+	// main expression token of two operators can be the same.
+	// (e.g. both x++ and ++x have ++ has their main token.)
 	CkExpressionKind kind;
 
-	/// <summary>
-	/// The type of the expression. This is a passed
-	/// pointer. Ideally, this should be allocated on 
-	/// the same arena as the expression to prevent
-	/// object lifetime issues.
-	/// </summary>
+	// The type of the expression. This is a passed
+	// pointer. Ideally, this should be allocated on 
+	// the same arena as the expression to prevent
+	// object lifetime issues.
 	CkFoodType *type;
 
-	/// <summary>
-	/// The left child node.
-	/// </summary>
+	// The left child node.
 	struct CkExpression *left;
 
-	/// <summary>
-	/// The right child node.
-	/// </summary>
+	// The right child node.
 	struct CkExpression *right;
 
-	/// <summary>
-	/// This child node is used to store the third
-	/// member of ternary expressions.
-	/// </summary>
+	// This child node is used to store the third
+	// member of ternary expressions.
 	struct CkExpression *extra;
 
-	/// <summary>
-	/// If true, this expression can be referenced.
-	/// </summary>
+	// If true, this expression can be referenced.
 	bool_t isLValue;
 
 } CkExpression;

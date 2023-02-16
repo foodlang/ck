@@ -1,6 +1,14 @@
-/*
- * Declares the expression parser functions.
-*/
+/***************************************************************************
+ *
+ * Copyright (C) 2023 The Food Project
+ * Authors:
+ *   - \e
+ *
+ * This header defines the expression sub-parser. This sub-parser parses the
+ * expressions that are used in statements and declarations. The main parser
+ * is located at include/Parser.h
+ *
+ ***************************************************************************/
 
 #ifndef CK_PARSER_EXPRESSIONS_H_
 #define CK_PARSER_EXPRESSIONS_H_
@@ -8,11 +16,7 @@
 #include "Expression.h"
 #include "Parser.h"
 
-/// <summary>
-/// Parses an expression in the parser source.
-/// </summary>
-/// <param name="parser">A pointer to the parser instance.</param>
-/// <returns>A heap-allocated expression tree. The user is responsible for freeing the data with CkExpressionDelete().</returns>
+// Parses an expression in the parser source.
 CkExpression *CkParserExpression(CkParserInstance *parser);
 
 #endif

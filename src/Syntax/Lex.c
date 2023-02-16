@@ -5,19 +5,13 @@
 #include <math.h>
 #include <stdio.h>
 
-/// <summary>
-/// Represents an entry in the keyword dictionary.
-/// </summary>
+// Represents an entry in the keyword dictionary.
 typedef struct KeywordEntryPair
 {
-	/// <summary>
-	/// The key, stored as a constant string.
-	/// </summary>
+	// The key, stored as a constant string.
 	const char *key;
 
-	/// <summary>
-	/// The token kind for that specific keyword.
-	/// </summary>
+	// The token kind for that specific keyword.
 	uint64_t value;
 
 } KeywordEntryPair;
@@ -109,11 +103,7 @@ static KeywordEntryPair s_keywordDict[] =
 	{ "typeof", KW_TYPEOF },
 };
 
-/// <summary>
-/// Gets the next character in the source code.
-/// </summary>
-/// <param name="lexer"></param>
-/// <returns></returns>
+// Gets the next character in the source code.
 static inline char s_nextChar( CkLexInstance *lexer )
 {
 	if ( lexer->cursor >= lexer->sourceLength )
@@ -121,11 +111,7 @@ static inline char s_nextChar( CkLexInstance *lexer )
 	return lexer->source[lexer->cursor];
 }
 
-/// <summary>
-/// Parses an escape sequence.
-/// </summary>
-/// <param name="cur"></param>
-/// <returns></returns>
+// Parses an escape sequence.
 static inline uint8_t s_escapeSequence( CkLexInstance *lexer )
 {
 	char cur = s_nextChar( lexer );
