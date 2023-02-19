@@ -54,19 +54,22 @@ void CkParserCreateInstance(
 	CkParserInstance *dest,
 	CkList *pPassedTokens,
 	size_t passedCount,
-	CkDiagnosticHandlerInstance *pDhi);
+	CkDiagnosticHandlerInstance *pDhi );
 
 // Deletes a parser instance.
-void CkParserDelete(CkParserInstance *dest);
+void CkParserDelete( CkParserInstance *dest );
 
 // Reads a token from the token stream provided when creating the parser instance.
 // Advances the token pointer, meaning you should never increase parser->position
 // manually, unlike the lexer.
-void CkParserReadToken(CkParserInstance *parser, CkToken *token);
+void CkParserReadToken( CkParserInstance *parser, CkToken *token );
 
 // Attempts to rewind a parser's token pointer. If the parser
 // cannot be rewinded by the given amount, FALSE is returned and
 // the token pointer is set to 0.
-bool_t CkParserRewind(CkParserInstance *parser, size_t elems);
+bool_t CkParserRewind( CkParserInstance *parser, size_t elems );
+
+// Goes to a specific token. Used to rewind the parser.
+void CkParserGoto( CkParserInstance *parser, size_t index );
 
 #endif

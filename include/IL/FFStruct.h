@@ -61,6 +61,8 @@ typedef enum FFStatementKind
 
 typedef struct FFStatement FFStatement;
 typedef struct FFScope FFScope;
+typedef struct FFLibrary FFLibrary;
+typedef struct FFModule FFModule;
 
 // A variable declaration.
 typedef struct FFVariable
@@ -210,9 +212,15 @@ typedef union FFStatementData
 // A scope is the frame that stores functions and variables.
 typedef struct FFScope
 {
+	// The library that contains the scope.
+	FFLibrary *library;
+
+	// The module that contains the scope.
+	FFModule *module;
+
 	// The scope containing this one. If there's no higher scope, then this
 	// is NULL.
-	struct FFScope *parent;
+	FFScope *parent;
 
 	// If this is true, the scope supports labels (e.g. function bodies)
 	bool_t supportsLabels;

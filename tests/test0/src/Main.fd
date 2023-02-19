@@ -1,6 +1,6 @@
-{ ;;;;;;;; 2 + (void)3; }
-	if (true) {
-		2 + 3;
-	} else {
-		while (true) 
-	}
+{
+	int a;
+	bool b;
+	for (1 + 2; 1 < 2; 3)
+		{}
+}

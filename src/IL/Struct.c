@@ -1,4 +1,5 @@
 #include <IL/FFStruct.h>
+#include <Syntax/Expression.h>
 
 #include <CDebug.h>
 
@@ -14,6 +15,10 @@ FFScope *FFStartScope(
 	
 	yield = CkArenaAllocate( allocator, sizeof( FFScope ) );
 	yield->parent = optionalParent;
+	if ( optionalParent ) {
+		yield->library = optionalParent->library;
+		yield->module = optionalParent->module;
+	}
 
 	// Variables
 	yield->variableList = CkListStart( allocator, sizeof( FFVariable ) );
@@ -84,6 +89,8 @@ FFLibrary *FFCreateLibrary( CkArenaFrame *allocator, char *passedName )
 	FFLibrary *lib = CkArenaAllocate( allocator, sizeof( FFLibrary ) );
 	lib->name = passedName;
 	lib->scope = FFStartScope( allocator, NULL, FALSE, TRUE );
+	lib->scope->library = lib;
+	lib->scope->module = NULL;
 	lib->moduleList = CkListStart( allocator, sizeof( FFModule * ) );
 	lib->dependenciesList = CkListStart( allocator, sizeof( char * ) );
 	return lib;
@@ -101,6 +108,7 @@ FFModule *FFCreateModule(
 	mod->bStatic = isStatic;
 	mod->name = passedName;
 	mod->scope = FFStartScope( allocator, parent->scope, FALSE, TRUE );
+	mod->scope->module = mod;
 	CkListAdd( parent->moduleList, &mod );
 	return mod;
 }
@@ -118,7 +126,8 @@ static void s_PrintStmt( size_t indent, FFStatement *stmt )
 		return;
 
 	case FF_STMT_EXPRESSION:
-		printf( "Expression statement\n" );
+		printf( "Expression:\n" );
+		CkExpressionPrint( stmt->data.expression );
 		return;
 
 	case FF_STMT_BLOCK:
@@ -150,6 +159,14 @@ static void s_PrintStmt( size_t indent, FFStatement *stmt )
 	case FF_STMT_DO_WHILE:
 		printf( "Do/while statement:\n" );
 		s_PrintStmt( indent + 1, stmt->data.while_.cWhile );
+		return;
+
+	case FF_STMT_FOR:
+		printf( "For statement:\n" );
+		s_PrintStmt( indent + 1, stmt->data.for_.cInit );
+		CkExpressionPrint( stmt->data.for_.condition );
+		CkExpressionPrint( stmt->data.for_.lead );
+		s_PrintStmt( indent + 1, stmt->data.for_.body );
 		return;
 
 	default:

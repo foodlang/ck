@@ -16,6 +16,7 @@
 #include <stdlib.h>
 
 // CK_ARG_NON_NULL: Check argument for nullity
+// CK_ASSERT: Assert
 
 #ifdef _DEBUG
 #define CK_ARG_NON_NULL(x)   \
@@ -26,8 +27,11 @@
 			__func__, #x);   \
 		abort();             \
 	}
+#define CK_ASSERT(x) \
+	if (!(x)) { fprintf(stderr, "ck (debug): assertion '%s' failed in function %s\n", #x, __func__); abort(); }
 #else
 #define CK_ARG_NON_NULL(x) (void)x
+#define CK_ASSERT(x) (void)x
 #endif
 
 #endif

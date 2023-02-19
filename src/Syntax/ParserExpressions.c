@@ -90,6 +90,15 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 
 	switch ( token.kind ) {
 
+		// Identifier
+	case 'I':
+		return CkExpressionCreateLiteral(
+			parser->arena,
+			&token,
+			CK_EXPRESSION_IDENTIFIER,
+			NULL // types are figured out later
+		);
+
 		// Literal integer
 	case '0':
 

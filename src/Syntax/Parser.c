@@ -62,3 +62,11 @@ bool_t CkParserRewind( CkParserInstance *parser, size_t elems )
 	parser->position -= elems;
 	return TRUE;
 }
+
+void CkParserGoto( CkParserInstance *parser, size_t index )
+{
+	CK_ARG_NON_NULL( parser );
+	if ( index >= parser->passedTokenCount ) {
+		parser->position = parser->passedTokenCount - 1;
+	} else parser->position = index;
+}

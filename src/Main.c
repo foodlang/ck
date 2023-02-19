@@ -40,6 +40,7 @@ int main( int argc, char *argv[], char **envp )
 #if defined(_DEBUG)
 	puts( "This is a debug build of CK. The compiler might not perform as fast as release builds." );
 #endif
+	puts( "" );
 
 	if ( argc == 1 ) {
 		puts( "Usage: ck <build_dir> <profile>" );
