@@ -92,12 +92,33 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 
 		// Identifier
 	case 'I':
-		return CkExpressionCreateLiteral(
-			parser->arena,
-			&token,
-			CK_EXPRESSION_IDENTIFIER,
-			NULL // types are figured out later
-		);
+	{
+		CkExpression *scoped;
+		CkToken op;
+
+		// Scope resolution
+		CkParserReadToken( parser, &op );
+		scoped =
+			ok.kind == CKTOK2(':', ':')
+			? CkExpressionCreateLiteral(parser->arena, &token, CK_EXPRESSION_SCOPED_REFERENCE, NULL)
+			: CkExpressionCreateLiteral(
+				parser->arena,
+				&token,
+				CK_EXPRESSION_IDENTIFIER,
+				NULL // types are figured out later
+			);
+		CkParserRewind( parser, 1 );
+		while ( TRUE ) {
+			CkParserReadToken( parser, &op );
+			if ( op.kind == CKTOK2( ':', ':' ) ) {
+				scoped = CkExpressionCreateUnary( parser->arena, &token, CK_EXPRESSION_SCOPED_REFERENCE, NULL, scoped );
+			} else {
+				CkParserRewind( parser, 1 );
+				break;
+			}
+		}
+		return scoped;
+	}
 
 		// Literal integer
 	case '0':

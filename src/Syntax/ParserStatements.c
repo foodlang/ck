@@ -8,19 +8,14 @@
 static CkExpression *s_ParseExpr( CkParserInstance *parser )
 {
 	CkExpression *base = CkParserExpression( parser );
-	CkExpression *processed = CkSemanticsProcessExpression(
-		parser->pDhi,
-		parser->genArena,
-		base
-	);
-	return processed;
+	return base;
 }
 
-static FFStatement *s_IfStatement( FFScope *context, CkParserInstance *parser )
+static CkStatement *s_IfStatement( CkScope *context, CkParserInstance *parser )
 {
 	CkToken token;
 	CkExpression *condition;
-	FFStatement *returned;
+	CkStatement *returned;
 
 	// if >>>(<<< condition ) stmt
 	CkParserReadToken( parser, &token );
@@ -55,8 +50,8 @@ static FFStatement *s_IfStatement( FFScope *context, CkParserInstance *parser )
 		return NULL;
 	}
 
-	returned = CkArenaAllocate( parser->genArena, sizeof( FFStatement ) );
-	returned->stmt = FF_STMT_IF;
+	returned = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
+	returned->stmt = CK_STMT_IF;
 	returned->data.if_.condition = condition;
 
 	// if ( condition ) >>>stmt<<<
@@ -72,11 +67,11 @@ static FFStatement *s_IfStatement( FFScope *context, CkParserInstance *parser )
 	return returned;
 }
 
-static FFStatement *s_WhileStatement( FFScope *context, CkParserInstance *parser )
+static CkStatement *s_WhileStatement( CkScope *context, CkParserInstance *parser )
 {
 	CkToken token;
 	CkExpression *condition;
-	FFStatement *returned;
+	CkStatement *returned;
 
 	// while >>>(<<< condition ) stmt
 	CkParserReadToken( parser, &token );
@@ -111,8 +106,8 @@ static FFStatement *s_WhileStatement( FFScope *context, CkParserInstance *parser
 		return NULL;
 	}
 
-	returned = CkArenaAllocate( parser->genArena, sizeof( FFStatement ) );
-	returned->stmt = FF_STMT_WHILE;
+	returned = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
+	returned->stmt = CK_STMT_WHILE;
 	returned->data.while_.condition = condition;
 
 	// while ( condition ) >>>stmt<<<
@@ -121,14 +116,14 @@ static FFStatement *s_WhileStatement( FFScope *context, CkParserInstance *parser
 	return returned;
 }
 
-static FFStatement *s_DoWhileStatement( FFScope *context, CkParserInstance *parser )
+static CkStatement *s_DoWhileStatement( CkScope *context, CkParserInstance *parser )
 {
 	CkToken token;
 	CkExpression *condition;
-	FFStatement *returned;
+	CkStatement *returned;
 
 	// do >>>stmt<<< while ( condition ) ;
-	FFStatement *cWhile = CkParseStmt( context, parser );
+	CkStatement *cWhile = CkParseStmt( context, parser );
 
 	// do stmt >>>while<<< ( condition ) ;
 	CkParserReadToken( parser, &token );
@@ -165,23 +160,23 @@ static FFStatement *s_DoWhileStatement( FFScope *context, CkParserInstance *pars
 		return NULL;
 	}
 
-	returned = CkArenaAllocate( parser->genArena, sizeof(FFStatement) );
-	returned->stmt = FF_STMT_DO_WHILE;
+	returned = CkArenaAllocate( parser->genArena, sizeof(CkStatement) );
+	returned->stmt = CK_STMT_DO_WHILE;
 	returned->data.doWhile.condition = condition;
 	returned->data.doWhile.cWhile = cWhile;
 
 	return returned;
 }
 
-static FFStatement *s_ForStatement( FFScope *context, CkParserInstance *parser )
+static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 {
 	CkToken token;
-	FFStatement *returned;
-	FFStatement *init;
-	FFStatement *body;
+	CkStatement *returned;
+	CkStatement *init;
+	CkStatement *body;
 	CkExpression *condition;
 	CkExpression *lead;
-	FFScope *forScope;
+	CkScope *forScope;
 
 	// for >>>(<<< init ; condition ; lead ) block
 	CkParserReadToken( parser, &token );
@@ -192,7 +187,7 @@ static FFStatement *s_ForStatement( FFScope *context, CkParserInstance *parser )
 	}
 
 	// for ( >>>init<<< ; condition ; lead ) block
-	forScope = FFStartScope( parser->genArena, context, FALSE, FALSE );
+	forScope = CkStartScope( parser->genArena, context, FALSE, FALSE );
 	init = CkParseStmt( forScope, parser );
 
 	// for ( init; >>>condition<<< ; lead ) block
@@ -220,8 +215,8 @@ static FFStatement *s_ForStatement( FFScope *context, CkParserInstance *parser )
 	// for ( init ; condition ; lead ) >>>block<<<
 	body = CkParseStmt( forScope, parser );
 
-	returned = CkArenaAllocate( parser->genArena, sizeof(FFStatement) );
-	returned->stmt = FF_STMT_FOR;
+	returned = CkArenaAllocate( parser->genArena, sizeof(CkStatement) );
+	returned->stmt = CK_STMT_FOR;
 	returned->data.for_.cInit = init;
 	returned->data.for_.condition = condition;
 	returned->data.for_.lead = lead;
@@ -230,7 +225,7 @@ static FFStatement *s_ForStatement( FFScope *context, CkParserInstance *parser )
 	return returned;
 }
 
-FFStatement *CkParseStmt( FFScope *context, CkParserInstance *parser )
+CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 {
 	CkToken token;
 
@@ -242,19 +237,19 @@ FFStatement *CkParseStmt( FFScope *context, CkParserInstance *parser )
 
 		// nop
 	case ';': {
-		FFStatement* returned = CkArenaAllocate( parser->genArena, sizeof( FFStatement ) );
-		returned->stmt = FF_STMT_EMPTY;
+		CkStatement* returned = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
+		returned->stmt = CK_STMT_EMPTY;
 		return returned;
 	}
 
 		// Block statement
 	case '{': {
-		FFStatement *block = CkArenaAllocate( parser->genArena, sizeof( FFStatement ) );
-		block->stmt = FF_STMT_BLOCK;
-		block->data.block.scope = FFStartScope( parser->genArena, context, TRUE, FALSE );
-		block->data.block.stmts = CkListStart( parser->genArena, sizeof( FFStatement * ) );
+		CkStatement *block = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
+		block->stmt = CK_STMT_BLOCK;
+		block->data.block.scope = CkStartScope( parser->genArena, context, TRUE, FALSE );
+		block->data.block.stmts = CkListStart( parser->genArena, sizeof( CkStatement * ) );
 		while ( TRUE ) {
-			FFStatement *stmt;
+			CkStatement *stmt;
 			size_t index;
 
 			// Checking for end of block
@@ -292,7 +287,7 @@ FFStatement *CkParseStmt( FFScope *context, CkParserInstance *parser )
 	default:
 	{
 		CkExpression *expr;
-		FFStatement *returned;
+		CkStatement *returned;
 
 		CkParserRewind( parser, 1 );
 		expr = s_ParseExpr( parser );
@@ -309,8 +304,8 @@ FFStatement *CkParseStmt( FFScope *context, CkParserInstance *parser )
 				"Expected semicolon at end of statement." );
 			return NULL;
 		}
-		returned = CkArenaAllocate( parser->genArena, sizeof( FFStatement ) );
-		returned->stmt = FF_STMT_EXPRESSION;
+		returned = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
+		returned->stmt = CK_STMT_EXPRESSION;
 		returned->data.expression = expr;
 		return returned;
 	}

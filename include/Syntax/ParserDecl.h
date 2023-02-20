@@ -18,7 +18,7 @@
 // Parses a declaration.
 bool_t CkParseDecl(
 	CkArenaFrame *allocator    /* Allocator */,
-	FFScope *context           /* The scope of the declaration. */,
+	CkScope *context           /* The scope of the declaration. */,
 	CkParserInstance *parser   /* The parser module instance. */,
 	bool_t allowModule         /* Whether parsing modules is allowed. */,
 	bool_t allowFuncStruct     /* Whether parsing functions and structures is allowed. */,

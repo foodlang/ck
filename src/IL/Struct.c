@@ -3,17 +3,17 @@
 
 #include <CDebug.h>
 
-FFScope *FFStartScope(
+CkScope *CkStartScope(
 	CkArenaFrame *allocator,
-	FFScope *optionalParent,
+	CkScope *optionalParent,
 	bool_t allowedLabels,
 	bool_t allowedFunctions )
 {
-	FFScope *yield;
+	CkScope *yield;
 
 	CK_ARG_NON_NULL( allocator );
 	
-	yield = CkArenaAllocate( allocator, sizeof( FFScope ) );
+	yield = CkArenaAllocate( allocator, sizeof( CkScope ) );
 	yield->parent = optionalParent;
 	if ( optionalParent ) {
 		yield->library = optionalParent->library;
@@ -21,33 +21,34 @@ FFScope *FFStartScope(
 	}
 
 	// Variables
-	yield->variableList = CkListStart( allocator, sizeof( FFVariable ) );
+	yield->variableList = CkListStart( allocator, sizeof( CkVariable ) );
 
 	// Labels
 	if ( allowedLabels ) {
 		yield->supportsLabels = TRUE;
-		yield->labelList = CkListStart( allocator, sizeof( FFLabel ) );
+		yield->labelList = CkListStart( allocator, sizeof( CkLabel ) );
 	}
 
 	// Functions
 	if ( allowedFunctions ) {
 		yield->supportsFunctions = TRUE;
-		yield->functionList = CkListStart( allocator, sizeof( FFFunction ) );
+		yield->functionList = CkListStart( allocator, sizeof( CkFunction ) );
+		yield->usertypeList = CkListStart( allocator, sizeof( CkUserType ) );
 	}
 
 	return yield;
 }
 
-FFScope *FFLeaveScope( FFScope *current )
+CkScope *CkLeaveScope( CkScope *current )
 {
 	CK_ARG_NON_NULL( current );
 
 	return current->parent ? current->parent : current;
 }
 
-void FFAllocateVariable( FFScope *scope, CkFoodType *type, char *passedName )
+void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName )
 {
-	FFVariable var = {};
+	CkVariable var = {};
 
 	CK_ARG_NON_NULL( scope );
 	CK_ARG_NON_NULL( type );
@@ -60,60 +61,57 @@ void FFAllocateVariable( FFScope *scope, CkFoodType *type, char *passedName )
 	CkListAdd( scope->variableList, &var );
 }
 
-void FFAllocateFunction(
-	FFScope *scope,
+void CkAllocateFunction(
+	CkScope *scope,
 	bool_t bPublic,
-	CkFoodType *returnType,
+	CkFoodType *signature,
 	char *passedName,
-	CkList *pPassedArgumentList,
-	FFStatement *body )
+	CkStatement *body )
 {
-	FFFunction func = {};
+	CkFunction func = {};
 
 	CK_ARG_NON_NULL( scope );
-	CK_ARG_NON_NULL( returnType );
 	CK_ARG_NON_NULL( passedName );
-	CK_ARG_NON_NULL( pPassedArgumentList );
+	CK_ARG_NON_NULL( signature );
 
 	func.parent = scope;
-	func.returnType = returnType;
+	func.signature = signature;
 	func.body = body;
 	func.bPublic = bPublic;
 	func.name = passedName;
-	func.passedArguments = pPassedArgumentList;
 	CkListAdd( scope->functionList, &func );
 }
 
-FFLibrary *FFCreateLibrary( CkArenaFrame *allocator, char *passedName )
+CkLibrary *CkCreateLibrary( CkArenaFrame *allocator, char *passedName )
 {
-	FFLibrary *lib = CkArenaAllocate( allocator, sizeof( FFLibrary ) );
+	CkLibrary *lib = CkArenaAllocate( allocator, sizeof( CkLibrary ) );
 	lib->name = passedName;
-	lib->scope = FFStartScope( allocator, NULL, FALSE, TRUE );
+	lib->scope = CkStartScope( allocator, NULL, FALSE, TRUE );
 	lib->scope->library = lib;
 	lib->scope->module = NULL;
-	lib->moduleList = CkListStart( allocator, sizeof( FFModule * ) );
+	lib->moduleList = CkListStart( allocator, sizeof( CkModule * ) );
 	lib->dependenciesList = CkListStart( allocator, sizeof( char * ) );
 	return lib;
 }
 
-FFModule *FFCreateModule(
+CkModule *CkCreateModule(
 	CkArenaFrame *allocator,
-	FFLibrary *parent,
+	CkLibrary *parent,
 	char *passedName,
 	bool_t isPublic,
 	bool_t isStatic )
 {
-	FFModule *mod = CkArenaAllocate( allocator, sizeof( FFModule ) );
+	CkModule *mod = CkArenaAllocate( allocator, sizeof( CkModule ) );
 	mod->bPublic = isPublic;
 	mod->bStatic = isStatic;
 	mod->name = passedName;
-	mod->scope = FFStartScope( allocator, parent->scope, FALSE, TRUE );
+	mod->scope = CkStartScope( allocator, parent->scope, FALSE, TRUE );
 	mod->scope->module = mod;
 	CkListAdd( parent->moduleList, &mod );
 	return mod;
 }
 
-static void s_PrintStmt( size_t indent, FFStatement *stmt )
+static void s_PrintStmt( size_t indent, CkStatement *stmt )
 {
 	if ( !stmt )
 		return;
@@ -121,28 +119,28 @@ static void s_PrintStmt( size_t indent, FFStatement *stmt )
 		putc( '\t', stdout );
 	switch ( stmt->stmt ) {
 
-	case FF_STMT_EMPTY:
+	case CK_STMT_EMPTY:
 		printf( "Empty statement\n" );
 		return;
 
-	case FF_STMT_EXPRESSION:
+	case CK_STMT_EXPRESSION:
 		printf( "Expression:\n" );
 		CkExpressionPrint( stmt->data.expression );
 		return;
 
-	case FF_STMT_BLOCK:
+	case CK_STMT_BLOCK:
 	{
 		size_t len = CkListLength( stmt->data.block.stmts );
 		printf( "Block statement:\n" );
 		for ( size_t i = 0; i < len; i++ ) {
 			s_PrintStmt(
 				indent + 1,
-				*(FFStatement **)CkListAccess( stmt->data.block.stmts, i ) );
+				*(CkStatement **)CkListAccess( stmt->data.block.stmts, i ) );
 		}
 		return;
 	}
 
-	case FF_STMT_IF:
+	case CK_STMT_IF:
 		printf( "If statement:\n" );
 		// Then
 		s_PrintStmt( indent + 1, stmt->data.if_.cThen );
@@ -151,17 +149,17 @@ static void s_PrintStmt( size_t indent, FFStatement *stmt )
 			s_PrintStmt( indent + 1, stmt->data.if_.cElse );
 		return;
 
-	case FF_STMT_WHILE:
+	case CK_STMT_WHILE:
 		printf( "While statement:\n" );
 		s_PrintStmt( indent + 1, stmt->data.while_.cWhile );
 		return;
 
-	case FF_STMT_DO_WHILE:
+	case CK_STMT_DO_WHILE:
 		printf( "Do/while statement:\n" );
 		s_PrintStmt( indent + 1, stmt->data.while_.cWhile );
 		return;
 
-	case FF_STMT_FOR:
+	case CK_STMT_FOR:
 		printf( "For statement:\n" );
 		s_PrintStmt( indent + 1, stmt->data.for_.cInit );
 		CkExpressionPrint( stmt->data.for_.condition );
@@ -175,17 +173,17 @@ static void s_PrintStmt( size_t indent, FFStatement *stmt )
 	}
 }
 
-void FFPrintAST( FFLibrary *library )
+void CkPrintAST( CkLibrary *library )
 {
 	size_t moduleCount = CkListLength( library->moduleList );
 	printf( "Library '%s':\n", library->name );
 	for ( size_t i = 0; i < moduleCount; i++ ) {
 		size_t funcCount = 0;
-		FFModule *mod = *(FFModule **)CkListAccess( library->moduleList, i );
+		CkModule *mod = *(CkModule **)CkListAccess( library->moduleList, i );
 		printf( "\tModule '%s' (public = %hhx, static = %hhx):\n", mod->name, mod->bPublic, mod->bStatic );
 		funcCount = CkListLength( mod->scope->functionList );
 		for ( size_t j = 0; j < funcCount; j++ ) {
-			FFFunction *func = CkListAccess( mod->scope->functionList, j );
+			CkFunction *func = CkListAccess( mod->scope->functionList, j );
 			printf( "\t\tFunction '%s' (public = %hhx):\n", func->name, func->bPublic );
 			s_PrintStmt( 3, func->body );
 		}

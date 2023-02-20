@@ -63,9 +63,8 @@ void CkDriverCompile(
 	FFAllocateFunction(
 		temp_dest->scope,
 		TRUE,
-		CkFoodCreateTypeInstance( genArena, CK_FOOD_VOID, 0, NULL ),
+		CkFoodCreateTypeInstance( genArena, CK_FOOD_FUNCPOINTER, 0, NULL ),
 		"main",
-		CkListStart( genArena, sizeof( bool_t ) ),
 		temp_funcstmt);
 
 	// Displaying diagnostics

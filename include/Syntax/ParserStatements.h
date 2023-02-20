@@ -17,6 +17,6 @@
 #include <IL/FFStruct.h>
 
 // Parses a statement, and outputs it to a Fast Food statement AST object.
-FFStatement *CkParseStmt(FFScope *context, CkParserInstance *parser);
+CkStatement *CkParseStmt(CkScope *context, CkParserInstance *parser);
 
 #endif

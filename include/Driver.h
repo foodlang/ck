@@ -31,6 +31,9 @@ typedef struct CkDriverStartupConfiguration
 	// If true, warnings act as errors (prevent compilation).
 	bool_t wError;
 
+	// The alignment requirement.
+	size_t align;
+
 } CkDriverStartupConfiguration;
 
 // Returned by a driver after running. Contains debugging information,
@@ -49,7 +52,7 @@ typedef struct CkDriverCompilationResult
 void CkDriverCompile(
 	CkArenaFrame *threadArena,
 	CkArenaFrame *genArena,
-	FFModule *temp_dest,
+	CkModule *temp_dest,
 	CkDriverCompilationResult *result,
 	CkDriverStartupConfiguration *startupConfig);
 

@@ -133,7 +133,21 @@ typedef struct CkFoodType
 	// type's direct subtype.
 	struct CkFoodType *child;
 
+	// Extra type data (for example, function signature)
+	void *extra;
+
 } CkFoodType;
+
+// A function's signature.
+typedef struct CkFuncSignature
+{
+	// The return type.
+	CkFoodType *tReturn;
+
+	// The arguments' types. Element type = CkFoodType*
+	CkList     *args;
+
+} CkFuncSignature;
 
 // The kind of an expression (its operator.)
 typedef enum CkExpressionKind
@@ -143,6 +157,7 @@ typedef enum CkExpressionKind
 	CK_EXPRESSION_DUMMY,
 
 	CK_EXPRESSION_IDENTIFIER,
+	CK_EXPRESSION_SCOPED_REFERENCE, // A::B::C...
 	CK_EXPRESSION_COMPOUND_LITERAL,
 	CK_EXPRESSION_INTEGER_LITERAL,
 	CK_EXPRESSION_FLOAT_LITERAL,
@@ -253,5 +268,15 @@ typedef struct CkExpression
 	bool_t isLValue;
 
 } CkExpression;
+
+#define CK_TYPE_CLASSED_INT(x) ((x) == CK_FOOD_I8 || (x) == CK_FOOD_U8 || (x) == CK_FOOD_I16 || (x) == CK_FOOD_U16 || \
+							 (x) == CK_FOOD_I32 || (x) == CK_FOOD_U32 || (x) == CK_FOOD_I64 || (x) == CK_FOOD_U64 || \
+							 (x) == CK_FOOD_ENUM)
+
+#define CK_TYPE_CLASSED_FLOAT(x) ((x) == CK_FOOD_F16 || (x) == CK_FOOD_F32 || (x) == CK_FOOD_F64)
+
+#define CK_TYPE_CLASSED_INTFLOAT(x) ((x) >= CK_FOOD_I8 && (x) <= CK_FOOD_F64)
+
+#define CK_TYPE_CLASSED_POINTER(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_FUNCPOINTER)
 
 #endif
