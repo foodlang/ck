@@ -1,6 +1,5 @@
 #include <Syntax/ParserStatements.h>
 #include <Syntax/ParserExpressions.h>
-#include <Syntax/Semantics.h>
 #include <Syntax/ParserDecl.h>
 
 #include <CDebug.h>
@@ -30,15 +29,6 @@ static CkStatement *s_IfStatement( CkScope *context, CkParserInstance *parser )
 	if ( !condition ) {
 		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of an if statement must be an expression." );
-		return NULL;
-	}
-	condition = CkSemanticsProcessExpression( parser->pDhi, parser->genArena, condition );
-	if (
-		condition->type->id != CK_FOOD_BOOL
-		&& !CK_TYPE_CLASSED_INT( condition->type->id )
-		&& !CK_TYPE_CLASSED_POINTER( condition->type->id ) ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-			"The condition of an if statement must be of pointer, boolean or integer type." );
 		return NULL;
 	}
 
@@ -86,15 +76,6 @@ static CkStatement *s_WhileStatement( CkScope *context, CkParserInstance *parser
 	if ( !condition ) {
 		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of a while statement must be an expression." );
-		return NULL;
-	}
-	condition = CkSemanticsProcessExpression( parser->pDhi, parser->genArena, condition );
-	if (
-		condition->type->id != CK_FOOD_BOOL
-		&& !CK_TYPE_CLASSED_INT( condition->type->id )
-		&& !CK_TYPE_CLASSED_POINTER( condition->type->id ) ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-			"The condition of a while statement must be of pointer, boolean or integer type." );
 		return NULL;
 	}
 

@@ -15,6 +15,7 @@
 
 #include <Types.h>
 #include <Memory/Arena.h>
+#include <Memory/List.h>
 
 // Allocates and creates a new type instance on the heap.
 CkFoodType *CkFoodCreateTypeInstance(
@@ -25,5 +26,16 @@ CkFoodType *CkFoodCreateTypeInstance(
 
 // Duplicates a type instance.
 CkFoodType *CkFoodCopyTypeInstance(CkArenaFrame *arena, CkFoodType *instance);
+
+// A function's signature.
+typedef struct CkFuncSignature
+{
+	// The return type.
+	CkFoodType *tReturn;
+
+	// The arguments' types. Element type = CkFoodType*
+	CkList *args;
+
+} CkFuncSignature;
 
 #endif

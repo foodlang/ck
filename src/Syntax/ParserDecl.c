@@ -4,7 +4,7 @@
 
 bool_t CkParseDecl(
 	CkArenaFrame *allocator    /* Allocator */,
-	FFScope *context           /* The scope of the declaration. */,
+	CkScope *context           /* The scope of the declaration. */,
 	CkParserInstance* parser   /* The parser module instance. */,
 	bool_t allowModule         /* Whether parsing modules is allowed. */,
 	bool_t allowFuncStruct     /* Whether parsing functions and structures is allowed. */,
@@ -70,7 +70,7 @@ bool_t CkParseDecl(
 
 	// 2. Parsing potential module
 	if ( token.kind == KW_MODULE ) {
-		FFModule *pModule; // Pointer to module instance
+		CkModule *pModule; // Pointer to module instance
 
 		// Compiler bug catching
 		CK_ASSERT( !context->module );
@@ -85,7 +85,7 @@ bool_t CkParseDecl(
 		}
 
 		// Return value is ignored
-		pModule = FFCreateModule( allocator, context->library, name.value.cstr, bPublic, bStatic );
+		pModule = CkCreateModule( allocator, context->library, name.value.cstr, bPublic, bStatic );
 		
 		// module name >>>{<<< decls }
 		CkParserReadToken( parser, &token );
@@ -136,7 +136,7 @@ bool_t CkParseDecl(
 	// 5. Parsing arguments or inline assignment
 	CkParserReadToken( parser, &token );
 	if ( token.kind == ';' ) { // T name; (un-assigned variable)
-		FFAllocateVariable( context, declType, name.value.cstr );
+		CkAllocateVariable( context, declType, name.value.cstr );
 		return TRUE;
 	} else {
 		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",

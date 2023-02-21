@@ -14,8 +14,9 @@
 #define CK_BINDER_H_
 
 #include <IL/FFStruct.h>
+#include <Diagnostics.h>
 
 // Performs type binding + validates a library.
-void CkBinderValidateAndBind( FFLibrary *library );
+void CkBinderValidateAndBind( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *allocator, CkLibrary *library );
 
 #endif

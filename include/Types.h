@@ -138,17 +138,6 @@ typedef struct CkFoodType
 
 } CkFoodType;
 
-// A function's signature.
-typedef struct CkFuncSignature
-{
-	// The return type.
-	CkFoodType *tReturn;
-
-	// The arguments' types. Element type = CkFoodType*
-	CkList     *args;
-
-} CkFuncSignature;
-
 // The kind of an expression (its operator.)
 typedef enum CkExpressionKind
 {
@@ -184,6 +173,7 @@ typedef enum CkExpressionKind
 	CK_EXPRESSION_BITWISE_NOT,
 	CK_EXPRESSION_C_CAST,
 	CK_EXPRESSION_DEREFERENCE,
+	CK_EXPRESSION_OPAQUE_ADDRESS_OF,
 	CK_EXPRESSION_ADDRESS_OF,
 
 	CK_EXPRESSION_MUL,
@@ -277,6 +267,7 @@ typedef struct CkExpression
 
 #define CK_TYPE_CLASSED_INTFLOAT(x) ((x) >= CK_FOOD_I8 && (x) <= CK_FOOD_F64)
 
-#define CK_TYPE_CLASSED_POINTER(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_FUNCPOINTER)
+#define CK_TYPE_CLASSED_POINTER(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_FUNCPOINTER || (x) == CK_FOOD_ARRAY)
+#define CK_TYPE_CLASSED_POINTER_ARITHM(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_ARRAY)
 
 #endif

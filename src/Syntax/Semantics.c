@@ -1,8 +1,8 @@
-#include <Syntax/Semantics.h>
 #include <CDebug.h>
 
 #include <assert.h>
 
+#ifdef UNUSED
 CkExpression *CkSemanticsProcessExpression(
 	CkDiagnosticHandlerInstance *dhi,
 	CkArenaFrame *outputArena,
@@ -499,3 +499,4 @@ CkExpression *CkSemanticsProcessExpression(
 
 	return new;
 }
+#endif

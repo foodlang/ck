@@ -99,7 +99,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 		// Scope resolution
 		CkParserReadToken( parser, &op );
 		scoped =
-			ok.kind == CKTOK2(':', ':')
+			op.kind == CKTOK2(':', ':')
 			? CkExpressionCreateLiteral(parser->arena, &token, CK_EXPRESSION_SCOPED_REFERENCE, NULL)
 			: CkExpressionCreateLiteral(
 				parser->arena,
@@ -354,6 +354,7 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 	case '~':
 	case '*':
 	case '&':
+	case CKTOK2('&', '&'): // Opaque referencing
 		kind = token.kind == CKTOK2( '+', '+' ) ? CK_EXPRESSION_PREFIX_INC
 			: token.kind == CKTOK2( '-', '-' ) ? CK_EXPRESSION_PREFIX_DEC
 			: token.kind == '+' ? CK_EXPRESSION_UNARY_PLUS
@@ -361,6 +362,7 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 			: token.kind == '!' ? CK_EXPRESSION_LOGICAL_NOT
 			: token.kind == '~' ? CK_EXPRESSION_BITWISE_NOT
 			: token.kind == '*' ? CK_EXPRESSION_DEREFERENCE
+			: token.kind == CKTOK2('&', '&') ? CK_EXPRESSION_OPAQUE_ADDRESS_OF,
 			: CK_EXPRESSION_ADDRESS_OF;
 
 		accumulator = CkExpressionCreateUnary( parser->arena, &token, kind, NULL, s_ParseLevel2( parser ) );

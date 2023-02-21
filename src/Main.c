@@ -29,8 +29,8 @@ int main( int argc, char *argv[], char **envp )
 
 	size_t sourceCount = 0; // Used for iterating through all source files
 
-	FFLibrary *result;           // The resulting library.
-	FFModule *temp_driverModule; // (TEMPORARY) The module for the current driver.
+	CkLibrary *result;           // The resulting library.
+	CkModule *temp_driverModule; // (TEMPORARY) The module for the current driver.
 
 	CkTimePoint compilerStart; // The start of the compilation
 	CkTimePoint compilerEnd;   // The end of the compilation
@@ -75,7 +75,7 @@ int main( int argc, char *argv[], char **envp )
 		return -1;
 	}
 
-	result = FFCreateLibrary( &configGenerationArena, applied->name );
+	result = CkCreateLibrary( &configGenerationArena, applied->name );
 
 	CkArenaStartFrame( &driverArena, 0 );
 	sourceCount = CkListLength( applied->sources );
@@ -119,14 +119,14 @@ int main( int argc, char *argv[], char **envp )
 		driverStart.wError = applied->wError;
 
 		// Driver compilation
-		temp_driverModule = FFCreateModule( &configGenerationArena, result, source, TRUE, TRUE );
+		temp_driverModule = CkCreateModule( &configGenerationArena, result, source, TRUE, TRUE );
 		CkDriverCompile( &driverArena, &configGenerationArena, temp_driverModule, &driverResult, &driverStart );
 
 		// Resetting the frame for the next file
 		CkArenaResetFrame( &driverArena );
 	}
 
-	FFPrintAST( result );
+	CkPrintAST( result );
 
 	CkArenaEndFrame( &configGenerationArena );
 	CkArenaEndFrame( &driverArena );

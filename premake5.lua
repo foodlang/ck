@@ -1,10 +1,6 @@
 workspace "ck"
 	configurations { "Debug", "Release" }
-	platforms { "x86_32", "x86_64" }
 	startproject "ck"
-
-	-- Default target: x86_64
-	defaultplatform "x86_64"
 
 	floatingpoint "Strict"
 	intrinsics "On"
@@ -21,12 +17,6 @@ workspace "ck"
 		optimize "Full"
 		omitframepointer "On"
 		flags { "LinktimeOptimization", "NoBufferSecurityCheck", "NoRuntimeChecks" }
-
-	filter "platforms:x86_32"
-		architecture "x86"
-
-	filter "platforms:x86_64"
-		architecture "x86_64"
 
 	filter "system:Windows"
 		systemversion "latest"

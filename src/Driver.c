@@ -3,7 +3,6 @@
 #include <Syntax/Lex.h>
 #include <Syntax/Parser.h>
 #include <Syntax/ParserStatements.h>
-#include <Syntax/Semantics.h>
 #include <Util/Time.h>
 
 #include <CDebug.h>
@@ -15,7 +14,7 @@
 void CkDriverCompile(
 	CkArenaFrame *threadArena,
 	CkArenaFrame *genArena,
-	FFModule *temp_dest,
+	CkModule *temp_dest,
 	CkDriverCompilationResult *result,
 	CkDriverStartupConfiguration *startupConfig
 )
@@ -30,7 +29,7 @@ void CkDriverCompile(
 	CkTimePoint driverStart; // The current time when performing the driver compilation.
 	CkTimePoint driverEnd;   // The current time when ending the driver compilation.
 
-	FFStatement *temp_funcstmt;
+	CkStatement *temp_funcstmt;
 
 	CK_ARG_NON_NULL( threadArena );
 	CK_ARG_NON_NULL( result );
@@ -60,7 +59,7 @@ void CkDriverCompile(
 	// 4. Parsing
 	CkParserCreateInstance( threadArena, genArena, &parser, tokenList, CkListLength( tokenList ), &dh );
 	temp_funcstmt = CkParseStmt( temp_dest->scope, &parser );
-	FFAllocateFunction(
+	CkAllocateFunction(
 		temp_dest->scope,
 		TRUE,
 		CkFoodCreateTypeInstance( genArena, CK_FOOD_FUNCPOINTER, 0, NULL ),
