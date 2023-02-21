@@ -101,6 +101,7 @@ static KeywordEntryPair s_keywordDict[] =
 	{ "catch", KW_CATCH },
 	{ "throw", KW_THROW },
 	{ "typeof", KW_TYPEOF },
+	{ "asm", KW_ASM }
 };
 
 // Gets the next character in the source code.

@@ -362,7 +362,7 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 			: token.kind == '!' ? CK_EXPRESSION_LOGICAL_NOT
 			: token.kind == '~' ? CK_EXPRESSION_BITWISE_NOT
 			: token.kind == '*' ? CK_EXPRESSION_DEREFERENCE
-			: token.kind == CKTOK2('&', '&') ? CK_EXPRESSION_OPAQUE_ADDRESS_OF,
+			: token.kind == CKTOK2('&', '&') ? CK_EXPRESSION_OPAQUE_ADDRESS_OF
 			: CK_EXPRESSION_ADDRESS_OF;
 
 		accumulator = CkExpressionCreateUnary( parser->arena, &token, kind, NULL, s_ParseLevel2( parser ) );

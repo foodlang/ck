@@ -130,22 +130,22 @@ static CkExpression *s_ValidateExpression(
 				allocator,
 				&expression->token,
 				CK_EXPRESSION_IDENTIFIER,
-				CkFoodCopyTypeInstance(allocator, symType)
+				CkFoodCopyTypeInstance( allocator, symType )
 			);
 		else {
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The symbol '%s' cannot be found in this scope.", expression->token.value.cstr );
 			result = CkExpressionCreateLiteral( // int type by default. Still shouldn't compile.
-					allocator,
-					&expression->token,
-					CK_EXPRESSION_IDENTIFIER,
-					CkFoodCreateTypeInstance( allocator, CK_FOOD_I32, 0, NULL ) );
+				allocator,
+				&expression->token,
+				CK_EXPRESSION_IDENTIFIER,
+				CkFoodCreateTypeInstance( allocator, CK_FOOD_I32, 0, NULL ) );
 		}
 		result->isLValue = TRUE;
 		return result;
 	}
 
-		// sizeof() and alignof()
+	// sizeof() and alignof()
 	case CK_EXPRESSION_SIZEOF:
 	case CK_EXPRESSION_ALIGNOF:
 	{
@@ -174,11 +174,12 @@ static CkExpression *s_ValidateExpression(
 		);
 	}
 
-		// Addition and subtraction
+	// Addition and subtraction
 	case CK_EXPRESSION_ADD:
 	case CK_EXPRESSION_SUB:
 	{
 		FoodTypeID newTypeID = CK_FOOD_VOID;
+		CkFoodType *subtype = NULL;
 		CK_ASSERT( left );
 		CK_ASSERT( right );
 
@@ -196,11 +197,13 @@ static CkExpression *s_ValidateExpression(
 			newTypeID = max( s_GetFloatTContainsIntU( left->type->id ), right->type->id );
 		else if ( CK_TYPE_CLASSED_FLOAT( left->type->id ) && CK_TYPE_CLASSED_INT( right->type->id ) ) // float + int => float
 			newTypeID = max( left->type->id, s_GetFloatTContainsIntU( right->type->id ) );
-		else if ( CK_TYPE_CLASSED_INT( left->type->id ) && CK_TYPE_CLASSED_POINTER_ARITHM(right->type->id) ) // ptr + int => ptr
+		else if ( CK_TYPE_CLASSED_INT( left->type->id ) && CK_TYPE_CLASSED_POINTER_ARITHM( right->type->id ) ) { // ptr + int => ptr
 			newTypeID = right->type->id;
-		else if ( CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id ) && CK_TYPE_CLASSED_INT( right->type->id ) ) // int + ptr => ptr
+			subtype = right->type->child;
+		} else if ( CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id ) && CK_TYPE_CLASSED_INT( right->type->id ) ) {// int + ptr => ptr
 			newTypeID = left->type->id;
-		else {
+			subtype = left->type->child;
+		} else {
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Addition and subtraction require arithmetic types on both operands. A pointer type is allowed on one of the two operands." );
 		}
@@ -209,13 +212,13 @@ static CkExpression *s_ValidateExpression(
 			allocator,
 			&expression->token,
 			expression->kind,
-			CkFoodCreateTypeInstance( allocator, newTypeID, 0, NULL ),
+			CkFoodCreateTypeInstance( allocator, newTypeID, 0, CkFoodCopyTypeInstance( subtype ) ),
 			left,
 			right
 		);
 	}
 
-		// Multiplication and division
+	// Multiplication and division
 	case CK_EXPRESSION_MUL:
 	case CK_EXPRESSION_DIV:
 	{
@@ -251,7 +254,7 @@ static CkExpression *s_ValidateExpression(
 		);
 	}
 
-		// Modulo
+	// Modulo
 	case CK_EXPRESSION_MOD:
 	{
 		FoodTypeID newTypeID = CK_FOOD_VOID;
@@ -279,7 +282,7 @@ static CkExpression *s_ValidateExpression(
 		);
 	}
 
-		// x++, x--, ++x, --x
+	// x++, x--, ++x, --x
 	case CK_EXPRESSION_POSTFIX_INC:
 	case CK_EXPRESSION_POSTFIX_DEC:
 	case CK_EXPRESSION_PREFIX_INC:
@@ -405,7 +408,7 @@ static CkExpression *s_ValidateExpression(
 				expression->kind,
 				CkFoodCopyTypeInstance( allocator, left->type ),
 				left
-			)
+			);
 		}
 
 		result = CkExpressionCreateUnary(
@@ -420,7 +423,7 @@ static CkExpression *s_ValidateExpression(
 		return result;
 	}
 
-		// Address-Of
+	// Address-Of
 	case CK_EXPRESSION_ADDRESS_OF:
 		/*
 			The address-of operator has a few constraints that need
@@ -428,9 +431,9 @@ static CkExpression *s_ValidateExpression(
 			  1) The operand must be an lvalue (must be addressable)
 			  2) The operand must not be a reference
 			  3) Its result is **always** a reference, and will be
-			     casted to a pointer if required. This trick is
+				 casted to a pointer if required. This trick is
 				 because the binder is uni-directional.
-			
+
 			&T => T& :: Always reference type.
 		*/
 
@@ -457,7 +460,6 @@ static CkExpression *s_ValidateExpression(
 			),
 			left
 		);
-	}
 
 		// &&x
 	case CK_EXPRESSION_OPAQUE_ADDRESS_OF:
@@ -486,7 +488,7 @@ static CkExpression *s_ValidateExpression(
 				allocator,
 				CK_FOOD_POINTER,
 				0,
-				CkFoodCreateTypeInstance(allocator, CK_FOOD_VOID, 0, NULL)
+				CkFoodCreateTypeInstance( allocator, CK_FOOD_VOID, 0, NULL )
 			),
 			left
 		);
@@ -582,10 +584,10 @@ static CkExpression *s_ValidateExpression(
 			if ( left->type->child->id != right->type->child->id ) {
 				CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 					"Two references cannot be compared if they don't have the same subtype. "
-				    "If you wish to compare two references that don't have the same subtype, use pointers." );
+					"If you wish to compare two references that don't have the same subtype, use pointers." );
 			}
-		} else if ((CK_TYPE_CLASSED_INTFLOAT(left->type->id) || CK_TYPE_CLASSED_POINTER(left->type->id))
-			&& (CK_TYPE_CLASSED_INTFLOAT( right->type->id ) || CK_TYPE_CLASSED_POINTER( left->type->id ))) {
+		} else if ( (CK_TYPE_CLASSED_INTFLOAT( left->type->id ) || CK_TYPE_CLASSED_POINTER( left->type->id ))
+			&& (CK_TYPE_CLASSED_INTFLOAT( right->type->id ) || CK_TYPE_CLASSED_POINTER( left->type->id )) ) {
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Equality comparison requires two identical types for user-types, or two arithmetic types or pointers." );
 		}
@@ -602,15 +604,85 @@ static CkExpression *s_ValidateExpression(
 	case CK_EXPRESSION_BITWISE_AND:
 	case CK_EXPRESSION_BITWISE_OR:
 	case CK_EXPRESSION_BITWISE_XOR:
+	{
+		FoodTypeID newTypeID = CK_FOOD_VOID;
+		CkFoodType *subtype = NULL;
 		/*
 			Allowed cases:
 			int & int => int :: Biggest integer
 			ptr & int => ptr :: Same pointer type (ptr and int can be interchanged)
 		*/
+
 		CK_ASSERT( left );
 		CK_ASSERT( right );
 
-		
+		if ( CK_TYPE_CLASSED_INT( left->type->id ) && CK_TYPE_CLASSED_INT( right->type->id ) )
+			newTypeID = max( left->type->id, right->type->id );
+		else if ( CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id ) && CK_TYPE_CLASSED_INT( right->type->id ) ) {
+			newTypeID = left->type->id;
+			subtype = left->type->child;
+		} else if ( CK_TYPE_CLASSED_INT( left->type->id ) && CK_TYPE_CLASSED_POINTER( right->type->id ) ) {
+			newTypeID = right->type->id;
+			subtype = right->type->child;
+		} else {
+			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"The classic bitwise operators (&, |, ^) require their operands to be integer, with one operand allowed to be a pointer." );
+		}
+
+		return CkExpressionCreateUnary(
+			allocator,
+			&expression->token,
+			expression->kind,
+			CkFoodCreateTypeInstance( allocator, newTypeID, 0, CkFoodCopyTypeInstance(subtype) ),
+			left
+		);
+	}
+
+	// && and ||
+	case CK_EXPRESSION_LOGICAL_AND:
+	case CK_EXPRESSION_LOGICAL_OR:
+		/*
+			Both operands must be of boolean, integer or pointer type.
+			Always returns bool.
+		*/
+
+		CK_ASSERT( left );
+		CK_ASSERT( right );
+
+		if ( !(CK_TYPE_CLASSED_INT( left->type->id )
+			|| CK_TYPE_CLASSED_POINTER( left->type->id )
+			|| left->type->id == CK_FOOD_BOOL) )
+			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"The left operand of a logical operator (&&, ||) must be either a boolean, an integer or a pointer." );
+		if ( !(CK_TYPE_CLASSED_INT( right->type->id )
+			|| CK_TYPE_CLASSED_POINTER( right->type->id )
+			|| right->type->id == CK_FOOD_BOOL) )
+			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"The right operand of a logical operator (&&, ||) must be either a boolean, an integer or a pointer." );
+
+		return CkExpressionCreateUnary(
+			allocator,
+			&expression->token,
+			expression->kind,
+			CkFoodCreateTypeInstance( allocator, CK_FOOD_BOOL, 0, NULL ),
+			left
+		);
+
+		// ?:
+	case CK_EXPRESSION_CONDITIONAL:
+	{
+		FoodTypeID newTypeID = CK_FOOD_VOID;
+		CkFoodType *subtype = NULL;
+
+		CK_ASSERT( left );
+		CK_ASSERT( right );
+		CK_ASSERT( extra );
+
+		if ( !(CK_TYPE_CLASSED_INT( extra->type->id ) || CK_TYPE_CLASSED_POINTER( extra->type->id ) || extra->type->id == CK_FOOD_POINTER) )
+			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"The condition of a conditional statement (a in a ? b : c) must be an integer, a pointer or a boolean." );
+	}
+	}
 }
 
 static void s_ValidateFunc( CkScope *scope, CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *allocator, CkFunction *func )

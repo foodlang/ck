@@ -98,6 +98,7 @@ typedef enum CkKeyword
 	KW_CATCH,
 	KW_THROW,
 	KW_TYPEOF,
+	KW_ASM,
 
 } CkKeyword;
 
