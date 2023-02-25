@@ -202,6 +202,7 @@ static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 	returned->data.for_.condition = condition;
 	returned->data.for_.lead = lead;
 	returned->data.for_.body = body;
+	returned->data.for_.scope = forScope;
 
 	return returned;
 }

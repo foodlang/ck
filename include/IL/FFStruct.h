@@ -149,6 +149,9 @@ typedef struct CkStatementData_For // For statement data
 
 	// The body of the for loop.
 	CkStatement *body;
+	
+	// For loops have their own scopes.
+	CkScope *scope;
 
 } CkStatementData_For;
 
@@ -170,8 +173,14 @@ typedef char CkStatementData_Continue; // Continue statement data (no data)
 
 typedef struct CkStatementData_Goto // Goto statement data
 {
+	// Computed goto flag
+	bool_t computed;
+
 	// The label to go to.
 	CkLabel destination;
+
+	// The computed location (if not using a label)
+	CkExpression *computedExpression;
 
 } CkStatementData_Goto;
 
@@ -220,7 +229,7 @@ typedef enum CkUserTypeKind
 // Common structs for the struct, record and union user data types.
 typedef struct CkUserTypeData_StructRecordUnion
 {
-	// The members.
+	// The members. Element type = CkVariable
 	CkList *members;
 
 } CkUserTypeData_Struct,

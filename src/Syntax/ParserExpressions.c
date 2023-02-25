@@ -509,7 +509,13 @@ static CkExpression *s_ParseAssign( CkParserInstance *parser )
 			: op.kind == CKTOK3( '<', '<', '=' ) ? CK_EXPRESSION_ASSIGN_LEFT_SHIFT
 			: CK_EXPRESSION_ASSIGN_RIGHT_SHIFT;
 
-		return CkExpressionCreateBinary( parser->arena, &op, kind, NULL, left, s_ParseConditional( parser ) );
+		return CkExpressionCreateBinary(
+			parser->arena,
+			&op,
+			kind,
+			CkFoodCreateTypeInstance(allocator, CK_FOOD_VOID, 0, NULL),
+			left,
+			s_ParseConditional( parser ) );
 
 		// Not an assignment
 	default:
@@ -526,7 +532,7 @@ static CkExpression *s_ParseCompound( CkParserInstance *parser )
 
 	CkParserReadToken( parser, &op );
 	while ( op.kind == ',' ) {
-		acc = CkExpressionCreateBinary( parser->arena, &op, CK_EXPRESSION_COMPOUND, NULL, acc, s_ParseAssign( parser ) );
+		acc = CkExpressionCreateBinary( parser->arena, &op, CK_EXPRESSION_COMPOUND, CkFoodCreateTypeInstance(allocator, CK_FOOD_VOID, 0, NULL), acc, s_ParseAssign(parser));
 		CkParserReadToken( parser, &op );
 	}
 	CkParserRewind( parser, 1 );
