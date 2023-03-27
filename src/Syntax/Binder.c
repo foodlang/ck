@@ -238,7 +238,7 @@ static CkExpression *s_ValidateExpression(
 	{
 		CkExpression *result;
 		const CkFoodType *symType = s_TryGetSymbolType( expression->token.value.cstr, scope );
-		if ( !symType )
+		if ( symType )
 			result = CkExpressionCreateLiteral(
 				allocator,
 				&expression->token,
@@ -764,10 +764,10 @@ static CkExpression *s_ValidateExpression(
 		CK_ASSERT( left );
 		CK_ASSERT( right );
 
-		if ( !s_BooleanType( extra->type->id ) )
+		if ( !s_BooleanType( left->type->id ) )
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The left operand of a logical operator (&&, ||) must be either a boolean, an integer or a pointer." );
-		if ( !s_BooleanType( extra->type->id ) )
+		if ( !s_BooleanType( right->type->id ) )
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The right operand of a logical operator (&&, ||) must be either a boolean, an integer or a pointer." );
 
@@ -800,8 +800,8 @@ static CkExpression *s_ValidateExpression(
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The result of a cast must be of scalar type." );
 
-		if (expression->left->type->id == CK_FOOD_STRUCT
-			|| expression->left->type->id == CK_FOOD_UNION)
+		if ( left->type->id == CK_FOOD_STRUCT
+			|| left->type->id == CK_FOOD_UNION)
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The input of a cast must be of scalar type." );
 

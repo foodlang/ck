@@ -119,7 +119,8 @@ CkExpression *CkExpressionDuplicate( CkArenaFrame *arena, CkExpression *source )
 	dest->kind = source->kind;
 	dest->isLValue = source->isLValue;
 	memcpy( &dest->token, &source->token, sizeof( CkToken ) );
-	dest->type = CkFoodCopyTypeInstance( arena, source->type );
+	if ( source->type )
+		dest->type = CkFoodCopyTypeInstance( arena, source->type );
 	return dest;
 }
 

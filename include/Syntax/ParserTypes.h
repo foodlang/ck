@@ -19,7 +19,7 @@
 
 // Attempts to parse a type. Returns NULL and rewinds
 // if no type can be successfully parsed.
-CkFoodType *CkParserType(CkParserInstance *parser);
+CkFoodType* CkParserType( CkScope* scope, CkParserInstance* parser );
 
 #endif
 

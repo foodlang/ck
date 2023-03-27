@@ -94,7 +94,7 @@ Leave:
 	return attr;
 }
 
-CkFoodType *CkParserType( CkParserInstance *parser )
+CkFoodType *CkParserType( CkScope *scope, CkParserInstance *parser )
 {
 	CkToken token;
 	CkFoodType *acc = 0;
@@ -141,7 +141,7 @@ CkFoodType *CkParserType( CkParserInstance *parser )
 		} else if ( token.kind == '[' ) { // Arrays
 			id = CK_FOOD_ARRAY;
 			acc = CkFoodCreateTypeInstance( parser->arena, id, attr, acc );
-			acc->extra = CkParserExpression( parser ); // [ >>>expr<<< ]
+			acc->extra = CkParserExpression( scope, parser ); // [ >>>expr<<< ]
 			CkParserReadToken( parser, &token );
 			if ( !acc->extra ) {
 				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",

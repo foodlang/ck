@@ -1,5 +1,6 @@
 #include <Syntax/ParserExpressions.h>
 #include <Syntax/ParserTypes.h>
+
 #include <FileIO.h>
 #include <CDebug.h>
 
@@ -82,7 +83,7 @@ static CkExpressionKind s_BinaryOpKind( uint64_t op )
 }
 
 // Parses a primary value.
-static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
+static CkExpression *s_ParsePrimaryExpression( CkScope* scope, CkParserInstance *parser )
 {
 	CkToken token;
 
@@ -204,7 +205,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 		// Parenthesized expressions
 	case '(':
 	{
-		CkExpression *expr = CkParserExpression( parser );
+		CkExpression *expr = CkParserExpression( scope, parser );
 		CkParserReadToken( parser, &token );
 		if ( token.kind != ')' ) {
 			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
@@ -222,7 +223,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing opening bracket in sizeof() operator." );
 		}
-		type = CkParserType( parser );
+		type = CkParserType( scope, parser );
 		if ( !type ) {
 			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The operand of sizeof() must a type." );
@@ -249,7 +250,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing opening bracket in alignof() operator." );
 		}
-		type = CkParserType( parser );
+		type = CkParserType( scope, parser );
 		if ( !type ) {
 			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The operand of alignof() must a type." );
@@ -282,13 +283,13 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 }
 
 // Parses access, postfix increment and decrement operators.
-static CkExpression *s_ParseLevel1( CkParserInstance *parser )
+static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 {
 	CkToken token;
 	CkExpression *acc;
 
 	// The operand and next token are read.
-	acc = s_ParsePrimaryExpression( parser );
+	acc = s_ParsePrimaryExpression( scope, parser );
 	CkParserReadToken( parser, &token );
 
 	while ( TRUE ) {
@@ -307,7 +308,7 @@ static CkExpression *s_ParseLevel1( CkParserInstance *parser )
 				CK_EXPRESSION_MEMBER_ACCESS,
 				NULL,
 				acc,
-				s_ParsePrimaryExpression( parser ) );
+				s_ParsePrimaryExpression( scope, parser ) );
 			break;
 
 		case CKTOK2( '-', '>' ):
@@ -317,12 +318,12 @@ static CkExpression *s_ParseLevel1( CkParserInstance *parser )
 				CK_EXPRESSION_POINTER_MEMBER_ACCESS,
 				NULL,
 				acc,
-				s_ParsePrimaryExpression( parser ) );
+				s_ParsePrimaryExpression( scope, parser ) );
 			break;
 
 			// Array subscript
 		case '[':
-			acc = CkExpressionCreateBinary( parser->arena, &token, CK_EXPRESSION_SUBSCRIPT, NULL, acc, CkParserExpression( parser ) );
+			acc = CkExpressionCreateBinary( parser->arena, &token, CK_EXPRESSION_SUBSCRIPT, NULL, acc, CkParserExpression( scope, parser ) );
 			CkParserReadToken( parser, &token );
 			if ( token.kind != ']' ) {
 				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
@@ -343,7 +344,7 @@ Leave:
 }
 
 // Parses prefix unary operators and casts.
-static CkExpression *s_ParseLevel2( CkParserInstance *parser )
+static CkExpression *s_ParseLevel2( CkScope *scope, CkParserInstance *parser )
 {
 	CkToken token;
 	CkExpression *accumulator;
@@ -374,18 +375,25 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 			: token.kind == CKTOK2('&', '&') ? CK_EXPRESSION_OPAQUE_ADDRESS_OF
 			: CK_EXPRESSION_ADDRESS_OF;
 
-		accumulator = CkExpressionCreateUnary( parser->arena, &token, kind, NULL, s_ParseLevel2( parser ) );
+		accumulator = CkExpressionCreateUnary( parser->arena, &token, kind, NULL, s_ParseLevel2( scope, parser ) );
 		break;
 
 		// C-style casting
 	case '(':
 	{
-		CkFoodType *t = CkParserType( parser );
+		CkFoodType* t = NULL;
 		CkToken exprToken = token;
-		// In case its a parenthesized expression
-		if ( t == NULL ) {
+
+		// Check if it's a parenthesized expression
+		CkParserReadToken( parser, &token );
+		if ( !(token.kind == 'I' && CkSymbolDeclared( scope, token.value.cstr )) ) {
 			CkParserRewind( parser, 1 );
-			accumulator = s_ParsePrimaryExpression( parser ); // Skipping level 1 because its parenthesized expr
+			t = CkParserType( scope, parser );
+		}
+		else CkParserRewind( parser, 1 );
+		if ( !t ) {
+			CkParserRewind( parser, 1 );
+			accumulator = s_ParsePrimaryExpression( scope, parser ); // Skipping level 1 because it's parenthesized expression
 			break;
 		}
 		CkParserReadToken( parser, &token );
@@ -398,7 +406,7 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 			&exprToken,
 			CK_EXPRESSION_C_CAST,
 			t,
-			s_ParseLevel2( parser ),
+			s_ParseLevel2( scope, parser ),
 			CkExpressionCreateType( parser->arena, t ) );
 		break;
 	}
@@ -406,7 +414,7 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 	// No level-2 operator
 	default:
 		CkParserRewind( parser, 1 );
-		accumulator = s_ParseLevel1( parser );
+		accumulator = s_ParseLevel1( scope, parser );
 		break;
 	}
 
@@ -414,10 +422,10 @@ static CkExpression *s_ParseLevel2( CkParserInstance *parser )
 }
 
 // Parses binary operators. Uses Pratt parsing.
-static CkExpression *s_ParseBinary( uint8_t parentPrec, CkParserInstance *parser )
+static CkExpression *s_ParseBinary( CkScope* scope, uint8_t parentPrec, CkParserInstance *parser )
 {
 	CkToken token;
-	CkExpression *acc = s_ParseLevel2( parser );
+	CkExpression *acc = s_ParseLevel2( scope, parser );
 
 	while ( TRUE ) {
 		uint8_t prec;
@@ -430,7 +438,7 @@ static CkExpression *s_ParseBinary( uint8_t parentPrec, CkParserInstance *parser
 			break;
 		}
 
-		right = s_ParseBinary( prec, parser );
+		right = s_ParseBinary( scope, prec, parser );
 		acc = CkExpressionCreateBinary( parser->arena, &token, s_BinaryOpKind( token.kind ), NULL, acc, right );
 	}
 
@@ -438,14 +446,14 @@ static CkExpression *s_ParseBinary( uint8_t parentPrec, CkParserInstance *parser
 }
 
 // Parses a Food-style cast (expr => T)
-static CkExpression *s_ParseFoodCast( CkParserInstance *parser )
+static CkExpression *s_ParseFoodCast( CkScope* scope, CkParserInstance *parser )
 {
 	CkToken op;
-	CkExpression *acc = s_ParseBinary( 0, parser );
+	CkExpression *acc = s_ParseBinary( scope, 0, parser );
 
 	CkParserReadToken( parser, &op );
 	while ( op.kind == CKTOK2( '=', '>' ) ) {
-		CkFoodType *t = CkParserType( parser );
+		CkFoodType *t = CkParserType( scope, parser );
 		if ( t == NULL ) {
 			CkDiagnosticThrow( parser->pDhi, op.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Expected a type in Food-style cast." );
@@ -458,13 +466,13 @@ static CkExpression *s_ParseFoodCast( CkParserInstance *parser )
 }
 
 // Parses a conditional expression.
-static CkExpression *s_ParseConditional( CkParserInstance *parser )
+static CkExpression *s_ParseConditional( CkScope* scope, CkParserInstance *parser )
 {
 	CkToken token;
 	CkToken op;
 	CkExpression *left;
 	CkExpression *right;
-	CkExpression *extra = s_ParseFoodCast( parser );
+	CkExpression *extra = s_ParseFoodCast( scope, parser );
 
 	CkParserReadToken( parser, &token );
 	op = token;
@@ -475,24 +483,24 @@ static CkExpression *s_ParseConditional( CkParserInstance *parser )
 		return extra;
 	}
 
-	left = s_ParseConditional( parser );
+	left = s_ParseConditional( scope, parser );
 	CkParserReadToken( parser, &token );
 	if ( token.kind != ':' ) {
 		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 			"Expected colon in conditional expression." );
 	}
-	right = s_ParseConditional( parser );
+	right = s_ParseConditional( scope, parser );
 
 	return CkExpressionCreateTernary( parser->arena, &op, CK_EXPRESSION_CONDITIONAL, NULL, left, right, extra );
 }
 
 // Parses an assignment expression.
-static CkExpression *s_ParseAssign( CkParserInstance *parser )
+static CkExpression *s_ParseAssign( CkScope* scope, CkParserInstance *parser )
 {
 	CkToken op;
 	CkExpressionKind kind;
 
-	CkExpression *left = s_ParseConditional( parser );
+	CkExpression *left = s_ParseConditional( scope, parser );
 	CkParserReadToken( parser, &op );
 	switch ( op.kind ) {
 	case '=':
@@ -524,7 +532,7 @@ static CkExpression *s_ParseAssign( CkParserInstance *parser )
 			kind,
 			CkFoodCreateTypeInstance( parser->arena, CK_FOOD_VOID, 0, NULL ),
 			left,
-			s_ParseConditional( parser ) );
+			s_ParseConditional( scope, parser ) );
 
 		// Not an assignment
 	default:
@@ -534,10 +542,10 @@ static CkExpression *s_ParseAssign( CkParserInstance *parser )
 }
 
 // Parses a compound expression.
-static CkExpression *s_ParseCompound( CkParserInstance *parser )
+static CkExpression *s_ParseCompound( CkScope* scope, CkParserInstance *parser )
 {
 	CkToken op;
-	CkExpression *acc = s_ParseAssign( parser );
+	CkExpression *acc = s_ParseAssign( scope, parser );
 
 	CkParserReadToken( parser, &op );
 	while ( op.kind == ',' ) {
@@ -547,15 +555,15 @@ static CkExpression *s_ParseCompound( CkParserInstance *parser )
 			CK_EXPRESSION_COMPOUND,
 			CkFoodCreateTypeInstance( parser->arena, CK_FOOD_VOID, 0, NULL ),
 			acc,
-			s_ParseAssign( parser ) );
+			s_ParseAssign( scope, parser ) );
 		CkParserReadToken( parser, &op );
 	}
 	CkParserRewind( parser, 1 );
 	return acc;
 }
 
-CkExpression *CkParserExpression( CkParserInstance *parser )
+CkExpression *CkParserExpression( CkScope* scope, CkParserInstance *parser )
 {
 	CK_ARG_NON_NULL( parser );
-	return s_ParseCompound( parser );
+	return s_ParseCompound( scope, parser );
 }

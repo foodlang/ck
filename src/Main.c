@@ -18,8 +18,6 @@
 
 int main( int argc, char *argv[], char **envp )
 {
-	/*CkArenaFrame configGenerationArena; // The arena used for config/profile-related + generation allocations.
-	CkArenaFrame driverArena;           // The arena used for driver allocations. Reset for each driver.*/
 	CkArenaFrame globalArena;           // The arena used for global allocations.
 
 	CkDriverStartupConfiguration driverStart; // Driver startup configuration
@@ -56,9 +54,6 @@ int main( int argc, char *argv[], char **envp )
 	}
 
 	CkTimeGetCurrent( &compilerStart );
-
-	/*CkArenaStartFrame(&configGenerationArena, 0);
-	CkArenaStartFrame( &driverArena, 0 );*/
 	CkArenaStartFrame( &globalArena, 0 );
 
 	if ( argc >= 2 ) buildDirectory = argv[1];
@@ -136,9 +131,7 @@ int main( int argc, char *argv[], char **envp )
 		success = FALSE;
 
 	CkPrintAST( result );
-
 	CkArenaEndFrame( &globalArena );
-
 	CkTimeGetCurrent( &compilerEnd );
 	printf(
 		"Full compilation time: %f ms\n",

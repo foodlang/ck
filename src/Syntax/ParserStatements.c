@@ -4,9 +4,9 @@
 
 #include <CDebug.h>
 
-static CkExpression *s_ParseExpr( CkParserInstance *parser )
+static inline CkExpression *s_ParseExpr( CkScope *scope, CkParserInstance *parser )
 {
-	CkExpression *base = CkParserExpression( parser );
+	CkExpression *base = CkParserExpression( scope, parser );
 	return base;
 }
 
@@ -25,7 +25,7 @@ static CkStatement *s_IfStatement( CkScope *context, CkParserInstance *parser )
 	}
 
 	// if ( >>>condition<<< ) stmt
-	condition = s_ParseExpr( parser );
+	condition = s_ParseExpr( context, parser );
 	if ( !condition ) {
 		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of an if statement must be an expression." );
@@ -72,7 +72,7 @@ static CkStatement *s_WhileStatement( CkScope *context, CkParserInstance *parser
 	}
 
 	// while ( >>>condition<<< ) stmt
-	condition = s_ParseExpr( parser );
+	condition = s_ParseExpr( context, parser );
 	if ( !condition ) {
 		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of a while statement must be an expression." );
@@ -123,7 +123,7 @@ static CkStatement *s_DoWhileStatement( CkScope *context, CkParserInstance *pars
 	}
 
 	// do stmt while ( >>>condition<<< ) ;
-	condition = CkParserExpression( parser );
+	condition = CkParserExpression( context, parser );
 
 	// do stmt while ( condition >>>)<<< ;
 	CkParserReadToken( parser, &token );
@@ -172,7 +172,7 @@ static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 	init = CkParseStmt( forScope, parser );
 
 	// for ( init; >>>condition<<< ; lead ) block
-	condition = CkParserExpression( parser );
+	condition = CkParserExpression( context, parser );
 
 	// for ( init ; condition >>>;<<< lead ) block
 	CkParserReadToken( parser, &token );
@@ -183,7 +183,7 @@ static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 	}
 
 	// for ( init ; condition ; >>>lead<<< ) block
-	lead = CkParserExpression( parser );
+	lead = CkParserExpression( context, parser );
 
 	// for ( init ; condition ; lead >>>)<<< block
 	CkParserReadToken( parser, &token );
@@ -228,7 +228,11 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 	case '{': {
 		CkStatement *block = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
 		block->stmt = CK_STMT_BLOCK;
-		block->data.block.scope = CkStartScope( parser->genArena, context, TRUE, FALSE );
+		block->data.block.scope = CkStartScope(
+			parser->genArena, context,
+			TRUE,
+			context == context->library->scope || context->module->scope == context ? TRUE : FALSE
+		);
 		block->data.block.stmts = CkListStart( parser->genArena, sizeof( CkStatement * ) );
 		while ( TRUE ) {
 			CkStatement *stmt;
@@ -243,7 +247,7 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 			// Declaration parsing
 			index = parser->position;
 			// TODO: Support for local funcs & typedefs
-			if ( CkParseDecl( parser->genArena, context, parser, FALSE, FALSE, TRUE, FALSE ) ) continue;
+			if ( CkParseDecl( parser->genArena, block->data.block.scope, parser, FALSE, FALSE, TRUE, FALSE ) ) continue;
 			else CkParserGoto( parser, index );
 
 			// Statement parsing
@@ -273,7 +277,7 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 		CkStatement *returned;
 
 		CkParserRewind( parser, 1 );
-		expr = s_ParseExpr( parser );
+		expr = s_ParseExpr( context, parser );
 
 		// Expressions
 		if ( !expr ) {

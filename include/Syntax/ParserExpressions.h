@@ -15,8 +15,9 @@
 
 #include "Expression.h"
 #include "Parser.h"
+#include "IL/FFStruct.h"
 
 // Parses an expression in the parser source.
-CkExpression *CkParserExpression(CkParserInstance *parser);
+CkExpression *CkParserExpression( CkScope *scope, CkParserInstance *parser );
 
 #endif

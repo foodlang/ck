@@ -8,6 +8,9 @@
 #include <sys/mman.h>
 #endif
 
+// Comment to use VirtualAlloc()/mmap().
+#define USE_MALLOC
+
 // Default maximum arena size
 #define DEFAULT_MAXSIZE 536870912
 
@@ -18,7 +21,9 @@ void CkArenaStartFrame( CkArenaFrame *dest, size_t maxSize )
 	if ( maxSize == 0 ) maxSize = DEFAULT_MAXSIZE;
 	dest->size = maxSize;
 	dest->offsetFree = 0;
-#if _WIN32
+#if defined(USE_MALLOC)
+	dest->base = calloc( 1, DEFAULT_MAXSIZE );
+#elif defined(_WIN32)
 	dest->base = VirtualAlloc( 0, maxSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
 #else
 	dest->base = mmap( 0, maxSize, PROT_WRITE | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
@@ -29,7 +34,9 @@ void CkArenaEndFrame( CkArenaFrame *frame )
 {
 	CK_ARG_NON_NULL( frame );
 
-#if _WIN32
+#if defined(USE_MALLOC)
+	free( frame->base );
+#elif defined(_WIN32)
 	VirtualFree( frame->base, 0, MEM_RELEASE );
 #else
 	munmap( frame->base, frame->size );
@@ -65,7 +72,9 @@ void CkArenaWriteLock( CkArenaFrame *frame )
 	unsigned long old;
 	CK_ARG_NON_NULL( frame );
 
-#if _WIN32
+#if defined(USE_MALLOC)
+	(void)old; // do nothing
+#elif defined(_WIN32)
 	VirtualProtect( frame->base, frame->size, PAGE_READONLY, &old );
 #else
 	mprotect( frame->base, frame->size, PROT_READ );
@@ -77,7 +86,9 @@ void CkArenaWriteUnlock( CkArenaFrame *frame )
 	unsigned long old;
 	CK_ARG_NON_NULL( frame );
 
-#if _WIN32
+#if defined(USE_MALLOC)
+	(void)old; // do nothing
+#elif defined(_WIN32)
 	VirtualProtect( frame->base, frame->size, PAGE_READWRITE, &old );
 #else
 	mprotect( frame->base, frame->size, PROT_READ | PROT_WRITE );
@@ -88,7 +99,10 @@ void CkArenaExecLock( CkArenaFrame *frame )
 {
 	unsigned long old;
 	CK_ARG_NON_NULL( frame );
-#if _WIN32
+
+#if defined(USE_MALLOC)
+	(void)old; // do nothing
+#elif defined(_WIN32)
 	VirtualProtect( frame->base, frame->size, PAGE_READWRITE, &old );
 #else
 	mprotect( frame->base, frame->size, PROT_READ | PROT_WRITE );
@@ -99,7 +113,10 @@ void CkArenaExecUnlock( CkArenaFrame *frame )
 {
 	unsigned long old;
 	CK_ARG_NON_NULL( frame );
-#if _WIN32
+
+#if defined(USE_MALLOC)
+	(void)old; // do nothing
+#elif defined(_WIN32)
 	VirtualProtect( frame->base, frame->size, PAGE_EXECUTE_READWRITE, &old );
 #else
 	mprotect( frame->base, frame->size, PROT_READ | PROT_WRITE | PROT_EXEC );

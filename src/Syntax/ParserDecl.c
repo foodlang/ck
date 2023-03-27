@@ -123,9 +123,9 @@ bool_t CkParseDecl(
 
 	// 3. Parsing the type
 	CkParserReadToken( parser, &token );
-	if ( CkSymbolDeclared( context, token.value.cstr ) ) return FALSE; // Is symbol?
+	if ( token.kind == 'I' && CkSymbolDeclared(context, token.value.cstr) ) return FALSE; // Is symbol?
 	CkParserRewind( parser, 1 );
-	declType = CkParserType( parser );
+	declType = CkParserType( context, parser );
 	if ( !declType ) return FALSE;
 
 	// 4. Parsing the name
