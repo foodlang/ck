@@ -131,6 +131,7 @@ int main( int argc, char *argv[], char **envp )
 
 	// Binding
 	CkBinderValidateAndBind( &dhi, &globalArena, result );
+	CkDiagnosticDisplay( &dhi );
 	if ( dhi.anyErrors || (applied->wError && dhi.anyWarnings) )
 		success = FALSE;
 

@@ -191,3 +191,10 @@ bool_t CkDiagnosticEndTryMode( CkDiagnosticHandlerInstance *dhi )
 	// No try mode enabled
 	return FALSE;
 }
+
+void CkDiagnosticClear( CkDiagnosticHandlerInstance* dhi )
+{
+	const size_t len = CkListLength( dhi->thrownDiagnosticsVector );
+	for ( size_t i = 0; i < len; i++ )
+		CkListRemove( dhi->thrownDiagnosticsVector, i );
+}

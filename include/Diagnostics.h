@@ -113,4 +113,7 @@ void CkDiagnosticBeginTryMode( CkDiagnosticHandlerInstance *dhi );
 // call to this function. Returns true if ok.
 bool_t CkDiagnosticEndTryMode( CkDiagnosticHandlerInstance *dhi );
 
+// Clears the thrown diagnostics.
+void CkDiagnosticClear( CkDiagnosticHandlerInstance* dhi );
+
 #endif

@@ -57,7 +57,8 @@ void CkDriverCompile(
 	// 4. Parsing
 	CkParserCreateInstance( threadArena, genArena, &parser, tokenList, CkListLength( tokenList ), pDhi );
 	temp_funcstmt = CkParseStmt( temp_dest->scope, &parser );
-	CkDiagnosticDisplay( pDhi ); // temp
+	CkDiagnosticDisplay( pDhi );
+	CkDiagnosticClear( pDhi );
 	CkAllocateFunction(
 		temp_dest->scope,
 		TRUE,

@@ -171,17 +171,19 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 
 		// False is a boolean constant
 	case KW_FALSE: {
-		CkToken trueToken = token;
-		trueToken.value.u64 = 0;
+		CkToken falseToken = token;
+		falseToken.value.u64 = 0;
 		return CkExpressionCreateLiteral(
 			parser->arena,
-			&trueToken,
+			&falseToken,
 			CK_EXPRESSION_BOOL_LITERAL,
 			CkFoodCreateTypeInstance( parser->arena, CK_FOOD_BOOL, 0, NULL ) );
 	}
 
 		// Null is a pointer constant
-	case KW_NULL:
+	case KW_NULL: {
+		CkToken nullToken = token;
+		nullToken.value.u64 = 0;
 		return CkExpressionCreateLiteral(
 			parser->arena,
 			&token,
@@ -197,6 +199,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 					NULL
 				)
 			) );
+	}
 
 		// Parenthesized expressions
 	case '(':
