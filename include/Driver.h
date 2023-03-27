@@ -14,6 +14,7 @@
 #define CK_DRIVER_H_
 
 #include <Memory/Arena.h>
+#include <Diagnostics.h>
 #include <Types.h>
 
 #include <IL/FFStruct.h>
@@ -50,6 +51,7 @@ typedef struct CkDriverCompilationResult
 
 // Runs a compilation driver.
 void CkDriverCompile(
+	CkDiagnosticHandlerInstance *pDhi,
 	CkArenaFrame *threadArena,
 	CkArenaFrame *genArena,
 	CkModule *temp_dest,

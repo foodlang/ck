@@ -242,6 +242,7 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 
 			// Declaration parsing
 			index = parser->position;
+			// TODO: Support for local funcs & typedefs
 			if ( CkParseDecl( parser->genArena, context, parser, FALSE, FALSE, TRUE, FALSE ) ) continue;
 			else CkParserGoto( parser, index );
 
@@ -265,7 +266,7 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 		// For statement
 	case KW_FOR: return s_ForStatement( context, parser );
 
-		// Attempts to parse an expression
+		// Attempts to parse an expression/declaration
 	default:
 	{
 		CkExpression *expr;
@@ -274,7 +275,7 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 		CkParserRewind( parser, 1 );
 		expr = s_ParseExpr( parser );
 
-		// TODO: Declarations
+		// Expressions
 		if ( !expr ) {
 			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Unknown statement." );

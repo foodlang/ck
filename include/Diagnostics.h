@@ -17,7 +17,7 @@
 #include <Memory/Arena.h>
 #include <Memory/List.h>
 
-// The severity of the diagnostic.
+ // The severity of the diagnostic.
 typedef enum CkDiagnosticSeverity
 {
 	// A suggestion or message given by the compiler.
@@ -70,23 +70,29 @@ typedef struct CkDiagnosticHandlerInstance
 	// and the blacklist.
 	CkArenaFrame *arena;
 
+	// If true, the diagnostic handler is currently in try mode.
+	bool_t tryMode;
+
+	// The number of diagnostics thrown in try mode. If no try mode, set to 0.
+	size_t thrownTryMode;
+
 } CkDiagnosticHandlerInstance;
 
 // Creates a new diagnostic handler instance.
-void CkDiagnosticHandlerCreateInstance(CkArenaFrame *arena, CkDiagnosticHandlerInstance *dhi, CkLexInstance *pPassedLexer);
+void CkDiagnosticHandlerCreateInstance( CkArenaFrame *arena, CkDiagnosticHandlerInstance *dhi, CkLexInstance *pPassedLexer );
 
 // Destroys a diagnostic handler and frees all used resources (except
 // for the passed lexer.)
-void CkDiagnosticHandlerDestroyInstance(CkDiagnosticHandlerInstance *dhi);
+void CkDiagnosticHandlerDestroyInstance( CkDiagnosticHandlerInstance *dhi );
 
 // Adds a diagnostic to the blacklist. The blacklist prevents warnings
 // from being thrown. If the diagnostic is already added to the list,
 // nothing happens.
-void CkDiagnosticBlacklist(CkDiagnosticHandlerInstance *dhi, char *name);
+void CkDiagnosticBlacklist( CkDiagnosticHandlerInstance *dhi, char *name );
 
 // Attempts to remove a diagnostic from the blacklist. Does simply nothing
 // if the diagnostic isn't already blacklisted.
-void CkDiagnosticWhitelist(CkDiagnosticHandlerInstance *dhi, char *name);
+void CkDiagnosticWhitelist( CkDiagnosticHandlerInstance *dhi, char *name );
 
 // Throws a diagnostic.
 void CkDiagnosticThrow(
@@ -95,9 +101,16 @@ void CkDiagnosticThrow(
 	uint8_t severity,
 	char *name,
 	const char *restrict format,
-	...);
+	... );
 
 // Displays all of the reported diagnostics.
-void CkDiagnosticDisplay(CkDiagnosticHandlerInstance *dhi);
+void CkDiagnosticDisplay( CkDiagnosticHandlerInstance *dhi );
+
+// Begins a try mode. Used by the statement/declaration parser.
+void CkDiagnosticBeginTryMode( CkDiagnosticHandlerInstance *dhi );
+
+// Begins an end try mode. The old diagnostics are restored after a
+// call to this function. Returns true if ok.
+bool_t CkDiagnosticEndTryMode( CkDiagnosticHandlerInstance *dhi );
 
 #endif

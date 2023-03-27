@@ -5,6 +5,10 @@
 
 #include <string.h>
 
+#ifndef max
+#define max(a, b) ((a) < (b) ? (b) : (a))
+#endif
+
 // Tries to get the type of a symbol. Returns NULL if unresolved.
 static const CkFoodType *s_TryGetSymbolType( char *symbol, CkScope *context )
 {
@@ -67,8 +71,8 @@ static const CkUserType *s_GetUserType( char *symname, CkScope *scope )
 	// Checking in the scope user type lists
 	userTypeCount = CkListLength( scope->usertypeList );
 	for ( size_t i = 0; i < userTypeCount; i++ ) {
-		const CkUserType *pCurrent = CkListAccess( scope->usertypeList );
-		if ( !strcmp( symname, pCurrent ) )
+		const CkUserType *pCurrent = CkListAccess( scope->usertypeList, i );
+		if ( !strcmp( symname, pCurrent->name ) )
 			return pCurrent;
 	}
 
@@ -110,6 +114,7 @@ static inline void s_GetSizeFoodNativeT( CkToken *dest, CkFoodType *T )
 	case CK_FOOD_FUNCPOINTER:
 		dest->value.u64 = 8;
 		break;
+	default: abort();
 	}
 }
 
@@ -157,8 +162,8 @@ static bool_t s_CompareUserTypesSignature( CkFoodType *left, CkFoodType *right, 
 {
 	size_t leftMemberCount = 0;                                // Left member count
 	size_t rightMemberCount = 0;                               // Right member count
-	CkUserType *leftT = s_GetUserType( left->extra, scope );   // The left user type.
-	CkUserType *rightT = s_GetUserType( right->extra, scope ); // The right user type.
+	const CkUserType *leftT = s_GetUserType( left->extra, scope );   // The left user type.
+	const CkUserType *rightT = s_GetUserType( right->extra, scope ); // The right user type.
 
 	// The two types must be of compatible user type kind.
 	if ( leftT->kind != rightT->kind )
@@ -179,7 +184,7 @@ static bool_t s_CompareUserTypesSignature( CkFoodType *left, CkFoodType *right, 
 		const CkVariable *leftM = CkListAccess( leftT->custom.struct_.members, i );
 		const CkVariable *rightM = CkListAccess( rightT->custom.struct_.members, i );
 
-		if ( !s_CompatibleTypesCheck( leftM, rightM, scope ) ) return FALSE;
+		if ( !s_CompatibleTypesCheck( leftM->type, rightM->type, scope ) ) return FALSE;
 	}
 	return TRUE;
 }
@@ -195,7 +200,7 @@ static bool_t s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkSco
 	// Only user types can be compared with other user types...
 	if ( (left->id == CK_FOOD_STRUCT && right->id == CK_FOOD_STRUCT)
 		|| (left->id == CK_FOOD_UNION && right->id == CK_FOOD_UNION) )
-		return s_CompareUserTypesSignature( left, right );
+		return s_CompareUserTypesSignature( left, right, scope );
 
 	if ( CK_TYPE_CLASSED_INTFLOAT( left->id ) && CK_TYPE_CLASSED_INTFLOAT( right->id ) ) return TRUE;
 	if ( CK_TYPE_CLASSED_INT( left->id ) && CK_TYPE_CLASSED_POINTER_ARITHM( right->id ) ) return TRUE;
@@ -223,20 +228,24 @@ static CkExpression *s_ValidateExpression(
 	case CK_EXPRESSION_BOOL_LITERAL:
 	case CK_EXPRESSION_STRING_LITERAL:
 	case CK_EXPRESSION_TYPE:
+	case CK_EXPRESSION_COMPOUND_LITERAL:
 		return DUPE_EXPR;
+
+		// TODO: Scoped references
+	case CK_EXPRESSION_SCOPED_REFERENCE:
+		abort();
 
 		// An identifier
 	case CK_EXPRESSION_IDENTIFIER:
 	{
-		CkFoodType *symType;
 		CkExpression *result;
-		symType = s_TryGetSymbolType( expression->token.value.cstr, scope );
+		const CkFoodType *symType = s_TryGetSymbolType( expression->token.value.cstr, scope );
 		if ( !symType )
 			result = CkExpressionCreateLiteral(
 				allocator,
 				&expression->token,
 				CK_EXPRESSION_IDENTIFIER,
-				CkFoodCopyTypeInstance( allocator, symType )
+				CkFoodCopyTypeInstance( allocator, (CkFoodType *)symType )
 			);
 		else {
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
@@ -318,7 +327,7 @@ static CkExpression *s_ValidateExpression(
 			allocator,
 			&expression->token,
 			expression->kind,
-			CkFoodCreateTypeInstance( allocator, newTypeID, 0, CkFoodCopyTypeInstance( subtype ) ),
+			CkFoodCreateTypeInstance( allocator, newTypeID, 0, subtype != NULL ? CkFoodCopyTypeInstance( allocator, subtype ) : NULL ),
 			left,
 			right
 		);
@@ -501,9 +510,9 @@ static CkExpression *s_ValidateExpression(
 
 		CK_ASSERT( left );
 		if (
-			left->type->id == CK_FOOD_POINTER
-			&& left->type->id == CK_FOOD_REFERENCE
-			&& left->type->id == CK_FOOD_ARRAY ) {
+			left->type->id != CK_FOOD_POINTER
+			&& left->type->id != CK_FOOD_REFERENCE
+			&& left->type->id != CK_FOOD_ARRAY ) {
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Only a pointer, reference or array may be dereferenced." );
 			return CkExpressionCreateUnary( // Avoiding NULL dereference + attempt to maintain order in error messages
@@ -737,7 +746,7 @@ static CkExpression *s_ValidateExpression(
 			allocator,
 			&expression->token,
 			expression->kind,
-			CkFoodCreateTypeInstance( allocator, newTypeID, 0, CkFoodCopyTypeInstance(subtype) ),
+			CkFoodCreateTypeInstance( allocator, newTypeID, 0, CkFoodCopyTypeInstance( allocator, subtype ) ),
 			left
 		);
 	}
@@ -824,7 +833,7 @@ static CkExpression *s_ValidateExpression(
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"You can only multiply or divide a value of arithmetic type." );
 
-		if ( (expression->kind == CK_EXPRESSION_REMAINDER)
+		if ( ( expression->kind == CK_EXPRESSION_MOD )
 			&& (!CK_TYPE_CLASSED_INT( left->type->id ) || !CK_TYPE_CLASSED_INT( right->type->id ) ) )
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The modulo assignment operator requires both of its operands to be integers." );
@@ -835,8 +844,8 @@ static CkExpression *s_ValidateExpression(
 			|| expression->kind == CK_EXPRESSION_ASSIGN_XOR
 			|| expression->kind == CK_EXPRESSION_ASSIGN_OR)
 			&& (
-				!CK_TYPE_CLASSED_INT( left->type->id )
-				&& !CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id )
+				( !CK_TYPE_CLASSED_INT( left->type->id )
+				&& !CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id ) )
 				|| !CK_TYPE_CLASSED_INT( right->type->id )) )
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Incorrect usage of bitwise operator." );
@@ -852,11 +861,11 @@ static CkExpression *s_ValidateExpression(
 		CK_ASSERT( left );
 		CK_ASSERT( right );
 
-		if ( !CK_TYPE_CLASSED_POINTER_ARITHM( left ) )
+		if ( !CK_TYPE_CLASSED_POINTER_ARITHM( left->kind ) )
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"You can only index via subscript an arithmetic pointer." );
 
-		if ( !CK_TYPE_CLASSED_INT( right ) )
+		if ( !CK_TYPE_CLASSED_INT( right->kind ) )
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The index of the subscript operator must be an integer." );
 
@@ -881,10 +890,6 @@ static CkExpression *s_ValidateExpression(
 
 		// ?:
 	case CK_EXPRESSION_CONDITIONAL:
-	{
-		FoodTypeID newTypeID = CK_FOOD_VOID;
-		CkFoodType *subtype = NULL;
-
 		CK_ASSERT( left );
 		CK_ASSERT( right );
 		CK_ASSERT( extra );
@@ -893,7 +898,7 @@ static CkExpression *s_ValidateExpression(
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The condition of a conditional statement (a in a ? b : c) must be an integer, a pointer or a boolean." );
 
-		if ( !s_CompatibleTypesCheck(left, right) )
+		if ( !s_CompatibleTypesCheck( left->type, right->type, scope ) )
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The two operands of the conditional statement must be of practical equality/be compatible." );
 
@@ -901,12 +906,11 @@ static CkExpression *s_ValidateExpression(
 			allocator,
 			&expression->token,
 			expression->kind,
-			CkFoodCopyTypeInstance( allocator, left ), // TODO: Lowest common denominator??
+			CkFoodCopyTypeInstance( allocator, left->type ), // TODO: Lowest common denominator??
 			left,
 			right,
 			extra
 		);
-	}
 
 	case CK_EXPRESSION_DUMMY:
 	case CK_EXPRESSION_NAMEOF:
@@ -914,7 +918,7 @@ static CkExpression *s_ValidateExpression(
 	case CK_EXPRESSION_MEMBER_ACCESS:
 	case CK_EXPRESSION_POINTER_MEMBER_ACCESS:
 	case CK_EXPRESSION_FUNCCALL:
-		printf( "ck internal error: Missing type binder for operator.\n" );
+		printf( "ck internal error: Missing type binder for operator %d.\n", expression->kind );
 		abort();
 	}
 #undef DUPE_EXPR
@@ -930,7 +934,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 	case CK_STMT_BREAK: break; // Handled at generation
 	case CK_STMT_CONTINUE: break; // Handled at generation
 	case CK_STMT_EXPRESSION: stmt->data.expression = s_ValidateExpression( scope, pDhi, allocator, stmt->data.expression ); break;
-	case CK_STMT_SPONGE: s_ValidateStmt( pDhi, stmt->data.sponge.statement );
+	case CK_STMT_SPONGE: s_ValidateStmt( pDhi, allocator, stmt->data.sponge.statement, scope );
 	case CK_STMT_ASSERT:
 		stmt->data.assert.expression = s_ValidateExpression( scope, pDhi, allocator, stmt->data.expression );
 		if ( !s_BooleanType(stmt->data.assert.expression->type->id) )
@@ -941,10 +945,10 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 	case CK_STMT_IF:
 		stmt->data.if_.condition = s_ValidateExpression( scope, pDhi, allocator, stmt->data.expression );
 		if ( !s_BooleanType( stmt->data.if_.condition->type->id ) )
-			CkDiagnosticThrow( pDhi, stmt->data.if_->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, stmt->data.if_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"If requires a boolean condition." );
-		s_ValidateStmt( stmt->data.if_.cThen );
-		s_ValidateStmt( stmt->data.if_.cElse );
+		s_ValidateStmt( pDhi, allocator, stmt->data.if_.cThen, scope );
+		s_ValidateStmt( pDhi, allocator, stmt->data.if_.cElse, scope );
 		break;
 
 	case CK_STMT_WHILE:
@@ -953,7 +957,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 		if ( !s_BooleanType( stmt->data.while_.condition->type->id ) )
 			CkDiagnosticThrow( pDhi, stmt->data.while_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"If requires a boolean condition." );
-		s_ValidateStmt( stmt->data.while_.cWhile );
+		s_ValidateStmt( pDhi, allocator, stmt->data.while_.cWhile, scope );
 		break;
 
 	case CK_STMT_FOR:
@@ -961,7 +965,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 		stmt->data.for_.condition = s_ValidateExpression( stmt->data.for_.scope, pDhi, allocator, stmt->data.for_.condition );
 		stmt->data.for_.lead = s_ValidateExpression( stmt->data.for_.scope, pDhi, allocator, stmt->data.for_.lead );
 
-		if ( !s_BooleanType(stmt->data.for_.condition) )
+		if ( !s_BooleanType(stmt->data.for_.condition->type->id) )
 			CkDiagnosticThrow( pDhi, stmt->data.while_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"For's condition must be a boolean." );
 
@@ -978,8 +982,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 		break;
 
 	case CK_STMT_SWITCH:
-		const size_t caseCount = CkListLength( stmt->data.switch_.caseList );
-		stmt->data.switch_.expression = s_ValidateExpression( scope, pDhi, allocator, stmt->data.switch_.expression );
+		break; // not yet supported
 	}
 }
 
@@ -988,15 +991,17 @@ static void s_ValidateBlock( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *al
 	const size_t elemCount = CkListLength( blk->data.block.stmts );
 	for ( size_t i = 0; i < elemCount; i++ ) {
 		const CkStatement *stmt = *(CkStatement **)CkListAccess( blk->data.block.stmts, i );
-		s_ValidateStmt( pDhi, allocator, stmt, blk->data.block.scope );
+		s_ValidateStmt( pDhi, allocator, (CkStatement *)stmt, blk->data.block.scope );
 	}
 }
 
 static void s_ValidateFunc( CkScope *scope, CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *allocator, CkFunction *func )
 {
+	CK_ARG_NON_NULL( func );
+	CK_ARG_NON_NULL( func->body );
 	if ( func->body->stmt == CK_STMT_EXPRESSION )
 		func->body->data.expression = s_ValidateExpression( scope, pDhi, allocator, func->body->data.expression );
-	else s_ValidateBlock( func->body );
+	else s_ValidateBlock( pDhi, allocator, func->body );
 }
 
 void CkBinderValidateAndBind( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *allocator, CkLibrary *library )

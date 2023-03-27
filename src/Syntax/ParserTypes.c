@@ -1,4 +1,5 @@
 #include <Syntax/ParserTypes.h>
+#include <Syntax/ParserExpressions.h>
 #include <CDebug.h>
 
 // A type ID pair.
@@ -95,7 +96,7 @@ Leave:
 CkFoodType *CkParserType( CkParserInstance *parser )
 {
 	CkToken token;
-	CkFoodType *acc;
+	CkFoodType *acc = 0;
 	uint8_t attr = 0;
 	uint8_t id = 0;
 
@@ -111,22 +112,41 @@ CkFoodType *CkParserType( CkParserInstance *parser )
 			break;
 		}
 	}
-	// TODO: Handle user-defined types and function pointers
-	if ( id == 0 ) return NULL;
-	acc = CkFoodCreateTypeInstance( parser->arena, id, attr, NULL );
+	// TODO: Handle function pointers
+	if ( id == 0 ) {
+		// User type
+		if ( token.kind == 'I' ) {
+			acc = CkFoodCreateTypeInstance( parser->arena, CK_FOOD_USER, attr, NULL );
+		}
+	} else acc = CkFoodCreateTypeInstance( parser->arena, id, attr, NULL );
 
-	// Handle pointers and references
-	// TODO: Handle arrays
+	// Handle pointers, references and arrays.
 	while ( TRUE ) {
 		attr = s_ParseQualifiers( parser );
 		CkParserReadToken( parser, &token );
-		if ( token.kind == '*' ) {
+		if ( token.kind == '*' ) { // Pointers
 			id = CK_FOOD_POINTER;
 			acc = CkFoodCreateTypeInstance( parser->arena, id, attr, acc );
-		} else if ( token.kind == '&' ) {
+		} else if ( token.kind == '&' ) { // References
 			id = CK_FOOD_REFERENCE;
 			acc = CkFoodCreateTypeInstance( parser->arena, id, attr, acc );
-			break; // References cannot be subtypes
+
+			// References cannot be subtypes
+			break;
+		} else if ( token.kind == '[' ) { // Arrays
+			id = CK_FOOD_ARRAY;
+			acc = CkFoodCreateTypeInstance( parser->arena, id, attr, acc );
+			acc->extra = CkParserExpression( parser ); // [ >>>expr<<< ]
+			CkParserReadToken( parser, &token );
+			if ( !acc->extra ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Expected an expression for array parser." );
+			}
+			if ( token.kind != ']' ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Expected closing square bracket at this token." );
+			}
+
 		} else {
 			CkParserRewind( parser, 1 );
 			break;

@@ -1,7 +1,10 @@
 #include <Driver.h>
+#include <Diagnostics.h>
 #include <Configs.h>
 #include <FileIO.h>
 #include <Util/Time.h>
+
+#include <Syntax/Binder.h>
 
 #include <Memory/Arena.h>
 
@@ -15,8 +18,9 @@
 
 int main( int argc, char *argv[], char **envp )
 {
-	CkArenaFrame configGenerationArena; // The arena used for config/profile-related + generation allocations.
-	CkArenaFrame driverArena;           // The arena used for driver allocations. Reset for each driver.
+	/*CkArenaFrame configGenerationArena; // The arena used for config/profile-related + generation allocations.
+	CkArenaFrame driverArena;           // The arena used for driver allocations. Reset for each driver.*/
+	CkArenaFrame globalArena;           // The arena used for global allocations.
 
 	CkDriverStartupConfiguration driverStart; // Driver startup configuration
 	CkDriverCompilationResult driverResult;   // Driver result
@@ -29,8 +33,10 @@ int main( int argc, char *argv[], char **envp )
 
 	size_t sourceCount = 0; // Used for iterating through all source files
 
-	CkLibrary *result;           // The resulting library.
-	CkModule *temp_driverModule; // (TEMPORARY) The module for the current driver.
+	CkLibrary *result;               // The resulting library.
+	CkModule *temp_driverModule;     // (TEMPORARY) The module for the current driver.
+	CkDiagnosticHandlerInstance dhi; // Handles diagnostics.
+	bool_t success = TRUE;           // Compilation & linkage status
 
 	CkTimePoint compilerStart; // The start of the compilation
 	CkTimePoint compilerEnd;   // The end of the compilation
@@ -51,22 +57,22 @@ int main( int argc, char *argv[], char **envp )
 
 	CkTimeGetCurrent( &compilerStart );
 
-	CkArenaStartFrame( &configGenerationArena, 0 );
-	CkArenaStartFrame( &driverArena, 0 );
+	/*CkArenaStartFrame(&configGenerationArena, 0);
+	CkArenaStartFrame( &driverArena, 0 );*/
+	CkArenaStartFrame( &globalArena, 0 );
 
 	if ( argc >= 2 ) buildDirectory = argv[1];
 	if ( argc >= 3 ) profileName = argv[2];
 	if ( argc > 3 ) puts( "ck: Parameters beyond <profile> are ignored." );
 
-	base = CkConfigGetBuildConfig( &configGenerationArena, buildDirectory );
+	base = CkConfigGetBuildConfig( &globalArena, buildDirectory );
 	if ( !base ) {
 		puts( "ck: Failed to parse build configuration, exiting.\n" );
-		CkArenaEndFrame( &configGenerationArena );
-		CkArenaEndFrame( &driverArena );
+		CkArenaEndFrame( &globalArena );
 		return -1;
 	}
 
-	applied = CkConfigApplied( &configGenerationArena, base, profileName );
+	applied = CkConfigApplied( &globalArena, base, profileName );
 	if ( !applied ) {
 		if ( !profileName )
 			puts( "ck: A profile must be used for this configuration, as it lacks mandatory settings.\n" );
@@ -75,9 +81,8 @@ int main( int argc, char *argv[], char **envp )
 		return -1;
 	}
 
-	result = CkCreateLibrary( &configGenerationArena, applied->name );
+	result = CkCreateLibrary( &globalArena, applied->name );
 
-	CkArenaStartFrame( &driverArena, 0 );
 	sourceCount = CkListLength( applied->sources );
 	for ( size_t i = 0; i < sourceCount; i++ ) {
 		char *source = CkConfigGetSource( applied, i );
@@ -97,21 +102,22 @@ int main( int argc, char *argv[], char **envp )
 		memset( &driverResult, 0, sizeof( CkDriverCompilationResult ) );
 
 		// Name (ProjectName::FileName)
-		driverStart.name = CkArenaAllocate( &driverArena, nameLen + 1 );
+		driverStart.name = CkArenaAllocate( &globalArena, nameLen + 1 );
 		strcpy( driverStart.name, applied->name );
 		strcat( driverStart.name, "::" );
 		strcat( driverStart.name, source );
 
 		// Source filepath (SourceDir/Filepath)
-		sourceTotal = CkArenaAllocate( &driverArena, sourceLen + 1 );
+		sourceTotal = CkArenaAllocate( &globalArena, sourceLen + 1 );
 		cwk_path_join( buildDirectory, applied->sourceDir, sourceTotal, sourceLen + 1 );
 		cwk_path_join( sourceTotal, source, sourceTotal, sourceLen + 1 );
 
+		printf( "ck: compiling file '%s'\n", sourceTotal );
+
 		// Source loading
-		driverStart.source = CkReadFileContents( &driverArena, sourceTotal );
+		driverStart.source = CkReadFileContents( &globalArena, sourceTotal );
 		if ( !driverStart.source ) {
 			fprintf( stderr, "ck: Project '%s' does not have source file '%s'.\n", applied->name, sourceTotal );
-			CkArenaResetFrame( &driverArena );
 			continue;
 		}
 
@@ -119,17 +125,18 @@ int main( int argc, char *argv[], char **envp )
 		driverStart.wError = applied->wError;
 
 		// Driver compilation
-		temp_driverModule = CkCreateModule( &configGenerationArena, result, source, TRUE, TRUE );
-		CkDriverCompile( &driverArena, &configGenerationArena, temp_driverModule, &driverResult, &driverStart );
-
-		// Resetting the frame for the next file
-		CkArenaResetFrame( &driverArena );
+		temp_driverModule = CkCreateModule( &globalArena, result, source, TRUE, TRUE );
+		CkDriverCompile( &dhi, &globalArena, &globalArena, temp_driverModule, &driverResult, &driverStart );
 	}
+
+	// Binding
+	CkBinderValidateAndBind( &dhi, &globalArena, result );
+	if ( dhi.anyErrors || (applied->wError && dhi.anyWarnings) )
+		success = FALSE;
 
 	CkPrintAST( result );
 
-	CkArenaEndFrame( &configGenerationArena );
-	CkArenaEndFrame( &driverArena );
+	CkArenaEndFrame( &globalArena );
 
 	CkTimeGetCurrent( &compilerEnd );
 	printf(
@@ -137,6 +144,7 @@ int main( int argc, char *argv[], char **envp )
 		(double)(CkTimeElapsed_mcs(&compilerStart, &compilerEnd)) / 1000.0 );
 
 	(void)envp;
+	(void)success;
 
 	return 0;
 }

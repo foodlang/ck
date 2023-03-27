@@ -159,20 +159,26 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 		);
 
 		// True is a boolean constant
-	case KW_TRUE:
+	case KW_TRUE: {
+		CkToken trueToken = token;
+		trueToken.value.u64 = 1;
 		return CkExpressionCreateLiteral(
 			parser->arena,
-			&token,
+			&trueToken,
 			CK_EXPRESSION_BOOL_LITERAL,
 			CkFoodCreateTypeInstance( parser->arena, CK_FOOD_BOOL, 0, NULL ) );
+	}
 
 		// False is a boolean constant
-	case KW_FALSE:
+	case KW_FALSE: {
+		CkToken trueToken = token;
+		trueToken.value.u64 = 0;
 		return CkExpressionCreateLiteral(
 			parser->arena,
-			&token,
+			&trueToken,
 			CK_EXPRESSION_BOOL_LITERAL,
 			CkFoodCreateTypeInstance( parser->arena, CK_FOOD_BOOL, 0, NULL ) );
+	}
 
 		// Null is a pointer constant
 	case KW_NULL:
@@ -513,7 +519,7 @@ static CkExpression *s_ParseAssign( CkParserInstance *parser )
 			parser->arena,
 			&op,
 			kind,
-			CkFoodCreateTypeInstance(allocator, CK_FOOD_VOID, 0, NULL),
+			CkFoodCreateTypeInstance( parser->arena, CK_FOOD_VOID, 0, NULL ),
 			left,
 			s_ParseConditional( parser ) );
 
@@ -532,7 +538,13 @@ static CkExpression *s_ParseCompound( CkParserInstance *parser )
 
 	CkParserReadToken( parser, &op );
 	while ( op.kind == ',' ) {
-		acc = CkExpressionCreateBinary( parser->arena, &op, CK_EXPRESSION_COMPOUND, CkFoodCreateTypeInstance(allocator, CK_FOOD_VOID, 0, NULL), acc, s_ParseAssign(parser));
+		acc = CkExpressionCreateBinary(
+			parser->arena,
+			&op,
+			CK_EXPRESSION_COMPOUND,
+			CkFoodCreateTypeInstance( parser->arena, CK_FOOD_VOID, 0, NULL ),
+			acc,
+			s_ParseAssign( parser ) );
 		CkParserReadToken( parser, &op );
 	}
 	CkParserRewind( parser, 1 );

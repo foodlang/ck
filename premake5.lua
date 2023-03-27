@@ -1,5 +1,6 @@
 workspace "ck"
 	configurations { "Debug", "Release" }
+	platforms { "x86", "x86_64", "ARM", "ARM64" }
 	startproject "ck"
 
 	floatingpoint "Strict"
@@ -27,6 +28,18 @@ workspace "ck"
 		toolset "gcc"
 		cdialect "gnu11"
 		links { "m" }
+	
+	filter "configurations:*_x86_32"
+		architecture "x86"
+	
+	filter "configurations:*_x86_64"
+		architecture "x86_64"
+	
+	filter "configurations:*_ARM"
+		architecture "ARM"
+	
+	filter "configurations:*_ARM64"
+		architecture "ARM64"
 
 	filter {}
 

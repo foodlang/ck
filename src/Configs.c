@@ -384,7 +384,7 @@ LSkipLookup:
 			CkListAdd(
 				total->libraries,
 				s_StringDuplicate( allocator,
-					CkListAccess( selected->libraries, i ) ) );
+					(char *)CkListAccess( selected->libraries, i ) ) );
 		}
 	}
 
@@ -399,5 +399,5 @@ char *CkConfigGetSource( CkBuildConfig *cfg, size_t index )
 		fprintf( stderr, "ck: Project '%s' doesn't have %zu source files.\n", cfg->name, index );
 		return NULL;
 	}
-	return CkListAccess( cfg->sources, index );
+	return (char *)CkListAccess( cfg->sources, index );
 }

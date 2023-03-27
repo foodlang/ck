@@ -115,6 +115,7 @@ typedef enum FoodTypeID
 	CK_FOOD_STRUCT,
 	CK_FOOD_UNION,
 	CK_FOOD_STRING,
+	CK_FOOD_USER,
 } FoodTypeID;
 
 // Represents a type in the Food programming language.
