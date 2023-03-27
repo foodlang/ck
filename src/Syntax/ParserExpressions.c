@@ -186,7 +186,7 @@ static CkExpression *s_ParsePrimaryExpression( CkParserInstance *parser )
 		nullToken.value.u64 = 0;
 		return CkExpressionCreateLiteral(
 			parser->arena,
-			&token,
+			&nullToken,
 			CK_EXPRESSION_INTEGER_LITERAL,
 			CkFoodCreateTypeInstance(
 				parser->arena,
