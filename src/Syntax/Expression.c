@@ -15,6 +15,7 @@ CkExpression *CkExpressionCreateType(
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
 	expr->type = type;
 	expr->kind = CK_EXPRESSION_TYPE;
+	expr->isLValue = FALSE;
 	return expr;
 }
 
@@ -33,6 +34,7 @@ CkExpression *CkExpressionCreateLiteral(
 	memcpy( &expr->token, token, sizeof( CkToken ) );
 	expr->type = type;
 	expr->kind = kind;
+	expr->isLValue = FALSE;
 	return expr;
 }
 
@@ -53,6 +55,7 @@ CkExpression *CkExpressionCreateUnary(
 	expr->left = operand;
 	expr->type = type;
 	expr->kind = kind;
+	expr->isLValue = FALSE;
 	return expr;
 }
 
@@ -75,6 +78,7 @@ CkExpression *CkExpressionCreateBinary(
 	expr->right = right;
 	expr->type = type;
 	expr->kind = kind;
+	expr->isLValue = FALSE;
 	return expr;
 }
 
@@ -99,6 +103,7 @@ CkExpression *CkExpressionCreateTernary(
 	expr->extra = extra;
 	expr->type = type;
 	expr->kind = kind;
+	expr->isLValue = FALSE;
 	return expr;
 }
 
@@ -123,9 +128,9 @@ static void s_ExprPrintTab( int tab, CkExpression *expression )
 	for ( int i = 0; i < tab; i++ )
 		printf( "  " );
 #if _WIN32
-	printf( "%c:%llu\n", (char)expression->token.kind, expression->token.value.u64 );
+	printf( "%d:%llu\n", (char)expression->kind, expression->token.value.u64 );
 #else
-	printf( "%c:%lu\n", (char)expression->token.kind, expression->token.value.u64 );
+	printf( "%d:%lu\n", (char)expression->kind, expression->token.value.u64 );
 #endif
 	if ( expression->extra )
 		s_ExprPrintTab( tab + 1, expression->extra );

@@ -118,6 +118,10 @@ CkFoodType *CkParserType( CkParserInstance *parser )
 		if ( token.kind == 'I' ) {
 			acc = CkFoodCreateTypeInstance( parser->arena, CK_FOOD_USER, attr, NULL );
 		}
+		else {
+			CkParserRewind( parser, 1 );
+			return NULL;
+		}
 	} else acc = CkFoodCreateTypeInstance( parser->arena, id, attr, NULL );
 
 	// Handle pointers, references and arrays.

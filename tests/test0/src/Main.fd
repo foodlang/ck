@@ -2,5 +2,5 @@
 	int a;
 	bool b;
 
-	3 * 2;
+	&&true;
 }

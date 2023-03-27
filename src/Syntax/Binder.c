@@ -215,8 +215,6 @@ static CkExpression *s_ValidateExpression(
 	CkArenaFrame *allocator,
 	CkExpression *expression )
 {
-#define DUPE_EXPR CkExpressionCreateTernary(allocator, &expression->token, expression->kind, CkFoodCopyTypeInstance(allocator, expression->type), left, right, extra)
-
 	CkExpression *left = expression->left ? s_ValidateExpression( scope, pDhi, allocator, expression->left ) : NULL;
 	CkExpression *right = expression->right ? s_ValidateExpression( scope, pDhi, allocator, expression->right ) : NULL;
 	CkExpression *extra = expression->extra ? s_ValidateExpression( scope, pDhi, allocator, expression->extra ) : NULL;
@@ -229,7 +227,7 @@ static CkExpression *s_ValidateExpression(
 	case CK_EXPRESSION_STRING_LITERAL:
 	case CK_EXPRESSION_TYPE:
 	case CK_EXPRESSION_COMPOUND_LITERAL:
-		return DUPE_EXPR;
+		return CkExpressionDuplicate(allocator, expression);
 
 		// TODO: Scoped references
 	case CK_EXPRESSION_SCOPED_REFERENCE:
@@ -583,6 +581,7 @@ static CkExpression *s_ValidateExpression(
 			not a reference.
 		*/
 
+		CK_ASSERT( left );
 		if ( !left->isLValue ) {
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"It is impossible to take the opaque address of a non-lvalue object." );
@@ -664,12 +663,13 @@ static CkExpression *s_ValidateExpression(
 				"The operands of a comparison must either be two pointers with the same subtype, integers or floats." );
 		}
 
-		return CkExpressionCreateUnary(
+		return CkExpressionCreateBinary(
 			allocator,
 			&expression->token,
 			expression->kind,
 			CkFoodCreateTypeInstance( allocator, CK_FOOD_BOOL, 0, NULL ),
-			left
+			left,
+			right
 		);
 
 		// == and !=
@@ -705,12 +705,13 @@ static CkExpression *s_ValidateExpression(
 				"Equality comparison requires two identical types for user-types, or two arithmetic types or pointers." );
 		}
 
-		return CkExpressionCreateUnary(
+		return CkExpressionCreateBinary(
 			allocator,
 			&expression->token,
 			expression->kind,
 			CkFoodCreateTypeInstance( allocator, CK_FOOD_BOOL, 0, NULL ),
-			left
+			left,
+			right
 		);
 
 		// Classical bitwise operators (not shifts)
@@ -742,12 +743,13 @@ static CkExpression *s_ValidateExpression(
 				"The classic bitwise operators (&, |, ^) require their operands to be integer, with one operand allowed to be a pointer." );
 		}
 
-		return CkExpressionCreateUnary(
+		return CkExpressionCreateBinary(
 			allocator,
 			&expression->token,
 			expression->kind,
-			CkFoodCreateTypeInstance( allocator, newTypeID, 0, CkFoodCopyTypeInstance( allocator, subtype ) ),
-			left
+			CkFoodCreateTypeInstance( allocator, newTypeID, 0, subtype != NULL ? CkFoodCopyTypeInstance( allocator, subtype ) : NULL ),
+			left,
+			right
 		);
 	}
 
@@ -769,12 +771,13 @@ static CkExpression *s_ValidateExpression(
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The right operand of a logical operator (&&, ||) must be either a boolean, an integer or a pointer." );
 
-		return CkExpressionCreateUnary(
+		return CkExpressionCreateBinary(
 			allocator,
 			&expression->token,
 			expression->kind,
 			CkFoodCreateTypeInstance( allocator, CK_FOOD_BOOL, 0, NULL ),
-			left
+			left,
+			right
 		);
 
 		// x => T, (T)x
@@ -790,7 +793,7 @@ static CkExpression *s_ValidateExpression(
 
 		// C-style discard
 		if ( expression->type->id == CK_FOOD_VOID )
-			return DUPE_EXPR;
+			return CkExpressionDuplicate(allocator, expression);
 
 		if ( expression->type->id == CK_FOOD_STRUCT
 			|| expression->type->id == CK_FOOD_UNION)
@@ -802,7 +805,7 @@ static CkExpression *s_ValidateExpression(
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"The input of a cast must be of scalar type." );
 
-		return DUPE_EXPR;
+		return CkExpressionDuplicate(allocator, expression);
 
 		// Classic assignment
 	case CK_EXPRESSION_ASSIGN:
@@ -854,7 +857,7 @@ static CkExpression *s_ValidateExpression(
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Only an lvalue can be assigned a value." );
 
-		return DUPE_EXPR;
+		return CkExpressionDuplicate(allocator, expression);
 
 		// x[y]
 	case CK_EXPRESSION_SUBSCRIPT:
@@ -886,7 +889,7 @@ static CkExpression *s_ValidateExpression(
 	case CK_EXPRESSION_COMPOUND:
 		CK_ASSERT( left );
 		CK_ASSERT( right );
-		return DUPE_EXPR;
+		return CkExpressionDuplicate(allocator, expression);
 
 		// ?:
 	case CK_EXPRESSION_CONDITIONAL:
@@ -921,7 +924,6 @@ static CkExpression *s_ValidateExpression(
 		printf( "ck internal error: Missing type binder for operator %d.\n", expression->kind );
 		abort();
 	}
-#undef DUPE_EXPR
 }
 
 static void s_ValidateBlock( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *allocator, CkStatement *blk );
