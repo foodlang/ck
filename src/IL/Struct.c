@@ -1,6 +1,8 @@
 #include <IL/FFStruct.h>
 #include <Syntax/Expression.h>
 
+#include <string.h>
+
 #include <CDebug.h>
 
 CkScope *CkStartScope(
@@ -188,4 +190,24 @@ void CkPrintAST( CkLibrary *library )
 			s_PrintStmt( 3, func->body );
 		}
 	}
+}
+
+bool_t CkSymbolDeclared( CkScope* current, char* passedName )
+{
+	const size_t varCount = CkListLength( current->variableList );
+	const size_t funcCount = current->supportsFunctions ? CkListLength( current->functionList ) : 0;
+
+	for ( size_t i = 0; i < varCount; i++ ) {
+		CkVariable *var = CkListAccess( current->variableList, i );
+		if ( !strcmp( var->name, passedName ) )
+			return TRUE;
+	}
+
+	for ( size_t i = 0; i < funcCount; i++ ) {
+		CkFunction *func = CkListAccess( current->functionList, i );
+		if ( !strcmp( func->name, passedName ) )
+			return TRUE;
+	}
+
+	return current->parent ? CkSymbolDeclared( current->parent, passedName ) : FALSE;
 }

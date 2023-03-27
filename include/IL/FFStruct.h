@@ -416,4 +416,7 @@ CkModule *CkCreateModule(
 // Prints a whole library's structure.
 void CkPrintAST( CkLibrary *library );
 
+// Returns true if a symbol of that name is declared in the scope.
+bool_t CkSymbolDeclared( CkScope* current, char *passedName );
+
 #endif

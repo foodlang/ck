@@ -1,3 +1,4 @@
+#include <IL/FFStruct.h>
 #include <Syntax/ParserTypes.h>
 #include <Syntax/ParserExpressions.h>
 #include <CDebug.h>
