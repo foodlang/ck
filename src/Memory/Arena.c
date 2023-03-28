@@ -22,7 +22,7 @@ void CkArenaStartFrame( CkArenaFrame *dest, size_t maxSize )
 	dest->size = maxSize;
 	dest->offsetFree = 0;
 #if defined(USE_MALLOC)
-	dest->base = calloc( 1, DEFAULT_MAXSIZE );
+	dest->base = malloc( DEFAULT_MAXSIZE );
 #elif defined(_WIN32)
 	dest->base = VirtualAlloc( 0, maxSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
 #else
@@ -49,8 +49,9 @@ void *CkArenaAllocate( CkArenaFrame *frame, size_t bytes )
 
 	CK_ARG_NON_NULL( frame );
 
-	// Alignment
+	// Allocation & alignment
 	bytes += -bytes & (ARENA_ALLOC_ALIGN - 1);
+	memset( frame->base + frame->offsetFree, 0, bytes );
 	frame->offsetFree += bytes;
 	if ( frame->offsetFree > frame->size ) {
 		fprintf( stderr, "ck: Allocating beyond arena frame (limit = %zu bytes)\n", frame->size );
