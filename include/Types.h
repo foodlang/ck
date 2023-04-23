@@ -59,6 +59,23 @@ typedef struct m256_t
 #define CK_QUALIFIER_RESTRICT_BIT 4
 #define CK_QUALIFIER_ATOMIC_BIT   8
 
+// Dynamic string
+typedef struct CkStrBuilder
+{
+	// The base of the string.
+	char *base;
+
+	// The length of the string.
+	size_t length;
+
+	// The current allocated length of the string.
+	size_t capacity;
+
+	// The size of allocations/reallocations.
+	size_t blksize;
+
+} CkStrBuilder;
+
 // Represents a token, an indivisible bit of text that is used to
 // represent the syntax of the source code.
 typedef struct CkToken
@@ -270,5 +287,20 @@ typedef struct CkExpression
 
 #define CK_TYPE_CLASSED_POINTER(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_FUNCPOINTER || (x) == CK_FOOD_ARRAY)
 #define CK_TYPE_CLASSED_POINTER_ARITHM(x) ((x) == CK_FOOD_POINTER || (x) == CK_FOOD_ARRAY)
+
+// Creates a new string builder ready to be used.
+// blksize = initial capacity, number of bytes to allocate
+// every time the max. capacity is reached.
+void CkStrBuilderCreate( CkStrBuilder *dest, size_t blksize );
+
+// Appends a single character to the string builder.
+void CkStrBuilderAppendChar( CkStrBuilder *sb, char c );
+
+// Appends a string to the string builder.
+void CkStrBuilderAppendString( CkStrBuilder *sb, char* s );
+
+// Disposes of a string builder. These objects don't use arenas,
+// so it is important to dispose of them.
+void CkStrBuilderDispose( CkStrBuilder *sb );
 
 #endif

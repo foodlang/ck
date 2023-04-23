@@ -103,7 +103,7 @@ void CkDiagnosticThrow(
 	CK_ARG_NON_NULL( format );
 
 	if ( dhi->tryMode && severity == CK_DIAG_SEVERITY_ERROR ) {
-		dhi->thrownTryMode + 1;
+		dhi->thrownTryMode += 1;
 		return;
 	}
 

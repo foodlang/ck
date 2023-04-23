@@ -96,3 +96,6 @@ project "ck"
 	includedirs { "include/", "vendor/cwalk/", "vendor/cJSON/", "vendor/lua/src/" }
 
 	links { "cJSON", "cwalk", "lua" }
+
+	-- Copying Lua helper code to bin directory
+	postbuildcommands { "{COPYDIR} luasrc bin/" }
