@@ -18,32 +18,29 @@
 
 int main( int argc, char *argv[], char **envp )
 {
-	CkArenaFrame globalArena;           // The arena used for global allocations.
-
+	CkArenaFrame globalArena;                 // The arena used for global allocations.
 	CkDriverStartupConfiguration driverStart; // Driver startup configuration
 	CkDriverCompilationResult driverResult;   // Driver result
-
-	CkBuildConfig *base;    // The base configuration.
-	CkBuildConfig *applied; // The configuration with the profile applied.
-
-	char *buildDirectory = NULL; // The directory where the project is located.
-	char *profileName = NULL;    // The name of the profile to use.
-
-	size_t sourceCount = 0; // Used for iterating through all source files
-
-	CkLibrary *result;               // The resulting library.
-	CkModule *temp_driverModule;     // (TEMPORARY) The module for the current driver.
-	CkDiagnosticHandlerInstance dhi; // Handles diagnostics.
-	bool_t success = TRUE;           // Compilation & linkage status
-
-	CkTimePoint compilerStart; // The start of the compilation
-	CkTimePoint compilerEnd;   // The end of the compilation
+	CkBuildConfig *base;                      // The base configuration.
+	CkBuildConfig *applied;                   // The configuration with the profile applied.
+	char *buildDirectory = NULL;              // The directory where the project is located.
+	char *profileName = NULL;                 // The name of the profile to use.
+	size_t sourceCount;                       // Used for iterating through all source files
+	CkLibrary *result;                        // The resulting library.
+	CkModule *temp_driverModule;              // (TEMPORARY) The module for the current driver.
+	CkDiagnosticHandlerInstance dhi;          // Handles diagnostics.
+	CkTimePoint compilerStart;                // The start of the compilation
+	CkTimePoint compilerEnd;                  // The end of the compilation
+	bool_t success = TRUE;                    // Compilation & linkage status
 
 	puts( "CK, The Official Food Compiler" );
-	puts( "Copyright (C) 2023 The Food Project & outside contributors" );
+	puts( "Copyright (C) 2023 The Food Project" );
+
 #if defined(_DEBUG)
 	puts( "This is a debug build of CK. The compiler might not perform as fast as release builds." );
+	puts( "  -> Please report any bugs you find at https://discord.gg/8SdtguX3P9 (#bug-reports channel.)" );
 #endif
+
 	puts( "" );
 
 	if ( argc == 1 ) {
