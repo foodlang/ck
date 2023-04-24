@@ -3,6 +3,7 @@
 #include <Configs.h>
 #include <FileIO.h>
 #include <Util/Time.h>
+#include <Generation/GenPrototype.h>
 
 #include <Syntax/Binder.h>
 
@@ -32,6 +33,7 @@ int main( int argc, char *argv[], char **envp )
 	CkTimePoint compilerStart;                // The start of the compilation
 	CkTimePoint compilerEnd;                  // The end of the compilation
 	bool_t success = TRUE;                    // Compilation & linkage status
+	CkList* libs;                             // Library list
 
 	puts( "CK, The Official Food Compiler" );
 	puts( "Copyright (C) 2023 The Food Project" );
@@ -127,7 +129,13 @@ int main( int argc, char *argv[], char **envp )
 	if ( dhi.anyErrors || (applied->wError && dhi.anyWarnings) )
 		success = FALSE;
 
-	CkPrintAST( result );
+	if ( success ) {
+		libs = CkListStart( &globalArena, sizeof( CkLibrary* ) );
+		CkListAdd( libs, &result );
+
+		CkPrintAST( result );
+		puts( CkGenProgram_Prototype( &dhi, &globalArena, libs ) );
+	}
 	CkArenaEndFrame( &globalArena );
 	CkTimeGetCurrent( &compilerEnd );
 	printf(

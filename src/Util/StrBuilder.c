@@ -11,6 +11,7 @@ void CkStrBuilderCreate( CkStrBuilder* dest, size_t blksize )
 	dest->base = calloc( blksize, 1 );
 	dest->length = 0;
 	dest->capacity = blksize;
+	dest->blksize = blksize;
 }
 
 // Appends a single character to the string builder.
@@ -24,6 +25,7 @@ void CkStrBuilderAppendChar( CkStrBuilder* sb, char c )
 	}
 	sb->base[sb->length] = c;
 	sb->base[sb->length + 1] = '\0'; // null terminator
+	sb->length++;
 }
 
 // Appends a string to the string builder.
@@ -45,6 +47,7 @@ void CkStrBuilderAppendString( CkStrBuilder* sb, char* s )
 		sb->base = realloc( sb->base, sb->capacity );
 	}
 	strcpy( sb->base + sb->length, s ); // copying. strcpy inserts a null terminator
+	sb->length += strlength;
 }
 
 // Disposes of a string builder. These objects don't use arenas,
