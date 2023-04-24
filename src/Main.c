@@ -132,8 +132,6 @@ int main( int argc, char *argv[], char **envp )
 	if ( success ) {
 		libs = CkListStart( &globalArena, sizeof( CkLibrary* ) );
 		CkListAdd( libs, &result );
-
-		CkPrintAST( result );
 		puts( CkGenProgram_Prototype( &dhi, &globalArena, libs ) );
 	}
 	CkArenaEndFrame( &globalArena );

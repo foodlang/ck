@@ -38,15 +38,18 @@ void CkStrBuilderAppendString( CkStrBuilder* sb, char* s )
 
 	strlength = strlen( s );
 
+	if ( !strlength ) return;
+
 	// If the string reaches max capacity INCLUDING the null terminator
 	if ( sb->length + strlength + 1 > sb->capacity ) {
 		// Finding the required amount of bytes and blocks to allocate
-		const size_t requiredBytes = sb->length + strlength - sb->capacity;
-		const size_t requiredBlocks = requiredBytes / sb->blksize + ( ( requiredBytes % sb->blksize != 0 ) ? 1 : 0 );
+		const size_t requiredBytes = sb->length + strlength + 1 - sb->capacity;
+		const size_t requiredBlocks = (requiredBytes / sb->blksize - 1) / sb->blksize; 
+
 		sb->capacity += sb->blksize * requiredBlocks;
 		sb->base = realloc( sb->base, sb->capacity );
 	}
-	strcpy( sb->base + sb->length, s ); // copying. strcpy inserts a null terminator
+	strcpy( sb->base + sb->length, s );
 	sb->length += strlength;
 }
 
