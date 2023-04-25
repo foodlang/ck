@@ -121,6 +121,15 @@ static CkExpression *s_ParsePrimaryExpression( CkScope* scope, CkParserInstance 
 		return scoped;
 	}
 
+		// String literal
+	case 'S':
+		return CkExpressionCreateLiteral(
+			parser->arena,
+			&token,
+			CK_EXPRESSION_STRING_LITERAL,
+			CkFoodCreateTypeInstance( parser->arena, CK_FOOD_STRING, 0, NULL )
+		);
+
 		// Literal integer
 	case '0':
 

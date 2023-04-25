@@ -8,4 +8,7 @@
 
 	while (1) 10;
 	9;
+	"Hello, World!";
+	"Another one";
+	"And another\n\r\e";
 }

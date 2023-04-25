@@ -568,10 +568,10 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 		}
 		end = lexer->cursor + 1;
 		token->value.cstr = CkArenaAllocate( lexer->arena, length + 1 );
-		lexer->cursor = base;
-		for ( size_t i = 0; i <= length; i++ ) {
+		lexer->cursor = base + 1;
+		for ( size_t i = 0; i < length; i++ ) {
 			token->value.cstr[i] = s_nextChar( lexer );
-			if ( cur == '\\' ) {
+			if ( token->value.cstr[i] == '\\' ) {
 				lexer->cursor++;
 				token->value.cstr[i] = (char)s_escapeSequence( lexer );
 			}

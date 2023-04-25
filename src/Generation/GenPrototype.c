@@ -127,6 +127,60 @@ static char* _RegnameInt( size_t reg, FoodTypeID typeid )
 	}
 }
 
+// Inserts static data.
+static void _InsertStaticData(
+	CkArenaFrame *allocator,
+	bool_t public,
+	void *cdata,
+	FoodTypeID typeid,
+	bool_t named,
+	char *optional_name )
+{
+	_StaticData entry = {};
+	// --- Create list of not already existent ---
+	if ( !_data_section )
+		_data_section = CkListStart( allocator, sizeof( _StaticData ) );
+
+	entry.named = named;
+	entry.public = public;
+	entry.typeid = typeid;
+	if ( optional_name ) entry.name.cstr = optional_name;
+	else entry.name.id = _static_unnamed_label_counter++;
+
+	// Replace some characters with escape sequences
+	if ( typeid == CK_FOOD_STRING ) {
+		char c;
+		char *cstr;
+		size_t cstrlen;
+		CkStrBuilder out;
+		char *outbuf;
+		size_t outbuflen;
+
+		cstr = cdata;
+		cstrlen = strlen( cstr );
+		CkStrBuilderCreate( &out, 10 );
+		
+		for ( size_t i = 0; i < cstrlen; i++ ) {
+			c = cstr[i];
+			// These characters will be inserted as escape sequences
+			if ( c <= 0x1F || c >= 0x7F ) {
+				outbuflen = snprintf( NULL, 0, "\\x%02hhX", (uint8_t)c );
+				outbuf = malloc( outbuflen + 1 );
+				sprintf( outbuf, "\\x%02hhX", (uint8_t)c );
+				CkStrBuilderAppendString( &out, outbuf );
+				free( outbuf );
+
+			} else CkStrBuilderAppendChar( &out, c );
+		}
+		entry.data = CkArenaAllocate( allocator, out.length + 1 );
+		strcpy( entry.data, out.base );
+		CkStrBuilderDispose( &out );
+
+	} else entry.data = cdata;
+
+	CkListAdd( _data_section, &entry );
+}
+
 // Inserts a line of code.
 static void _InsertLine( CkStrBuilder *sb, const char* format, ... )
 {
@@ -189,7 +243,7 @@ static void _ExtendRegister( CkStrBuilder *sb, size_t r, FoodTypeID original, Fo
 }
 
 // Inserts an expression. Returns the output register
-static size_t _InsertExpression( CkStrBuilder* sb, CkExpression* expr )
+static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkExpression* expr )
 {
 	size_t left = NOREG;  // Left register
 	size_t right = NOREG; // Right register
@@ -198,15 +252,15 @@ static size_t _InsertExpression( CkStrBuilder* sb, CkExpression* expr )
 
 	// --- Generating operands ---
 	if ( expr->left ) {
-		left = _InsertExpression( sb, expr->left );
+		left = _InsertExpression( allocator, sb, expr->left );
 		_ExtendRegister( sb, left, expr->left->type->id, expr->type->id );
 	}
 	if ( expr->right ) {
-		right = _InsertExpression( sb, expr->right );
+		right = _InsertExpression( allocator, sb, expr->right );
 		_ExtendRegister( sb, right, expr->right->type->id, expr->type->id );
 	}
 	if ( expr->extra ) {
-		extra = _InsertExpression( sb, expr->extra );
+		extra = _InsertExpression( allocator, sb, expr->extra );
 		_ExtendRegister( sb, extra, expr->extra->type->id, expr->type->id );
 	}
 
@@ -256,10 +310,15 @@ static size_t _InsertExpression( CkStrBuilder* sb, CkExpression* expr )
 			_InsertLine( sb, "mov %s, 1", _regint_table[out].name8 );
 		break;
 
-	case CK_EXPRESSION_STRING_LITERAL:
-		// TODO: string literals
-		break;
+	case CK_EXPRESSION_STRING_LITERAL: {
+		size_t sref;
 
+		out = _AllocateIntRegister();
+		sref = _static_unnamed_label_counter;
+		_InsertStaticData( allocator, FALSE, expr->token.value.ptr, CK_FOOD_STRING, FALSE, NULL );
+		_InsertLine( sb, "lea %s, .S%zu", _regint_table[out].name64, sref );
+		break;
+	}
 	case CK_EXPRESSION_UNARY_PLUS:
 		out = left;
 		break;
@@ -580,17 +639,17 @@ static size_t _InsertExpression( CkStrBuilder* sb, CkExpression* expr )
 }
 
 // Generates a statement.
-static void _GenerateStatement( CkStrBuilder* sb, CkStatement* stmt )
+static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkStatement* stmt )
 {
 	switch ( stmt->stmt ) {
 	case CK_STMT_EMPTY: break;
-	case CK_STMT_EXPRESSION: _FreeIntRegister( _InsertExpression( sb, stmt->data.expression ) ); break;
+	case CK_STMT_EXPRESSION: _FreeIntRegister( _InsertExpression( allocator, sb, stmt->data.expression ) ); break;
 	case CK_STMT_BLOCK: {
 		// TODO: variables
 		size_t stmtCount = CkListLength( stmt->data.block.stmts );
 		for ( size_t i = 0; i < stmtCount; i++ ) {
 			CkStatement* cstmt = *(CkStatement**)CkListAccess( stmt->data.block.stmts, i );
-			_GenerateStatement( sb, cstmt );
+			_GenerateStatement( allocator, sb, cstmt );
 		}
 		break;
 	}
@@ -603,16 +662,16 @@ static void _GenerateStatement( CkStrBuilder* sb, CkStatement* stmt )
 		lLead = _local_label_counter++;
 		lElse = stmt->data.if_.cElse != NULL ? _local_label_counter++ : 0;
 
-		exprReg = _InsertExpression( sb, stmt->data.if_.condition );
+		exprReg = _InsertExpression( allocator, sb, stmt->data.if_.condition );
 		regname = _RegnameInt( exprReg, stmt->data.if_.condition->type->id );
 		_InsertLine( sb, "test %s, %s", regname, regname );
 		_InsertLine( sb, "jz .L%zu", lElse != 0 ? lElse : lLead );
 		_FreeIntRegister( exprReg );
-		_GenerateStatement( sb, stmt->data.if_.cThen );
+		_GenerateStatement( allocator, sb, stmt->data.if_.cThen );
 		if ( stmt->data.if_.cElse != NULL ) {
 			_InsertLine( sb, "goto .L%zu", lLead );
 			_InsertLine( sb, ".L%zu:", lElse );
-			_GenerateStatement( sb, stmt->data.if_.cElse );
+			_GenerateStatement( allocator, sb, stmt->data.if_.cElse );
 		}
 		_InsertLine( sb, ".L%zu:", lLead );
 		break;
@@ -627,12 +686,12 @@ static void _GenerateStatement( CkStrBuilder* sb, CkStatement* stmt )
 		lLead = _local_label_counter++;
 
 		_InsertLine( sb, ".L%zu:", lLoop );
-		exprReg = _InsertExpression( sb, stmt->data.while_.condition );
+		exprReg = _InsertExpression( allocator, sb, stmt->data.while_.condition );
 		regname = _RegnameInt( exprReg, stmt->data.while_.condition->type->id );
 		_InsertLine( sb, "test %s, %s", regname, regname );
 		_InsertLine( sb, "jz .L%zu", lLead );
 		_FreeIntRegister( exprReg );
-		_GenerateStatement( sb, stmt->data.while_.cWhile );
+		_GenerateStatement( allocator, sb, stmt->data.while_.cWhile );
 		_InsertLine( sb, "goto .L%zu", lLoop );
 		_InsertLine( sb, ".L%zu:", lLead );
 		break;
@@ -704,7 +763,7 @@ static void _InsertFuncName( CkStrBuilder* sb, CkFunction* pFunc )
 }
 
 // Inserts a function.
-static void _InsertFunction( CkStrBuilder* sb, CkFunction* pFunc )
+static void _InsertFunction( CkArenaFrame *allocator, CkStrBuilder* sb, CkFunction* pFunc )
 {
 	// --- Insert function header ---
 
@@ -718,41 +777,18 @@ static void _InsertFunction( CkStrBuilder* sb, CkFunction* pFunc )
 	CkStrBuilderAppendString( sb, ":\n" );
 
 	// --- Insert function body ---
-	_GenerateStatement( sb, pFunc->body );
+	_GenerateStatement( allocator, sb, pFunc->body );
 }
 
 // Inserts a new module.
-static void _InsertModule( CkStrBuilder* sb, CkModule* module )
+static void _InsertModule( CkArenaFrame *allocator, CkStrBuilder* sb, CkModule* module )
 {
 	size_t funcCount;
 	_InsertLine( sb, "; Module %s::%s", module->scope->library->name, module->name );
 
 	funcCount = CkListLength( module->scope->functionList );
 	for ( size_t i = 0; i < funcCount; i++ )
-		_InsertFunction( sb, CkListAccess( module->scope->functionList, i ) );
-}
-
-// Inserts static data.
-static void _InsertStaticData(
-	CkArenaFrame *allocator,
-	bool_t public,
-	void *cdata,
-	FoodTypeID typeid,
-	bool_t named,
-	char *optional_name )
-{
-	_StaticData entry = {};
-	// --- Create list of not already existent ---
-	if ( !_data_section )
-		_data_section = CkListStart( allocator, sizeof( _StaticData ) );
-
-	entry.data = cdata;
-	entry.named = named;
-	entry.public = public;
-	if ( optional_name ) entry.name.cstr = optional_name;
-	else entry.name.id = _static_unnamed_label_counter++;
-
-	CkListAdd( _data_section, &entry );
+		_InsertFunction( allocator, sb, CkListAccess( module->scope->functionList, i ) );
 }
 
 char* CkGenProgram_Prototype(
@@ -784,16 +820,16 @@ char* CkGenProgram_Prototype(
 		// Global functions
 		glblFuncCount = CkListLength( lib->scope->functionList );
 		for ( size_t j = 0; j < glblFuncCount; j++ )
-			_InsertFunction( &outsb, CkListAccess( lib->scope->functionList, j ) );
+			_InsertFunction( allocator, &outsb, CkListAccess( lib->scope->functionList, j ) );
 
 		// Modules
 		moduleCount = CkListLength( lib->moduleList );
 		for ( size_t j = 0; j < moduleCount; j++ )
-			_InsertModule( &outsb, *(CkModule**)CkListAccess(lib->moduleList, j) );
+			_InsertModule( allocator, &outsb, *(CkModule**)CkListAccess(lib->moduleList, j) );
 	}
 
 	// --- Generating static data ---
-	if ( !_data_section ) {
+	if ( _data_section ) {
 		size_t elems = CkListLength( _data_section );
 		CkStrBuilderAppendString( &outsb, "section .data\n" );
 		for ( size_t i = 0; i < elems; i++ ) {
