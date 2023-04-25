@@ -154,7 +154,7 @@ static char* s_GenFuncHeader( CkArenaFrame *frame, CkDiagnosticHandlerInstance* 
 static char* s_GenStatement( CkArenaFrame* frame, CkDiagnosticHandlerInstance* pDhi, lua_State* script, CkStatement* stmt )
 {
 	// Generating statement
-	CkStatement* stmt = *(CkStatement**)CkListAccess( blk->data.block.stmts, i );
+	CkStatement* stmt = *(CkStatement **)CkListAccess( blk->data.block.stmts, i );
 
 	switch ( stmt->stmt ) {
 		// Block statement {}
@@ -221,7 +221,7 @@ static char* s_GenBlock( CkArenaFrame* frame, CkDiagnosticHandlerInstance* pDhi,
 
 	// Generating statements
 	for ( size_t i = 0; i < blkLength; i++ ) {
-		CkStatement* stmt = *(CkStatement**)CkListAccess( blk->data.block.stmts, i );
+		CkStatement* stmt = *(CkStatement **)CkListAccess( blk->data.block.stmts, i );
 		CkStrBuilderAppendString( &sb, s_GenStatement( frame, pDhi, script, stmt ) );
 	}
 

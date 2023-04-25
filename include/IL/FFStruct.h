@@ -105,7 +105,7 @@ typedef CkExpression *CkStatementData_Expression; // Expression statement data
 
 typedef struct CkStatementData_Block // Block statement data
 {
-	// The statements of the block statement.
+	// The statements of the block statement. Element type=CkStatement*
 	CkList *stmts;
 
 	// The scope of the block statement.

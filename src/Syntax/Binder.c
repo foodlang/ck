@@ -950,7 +950,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 			CkDiagnosticThrow( pDhi, stmt->data.if_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"If requires a boolean condition." );
 		s_ValidateStmt( pDhi, allocator, stmt->data.if_.cThen, scope );
-		s_ValidateStmt( pDhi, allocator, stmt->data.if_.cElse, scope );
+		if (stmt->data.if_.cElse) s_ValidateStmt( pDhi, allocator, stmt->data.if_.cElse, scope );
 		break;
 
 	case CK_STMT_WHILE:

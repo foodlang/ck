@@ -23,6 +23,12 @@
 // The counter for local labels.
 static size_t _local_label_counter = 0;
 
+// The counter for unnamed static data labels.
+static size_t _static_unnamed_label_counter = 0;
+
+// Stores the data to be stored in the data section (static data)
+static CkList *_data_section = NULL;
+
 // A x86-64 register.
 typedef struct _Register
 {
@@ -33,6 +39,24 @@ typedef struct _Register
 	char*  name64;
 
 } _Register;
+
+// A name for an entry of static data.
+typedef union _StaticDataName
+{
+	char *cstr; // C-string name (named)
+	size_t id;  // ID (unnamed)
+} _StaticDataName;
+
+// Static data.
+typedef struct _StaticData
+{
+	void  *data;          // Constant data
+	bool_t public;        // Whether the data is public or not
+	bool_t named;         // Whether the data has a given name
+	_StaticDataName name; // The name
+	FoodTypeID typeid;    // The type of the data
+
+} _StaticData;
 
 // The table of integer registers.
 static _Register _regint_table[] =
@@ -305,6 +329,7 @@ static size_t _InsertExpression( CkStrBuilder* sb, CkExpression* expr )
 		}
 		if ( scale != 0 ) _InsertLine( sb, "shl %s, %zu", indexname, scale );
 		_InsertLine( sb, "add %s, %s", regname, indexname );
+		_InsertLine( sb, "mov %s, [%s]", regname, regname );
 		break;
 	}
 	case CK_EXPRESSION_ADD: {
@@ -533,6 +558,17 @@ static size_t _InsertExpression( CkStrBuilder* sb, CkExpression* expr )
 		_InsertLine( sb, "shr %s, %s", leftname, rightname );
 		break;
 	}
+	case CK_EXPRESSION_DEREFERENCE: {
+		char* regname;
+		char* ptrname;
+
+		ptrname = _RegnameInt( left, expr->left->type->id );
+		regname = _RegnameInt( left, expr->type->id );
+
+		_InsertLine( sb, "mov %s, [%s]", regname, ptrname );
+		break;
+	}
+	case CK_EXPRESSION_COMPOUND_LITERAL: _FreeIntRegister( right ); break;
 	default:
 		_InsertLine( sb, "; unsupported expression %d", expr->kind );
 	}
@@ -557,6 +593,29 @@ static void _GenerateStatement( CkStrBuilder* sb, CkStatement* stmt )
 			_GenerateStatement( sb, cstmt );
 		}
 		break;
+	case CK_STMT_IF: {
+		size_t lElse;
+		size_t lLead;
+		size_t exprReg;
+		char *regname;
+
+		lLead = _local_label_counter++;
+		lElse = stmt->data.if_.cElse != NULL ? _local_label_counter++ : 0;
+
+		exprReg = _InsertExpression( sb, stmt->data.if_.condition );
+		regname = _RegnameInt( exprReg, stmt->data.if_.condition->type->id );
+		_InsertLine( sb, "test %s, %s", regname, regname );
+		_InsertLine( sb, "jz .L%zu", lElse != 0 ? lElse : lLead );
+		_FreeIntRegister( exprReg );
+		_GenerateStatement( sb, stmt->data.if_.cThen );
+		if ( stmt->data.if_.cElse != NULL ) {
+			_InsertLine( sb, "goto .L%zu", lLead );
+			_InsertLine( sb, ".L%zu:", lElse );
+			_GenerateStatement( sb, stmt->data.if_.cElse );
+		}
+		_InsertLine( sb, ".L%zu:", lLead );
+		break;
+	}
 	}
 	}
 }
@@ -642,6 +701,7 @@ static void _InsertFunction( CkStrBuilder* sb, CkFunction* pFunc )
 	_GenerateStatement( sb, pFunc->body );
 }
 
+// Inserts a new module.
 static void _InsertModule( CkStrBuilder* sb, CkModule* module )
 {
 	size_t funcCount;
@@ -650,6 +710,29 @@ static void _InsertModule( CkStrBuilder* sb, CkModule* module )
 	funcCount = CkListLength( module->scope->functionList );
 	for ( size_t i = 0; i < funcCount; i++ )
 		_InsertFunction( sb, CkListAccess( module->scope->functionList, i ) );
+}
+
+// Inserts static data.
+static void _InsertStaticData(
+	CkArenaFrame *allocator,
+	bool_t public,
+	void *cdata,
+	FoodTypeID typeid,
+	bool_t named,
+	char *optional_name )
+{
+	_StaticData entry = {};
+	// --- Create list of not already existent ---
+	if ( !_data_section )
+		_data_section = CkListStart( allocator, sizeof( _StaticData ) );
+
+	entry.data = cdata;
+	entry.named = named;
+	entry.public = public;
+	if ( optional_name ) entry.name.cstr = optional_name;
+	else entry.name.id = _static_unnamed_label_counter++;
+
+	CkListAdd( _data_section, &entry );
 }
 
 char* CkGenProgram_Prototype(
@@ -666,7 +749,8 @@ char* CkGenProgram_Prototype(
 	CkStrBuilderCreate( &outsb, 4096 );
 
 	// --- CK credit ---
-	_InsertLine( &outsb, "; Generated with CK" );
+	CkStrBuilderAppendString( &outsb, "; Generated with CK\n" );
+	CkStrBuilderAppendString( &outsb, "section .code\n" );
 
 	// --- Generating libraries ---
 	libCount = CkListLength( libraries );
@@ -686,6 +770,53 @@ char* CkGenProgram_Prototype(
 		moduleCount = CkListLength( lib->moduleList );
 		for ( size_t j = 0; j < moduleCount; j++ )
 			_InsertModule( &outsb, *(CkModule**)CkListAccess(lib->moduleList, j) );
+	}
+
+	// --- Generating static data ---
+	if ( !_data_section ) {
+		size_t elems = CkListLength( _data_section );
+		CkStrBuilderAppendString( &outsb, "section .data\n" );
+		for ( size_t i = 0; i < elems; i++ ) {
+			_StaticData *sd = CkListAccess( _data_section, i );
+			if ( sd->named ) {
+				if ( sd->public ) {
+					CkStrBuilderAppendString( &outsb, "global " );
+					CkStrBuilderAppendString( &outsb, sd->name.cstr );
+					CkStrBuilderAppendChar( &outsb, '\n' );
+				}
+				CkStrBuilderAppendString( &outsb, sd->name.cstr );
+				CkStrBuilderAppendString( &outsb, ":\n" );
+			} else {
+				_InsertLine( &outsb, "\r.S%zu:", sd->name.id );
+			}
+			switch ( sd->typeid ) {
+			case CK_FOOD_I8:
+			case CK_FOOD_U8:
+			case CK_FOOD_BOOL:
+				_InsertLine( &outsb, "db %hhu", *(uint8_t *)sd->data );
+				break;
+			case CK_FOOD_I16:
+			case CK_FOOD_U16:
+				_InsertLine( &outsb, "dw %hu", *(uint16_t *)sd->data );
+				break;
+			case CK_FOOD_I32:
+			case CK_FOOD_U32:
+			case CK_FOOD_ENUM:
+				_InsertLine( &outsb, "dd %u", *(uint32_t *)sd->data );
+				break;
+			case CK_FOOD_I64:
+			case CK_FOOD_U64:
+			case CK_FOOD_POINTER:
+				_InsertLine( &outsb, "dq %llu", *(uint64_t *)sd->data );
+				break;
+			case CK_FOOD_STRING:
+				_InsertLine( &outsb, "db \"%s\"", (char *)sd->data );
+				break;
+			default:
+				_InsertLine( &outsb, "; unsupported literal %u", sd->typeid );
+				break;
+			}
+		}
 	}
 	
 	// --- Copying output to arena allocated memory ---
