@@ -593,6 +593,7 @@ static void _GenerateStatement( CkStrBuilder* sb, CkStatement* stmt )
 			_GenerateStatement( sb, cstmt );
 		}
 		break;
+	}
 	case CK_STMT_IF: {
 		size_t lElse;
 		size_t lLead;
@@ -616,6 +617,25 @@ static void _GenerateStatement( CkStrBuilder* sb, CkStatement* stmt )
 		_InsertLine( sb, ".L%zu:", lLead );
 		break;
 	}
+	case CK_STMT_WHILE: {
+		size_t lLead;
+		size_t lLoop;
+		size_t exprReg;
+		char *regname;
+
+		lLoop = _local_label_counter++;
+		lLead = _local_label_counter++;
+
+		_InsertLine( sb, ".L%zu:", lLoop );
+		exprReg = _InsertExpression( sb, stmt->data.while_.condition );
+		regname = _RegnameInt( exprReg, stmt->data.while_.condition->type->id );
+		_InsertLine( sb, "test %s, %s", regname, regname );
+		_InsertLine( sb, "jz .L%zu", lLead );
+		_FreeIntRegister( exprReg );
+		_GenerateStatement( sb, stmt->data.while_.cWhile );
+		_InsertLine( sb, "goto .L%zu", lLoop );
+		_InsertLine( sb, ".L%zu:", lLead );
+		break;
 	}
 	}
 }
