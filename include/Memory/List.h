@@ -52,4 +52,7 @@ CkList *CkListRemove(CkList *desc, size_t index);
 // Returns the length of a list.
 size_t CkListLength( CkList *desc );
 
+// Clears a whole list.
+void CkListClear( CkList *base );
+
 #endif

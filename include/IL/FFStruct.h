@@ -315,6 +315,9 @@ typedef struct CkScope
 	// The list of user types. Element type = CkUserType. Requires supportsFunction.
 	CkList *usertypeList;
 
+	// The list of children scopes. Element type = CkScope *
+	CkList *children;
+
 } CkScope;
 
 // A statement is a piece of code that performs operations.
@@ -371,6 +374,9 @@ typedef struct CkFunction
 	// The parent scope of the function.
 	CkScope *parent;
 
+	// The scope of the function.
+	CkScope *funscope;
+
 	// The signature of a function.
 	CkFoodType *signature;
 
@@ -396,6 +402,7 @@ void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName );
 
 // Attempts to allocate a new function in a scope.
 void CkAllocateFunction(
+	CkArenaFrame *frame,
 	CkScope *scope,
 	bool_t bPublic,
 	CkFoodType *signature,

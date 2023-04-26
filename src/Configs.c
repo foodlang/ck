@@ -196,13 +196,15 @@ static bool_t s_PopulateConfig(
 		config->sources = CkListStart( arena, sizeof( char * ) );
 
 		cJSON_ArrayForEach( sourcePath, jSourcesRoot ) {
+			char *cstr;
 			if ( !cJSON_IsString( sourcePath ) ) {
 				fprintf( stderr, "ck: A source path must be a string.\n" );
 				return FALSE;
 			}
+			cstr = s_StringDuplicate( arena, cJSON_GetStringValue( sourcePath ) );
 			CkListAdd(
 				config->sources,
-				s_StringDuplicate( arena, cJSON_GetStringValue( sourcePath ) ) );
+				&cstr );
 		}
 	} else config->sources = CkListStart( arena, sizeof( char * ) ); // empty list
 
@@ -213,13 +215,15 @@ static bool_t s_PopulateConfig(
 		config->libraries = CkListStart( arena, sizeof( char * ) );
 
 		cJSON_ArrayForEach( libraryPath, jLibrariesRoot ) {
+			char *dup;
 			if ( !cJSON_IsString( libraryPath ) ) {
 				fprintf( stderr, "ck: A library path must be a string.\n" );
 				return FALSE;
 			}
+			dup = s_StringDuplicate( arena, cJSON_GetStringValue( libraryPath ) );
 			CkListAdd(
 				config->libraries,
-				s_StringDuplicate( arena, cJSON_GetStringValue( libraryPath ) ) );
+				 &dup );
 		}
 	} else config->libraries = CkListStart( arena, sizeof( char * ) ); // empty list
 
@@ -349,20 +353,22 @@ LSkipLookup:
 	baseSourcesCount = CkListLength( base->sources );
 	if ( baseSourcesCount ) {
 		for ( size_t i = 0; i < baseSourcesCount; i++ ) {
+			char *dup = s_StringDuplicate( allocator,
+				*(char **)CkListAccess( base->sources, i ) );
 			CkListAdd(
 				total->sources,
-				s_StringDuplicate( allocator,
-					CkListAccess( base->sources, i ) ) );
+				&dup );
 		}
 	}
 
 	selectedSourcesCount = CkListLength( selected->sources );
 	if ( selectedSourcesCount ) {
 		for ( size_t i = 0; i < selectedSourcesCount; i++ ) {
+			char *dup = s_StringDuplicate( allocator,
+				*(char **)CkListAccess( selected->sources, i ) );
 			CkListAdd(
 				total->sources,
-				s_StringDuplicate( allocator,
-					CkListAccess( selected->sources, i ) ) );
+				&dup );
 		}
 	}
 
@@ -371,20 +377,22 @@ LSkipLookup:
 	baseLibrariesCount = CkListLength( base->libraries );
 	if ( baseLibrariesCount ) {
 		for ( size_t i = 0; i < baseLibrariesCount; i++ ) {
+			char *dup = s_StringDuplicate( allocator,
+				*(char **)CkListAccess( base->libraries, i ) );
 			CkListAdd(
 				total->libraries,
-				s_StringDuplicate( allocator,
-					CkListAccess( base->libraries, i ) ) );
+				&dup );
 		}
 	}
 
 	selectedLibrariesCount = CkListLength( selected->libraries );
 	if ( selectedLibrariesCount ) {
 		for ( size_t i = 0; i < selectedLibrariesCount; i++ ) {
+			char *dup = s_StringDuplicate( allocator,
+				*(char **)CkListAccess( selected->libraries, i ) );
 			CkListAdd(
 				total->libraries,
-				s_StringDuplicate( allocator,
-					(char *)CkListAccess( selected->libraries, i ) ) );
+				 &dup );
 		}
 	}
 
@@ -399,5 +407,5 @@ char *CkConfigGetSource( CkBuildConfig *cfg, size_t index )
 		fprintf( stderr, "ck: Project '%s' doesn't have %zu source files.\n", cfg->name, index );
 		return NULL;
 	}
-	return (char *)CkListAccess( cfg->sources, index );
+	return *(char **)CkListAccess( cfg->sources, index );
 }

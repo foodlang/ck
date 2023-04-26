@@ -107,3 +107,10 @@ size_t CkListLength( CkList *desc )
 	}
 	return index;
 }
+
+void CkListClear( CkList *base )
+{
+	base->next = NULL; // arenas
+	base->used = 0;
+	memset( base + 1, 0, base->elemSize );
+}

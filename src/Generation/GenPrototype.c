@@ -61,7 +61,7 @@ typedef struct _StaticData
 // The table of integer registers.
 static _Register _regint_table[] =
 {
-	/* 0 */ {TRUE, "bl", "bx", "ebx", "rbx"},
+	/* 0 */ { TRUE, "bl", "bx", "ebx", "rbx" },
 	/* 1 */ { TRUE, "cl", "cx", "ecx", "rcx" },
 	/* 2 */ { TRUE, "dl", "dx", "edx", "rdx" },
 	/* 3 */ { TRUE, "r8b", "r8w", "r8d", "r8" },
@@ -72,8 +72,62 @@ static _Register _regint_table[] =
 	/* 8 */ { TRUE, "r13b", "r13w", "r13d", "r13" },
 	/* 9 */ { TRUE, "r14b", "r14w", "r14d", "r14" },
 	/* 10 */ { TRUE, "r15b", "r15w", "r15d", "r15" },
+	/* ----------- RESERVED DOWN BELOW ----------- */
 	/* 11 */ { FALSE, "al", "ax", "eax", "rax" } // used for returns
 };
+
+// A stack variable declaration in the assembly code.
+typedef struct _StackVarDecl
+{
+	size_t stack_offset; // The stack offset of the variable in its scope.
+	CkVariable *vardecl; // The frontend variable declaration.
+
+} _StackVarDecl;
+
+// The variable declarations on the stack (current func)
+static CkList *_stack_var_decls = NULL;
+
+// Gets the size of a type.
+static size_t _SizeOfT( CkScope *scope, CkFoodType *T )
+{
+	switch ( T->id ) {
+	case CK_FOOD_I8:
+	case CK_FOOD_U8:
+	case CK_FOOD_BOOL:
+	case CK_FOOD_VOID:
+		return 1;
+
+	case CK_FOOD_I16:
+	case CK_FOOD_U16:
+	case CK_FOOD_F16:
+		return 2;
+
+	case CK_FOOD_I32:
+	case CK_FOOD_U32:
+	case CK_FOOD_F32:
+	case CK_FOOD_ENUM:
+		return 4;
+
+	case CK_FOOD_I64:
+	case CK_FOOD_U64:
+	case CK_FOOD_F64:
+	case CK_FOOD_POINTER:
+	case CK_FOOD_FUNCPOINTER:
+	case CK_FOOD_REFERENCE:
+	case CK_FOOD_STRING:
+		return 8;
+
+	case CK_FOOD_ARRAY: {
+		CkExpression *expr = (CkExpression *)T->extra;
+		if ( expr->isConstant )
+			return expr->token.value.u64 * _SizeOfT( scope, T->child );
+		return 8;
+	}
+	default:
+		printf( "unsupported sizeof(%d)\n", T->id );
+		abort();
+	}
+}
 
 // Allocates a new integer register.
 static size_t _AllocateIntRegister( void )
@@ -298,16 +352,16 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			value = expr->token.value.u64;
 			break;
 		}
-		if ( value == 0 ) _InsertLine( sb, "xor %s, %s", regname, regname );
-		else _InsertLine( sb, "mov %s, %zu", regname, value );
+		if ( value == 0 ) _InsertLine( sb, "xor\t%s, %s", regname, regname );
+		else _InsertLine( sb, "mov\t%s, %zu", regname, value );
 		break;
 	}
 	case CK_EXPRESSION_BOOL_LITERAL:
 		out = _AllocateIntRegister();
 		if ( expr->token.value.boolean == FALSE )
-			_InsertLine( sb, "xor %s, %s", _regint_table[out].name8, _regint_table[out].name8 );
+			_InsertLine( sb, "xor\t%s, %s", _regint_table[out].name8, _regint_table[out].name8 );
 		else
-			_InsertLine( sb, "mov %s, 1", _regint_table[out].name8 );
+			_InsertLine( sb, "mov\t%s, 1", _regint_table[out].name8 );
 		break;
 
 	case CK_EXPRESSION_STRING_LITERAL: {
@@ -316,7 +370,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		out = _AllocateIntRegister();
 		sref = _static_unnamed_label_counter;
 		_InsertStaticData( allocator, FALSE, expr->token.value.ptr, CK_FOOD_STRING, FALSE, NULL );
-		_InsertLine( sb, "lea %s, .S%zu", _regint_table[out].name64, sref );
+		_InsertLine( sb, "lea\t%s, .S%zu", _regint_table[out].name64, sref );
 		break;
 	}
 	case CK_EXPRESSION_UNARY_PLUS:
@@ -327,14 +381,14 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		char* regname;
 		out = left;
 		regname = _RegnameInt( left, expr->type->id );
-		_InsertLine( sb, "neg %s", regname );
+		_InsertLine( sb, "neg\t%s", regname );
 		break;
 	}
 	case CK_EXPRESSION_BITWISE_NOT: {
 		char* regname;
 		out = left;
 		regname = _RegnameInt( left, expr->type->id );
-		_InsertLine( sb, "not %s", regname );
+		_InsertLine( sb, "not\t%s", regname );
 		break;
 	}
 	case CK_EXPRESSION_LOGICAL_NOT: {
@@ -343,8 +397,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		out = left;
 		regname = _RegnameInt( left, expr->type->id );
 		maskname = _RegnameInt( right, expr->type->id );
-		_InsertLine( sb, "mov %s, -1", maskname );
-		_InsertLine( sb, "xor %s, %s", regname, maskname );
+		_InsertLine( sb, "mov\t%s, -1", maskname );
+		_InsertLine( sb, "xor\t%s, %s", regname, maskname );
 		break;
 	}
 	case CK_EXPRESSION_SUBSCRIPT: {
@@ -386,9 +440,9 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			scale = 3;
 			break;
 		}
-		if ( scale != 0 ) _InsertLine( sb, "shl %s, %zu", indexname, scale );
-		_InsertLine( sb, "add %s, %s", regname, indexname );
-		_InsertLine( sb, "mov %s, [%s]", regname, regname );
+		if ( scale != 0 ) _InsertLine( sb, "shl\t%s, %zu", indexname, scale );
+		_InsertLine( sb, "add\t%s, %s", regname, indexname );
+		_InsertLine( sb, "mov\t%s, [%s]", regname, regname );
 		break;
 	}
 	case CK_EXPRESSION_ADD: {
@@ -399,7 +453,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "add %s, %s", leftname, rightname );
+		_InsertLine( sb, "add\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_SUB: {
@@ -410,7 +464,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "sub %s, %s", leftname, rightname );
+		_InsertLine( sb, "sub\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_MUL: {
@@ -422,8 +476,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		rightname = _RegnameInt( right, expr->type->id );
 
 		if ( _Unsigned( expr->type->id ) )
-			_InsertLine( sb, "mul %s, %s", leftname, rightname );
-		else _InsertLine( sb, "imul %s, %s", leftname, rightname );
+			_InsertLine( sb, "mul\t%s, %s", leftname, rightname );
+		else _InsertLine( sb, "imul\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_DIV: {
@@ -436,11 +490,11 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		rightname = _RegnameInt( right, expr->type->id );
 		accname = _RegnameInt( ACC, expr->type->id );
 
-		if ( _regint_table[RD].free ) _InsertLine( sb, "push rdx" );
-		_InsertLine( sb, "mov %s, %s", accname, leftname );
-		_InsertLine( sb, "div %s", rightname );
-		_InsertLine( sb, "mov %s, %s", leftname, accname );
-		if ( _regint_table[RD].free ) _InsertLine( sb, "pop rdx" );
+		if ( _regint_table[RD].free ) _InsertLine( sb, "push\trdx" );
+		_InsertLine( sb, "mov\t%s, %s", accname, leftname );
+		_InsertLine( sb, "div\t%s", rightname );
+		_InsertLine( sb, "mov\t%s, %s", leftname, accname );
+		if ( _regint_table[RD].free ) _InsertLine( sb, "pop\trdx" );
 		break;
 	}
 	case CK_EXPRESSION_MOD: {
@@ -455,11 +509,11 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		accname = _RegnameInt( ACC, expr->type->id );
 		remaindername = _RegnameInt( RD, expr->type->id );
 
-		if ( _regint_table[RD].free ) _InsertLine( sb, "push rdx" );
-		_InsertLine( sb, "mov %s, %s", accname, leftname );
-		_InsertLine( sb, "div %s", rightname );
-		_InsertLine( sb, "mov %s, %s", leftname, remaindername );
-		if ( _regint_table[RD].free ) _InsertLine( sb, "pop rdx" );
+		if ( _regint_table[RD].free ) _InsertLine( sb, "push\trdx" );
+		_InsertLine( sb, "mov\t%s, %s", accname, leftname );
+		_InsertLine( sb, "div\t%s", rightname );
+		_InsertLine( sb, "mov\t%s, %s", leftname, remaindername );
+		if ( _regint_table[RD].free ) _InsertLine( sb, "pop\trdx" );
 		break;
 	}
 	case CK_EXPRESSION_BITWISE_OR: {
@@ -470,7 +524,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "or %s, %s", leftname, rightname );
+		_InsertLine( sb, "or\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_BITWISE_AND: {
@@ -481,7 +535,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "and %s, %s", leftname, rightname );
+		_InsertLine( sb, "and\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_BITWISE_XOR: {
@@ -492,7 +546,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "xor %s, %s", leftname, rightname );
+		_InsertLine( sb, "xor\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_LOGICAL_AND: {
@@ -503,11 +557,11 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "test %s, %s", leftname, leftname );
-		_InsertLine( sb, "setne %s", leftname );
-		_InsertLine( sb, "test %s, %s", rightname, rightname );
-		_InsertLine( sb, "setne %s", rightname );
-		_InsertLine( sb, "and %s, %s", leftname, rightname );
+		_InsertLine( sb, "test\t%s, %s", leftname, leftname );
+		_InsertLine( sb, "setne\t%s", leftname );
+		_InsertLine( sb, "test\t%s, %s", rightname, rightname );
+		_InsertLine( sb, "setne\t%s", rightname );
+		_InsertLine( sb, "and\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_LOGICAL_OR: {
@@ -518,8 +572,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "or %s, %s", leftname, rightname );
-		_InsertLine( sb, "setne %s", leftname );
+		_InsertLine( sb, "or\t%s, %s", leftname, rightname );
+		_InsertLine( sb, "setne\t%s", leftname );
 		break;
 	}
 	case CK_EXPRESSION_LOWER: {
@@ -530,8 +584,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "cmp %s, %s", leftname, rightname );
-		_InsertLine( sb, "setl %s", leftname );
+		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
+		_InsertLine( sb, "setl\t%s", leftname );
 		break;
 	}
 	case CK_EXPRESSION_LOWER_EQUAL: {
@@ -542,8 +596,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "cmp %s, %s", leftname, rightname );
-		_InsertLine( sb, "setle %s", leftname );
+		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
+		_InsertLine( sb, "setle\t%s", leftname );
 		break;
 	}
 	case CK_EXPRESSION_GREATER: {
@@ -554,8 +608,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "cmp %s, %s", leftname, rightname );
-		_InsertLine( sb, "setg %s", leftname );
+		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
+		_InsertLine( sb, "setg\t%s", leftname );
 		break;
 	}
 	case CK_EXPRESSION_GREATER_EQUAL: {
@@ -566,8 +620,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "cmp %s, %s", leftname, rightname );
-		_InsertLine( sb, "setge %s", leftname );
+		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
+		_InsertLine( sb, "setge\t%s", leftname );
 		break;
 	}
 	case CK_EXPRESSION_EQUAL: {
@@ -578,8 +632,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "cmp %s, %s", leftname, rightname );
-		_InsertLine( sb, "sete %s", leftname );
+		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
+		_InsertLine( sb, "sete\t%s", leftname );
 		break;
 	}
 
@@ -591,8 +645,8 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "cmp %s, %s", leftname, rightname );
-		_InsertLine( sb, "setne %s", leftname );
+		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
+		_InsertLine( sb, "setne\t%s", leftname );
 		break;
 	}
 	case CK_EXPRESSION_LEFT_SHIFT: {
@@ -603,7 +657,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "sal %s, %s", leftname, rightname );
+		_InsertLine( sb, "sal\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_RIGHT_SHIFT: {
@@ -614,7 +668,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		leftname = _RegnameInt( left, expr->type->id );
 		rightname = _RegnameInt( right, expr->type->id );
 
-		_InsertLine( sb, "shr %s, %s", leftname, rightname );
+		_InsertLine( sb, "shr\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_DEREFERENCE: {
@@ -624,7 +678,29 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		ptrname = _RegnameInt( left, expr->left->type->id );
 		regname = _RegnameInt( left, expr->type->id );
 
-		_InsertLine( sb, "mov %s, [%s]", regname, ptrname );
+		_InsertLine( sb, "mov\t%s, [%s]", regname, ptrname );
+		break;
+	}
+		// TODO: Static variables
+	case CK_EXPRESSION_IDENTIFIER: {
+		char* regname;
+		_StackVarDecl *p_stack_decl = NULL;
+		size_t stack_decl_length = 0;
+
+		out = _AllocateIntRegister();
+		regname = _RegnameInt( out, expr->type->id );
+
+		stack_decl_length = CkListLength( _stack_var_decls );
+		for ( size_t i = 0; i < stack_decl_length; i++ ) {
+			_StackVarDecl *p_current = CkListAccess( _stack_var_decls, i );
+			if ( !strcmp( p_current->vardecl->name, expr->token.value.cstr ) ) {
+				p_stack_decl = p_current;
+				break;
+			}
+		}
+		if ( p_stack_decl )
+			_InsertLine( sb, "mov\t%s, [rbp-%zu]", regname, p_stack_decl->stack_offset );
+		else abort();
 		break;
 	}
 	case CK_EXPRESSION_COMPOUND_LITERAL: _FreeIntRegister( right ); break;
@@ -645,7 +721,6 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 	case CK_STMT_EMPTY: break;
 	case CK_STMT_EXPRESSION: _FreeIntRegister( _InsertExpression( allocator, sb, stmt->data.expression ) ); break;
 	case CK_STMT_BLOCK: {
-		// TODO: variables
 		size_t stmtCount = CkListLength( stmt->data.block.stmts );
 		for ( size_t i = 0; i < stmtCount; i++ ) {
 			CkStatement* cstmt = *(CkStatement**)CkListAccess( stmt->data.block.stmts, i );
@@ -664,16 +739,16 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 
 		exprReg = _InsertExpression( allocator, sb, stmt->data.if_.condition );
 		regname = _RegnameInt( exprReg, stmt->data.if_.condition->type->id );
-		_InsertLine( sb, "test %s, %s", regname, regname );
-		_InsertLine( sb, "jz .L%zu", lElse != 0 ? lElse : lLead );
+		_InsertLine( sb, "test\t%s, %s", regname, regname );
+		_InsertLine( sb, "jz\t.L%zu", lElse != 0 ? lElse : lLead );
 		_FreeIntRegister( exprReg );
 		_GenerateStatement( allocator, sb, stmt->data.if_.cThen );
 		if ( stmt->data.if_.cElse != NULL ) {
-			_InsertLine( sb, "goto .L%zu", lLead );
-			_InsertLine( sb, ".L%zu:", lElse );
+			_InsertLine( sb, "goto\t.L%zu", lLead );
+			_InsertLine( sb, "\r.L%zu:", lElse );
 			_GenerateStatement( allocator, sb, stmt->data.if_.cElse );
 		}
-		_InsertLine( sb, ".L%zu:", lLead );
+		_InsertLine( sb, "\r.L%zu:", lLead );
 		break;
 	}
 	case CK_STMT_WHILE: {
@@ -685,15 +760,15 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		lLoop = _local_label_counter++;
 		lLead = _local_label_counter++;
 
-		_InsertLine( sb, ".L%zu:", lLoop );
+		_InsertLine( sb, "\r.L%zu:", lLoop );
 		exprReg = _InsertExpression( allocator, sb, stmt->data.while_.condition );
 		regname = _RegnameInt( exprReg, stmt->data.while_.condition->type->id );
-		_InsertLine( sb, "test %s, %s", regname, regname );
-		_InsertLine( sb, "jz .L%zu", lLead );
+		_InsertLine( sb, "test\t%s, %s", regname, regname );
+		_InsertLine( sb, "jz\t.L%zu", lLead );
 		_FreeIntRegister( exprReg );
 		_GenerateStatement( allocator, sb, stmt->data.while_.cWhile );
-		_InsertLine( sb, "goto .L%zu", lLoop );
-		_InsertLine( sb, ".L%zu:", lLead );
+		_InsertLine( sb, "goto\t.L%zu", lLoop );
+		_InsertLine( sb, "\r.L%zu:", lLead );
 		break;
 	}
 	}
@@ -762,9 +837,37 @@ static void _InsertFuncName( CkStrBuilder* sb, CkFunction* pFunc )
 	free( buffer );
 }
 
+// Gets the size of a scope.
+static size_t _SizeOfScope( CkScope *scope )
+{
+	size_t child_scopes = 0; // The amount of child scopes
+	size_t var_count = 0;    // the count of variables.
+	size_t scope_size = 0;   // The size of the scope.
+
+	var_count = CkListLength( scope->variableList );
+	for ( size_t i = 0; i < var_count; i++ ) {
+		CkVariable *pVar = (CkVariable *)CkListAccess( scope->variableList, i );
+		size_t size_type = 0;
+		_StackVarDecl stackdecl = {};
+		size_type = _SizeOfT( scope, pVar->type );
+		stackdecl.stack_offset = scope_size + size_type;
+		stackdecl.vardecl = pVar; // Fixed cause of arena
+		CkListAdd( _stack_var_decls, &stackdecl );
+		scope_size += size_type;
+	}
+
+	child_scopes = CkListLength( scope->children );
+	for (size_t i = 0; i < child_scopes; i++ )
+		scope_size += _SizeOfScope(*( CkScope ** )CkListAccess( scope->children, i ));
+
+	return scope_size;
+}
+
 // Inserts a function.
 static void _InsertFunction( CkArenaFrame *allocator, CkStrBuilder* sb, CkFunction* pFunc )
 {
+	size_t stack_size = 0; // The size of the stack to reserve.
+
 	// --- Insert function header ---
 
 	if ( pFunc->bPublic ) {
@@ -776,15 +879,32 @@ static void _InsertFunction( CkArenaFrame *allocator, CkStrBuilder* sb, CkFuncti
 	_InsertFuncName( sb, pFunc );
 	CkStrBuilderAppendString( sb, ":\n" );
 
+	// --- Variables ---
+	if (!_stack_var_decls)
+		_stack_var_decls = CkListStart( allocator, sizeof( _StackVarDecl ) );
+	stack_size = _SizeOfScope( pFunc->funscope );
+	if ( stack_size != 0 ) {
+		_InsertLine( sb, "push\trbp" );
+		_InsertLine( sb, "mov\trbp, rsp" );
+		_InsertLine( sb, "sub\trsp, %zu", stack_size );
+		_InsertLine( sb, "" );
+	}
+
 	// --- Insert function body ---
 	_GenerateStatement( allocator, sb, pFunc->body );
+
+	CkListClear( _stack_var_decls );
+	_InsertLine( sb, "" );
+	if ( stack_size != 0 )
+		_InsertLine( sb, "pop\trbp" );
+	_InsertLine( sb, "ret\t; default return" );
 }
 
 // Inserts a new module.
 static void _InsertModule( CkArenaFrame *allocator, CkStrBuilder* sb, CkModule* module )
 {
 	size_t funcCount;
-	_InsertLine( sb, "; Module %s::%s", module->scope->library->name, module->name );
+	_InsertLine( sb, "\r; Module %s::%s", module->scope->library->name, module->name );
 
 	funcCount = CkListLength( module->scope->functionList );
 	for ( size_t i = 0; i < funcCount; i++ )
@@ -815,7 +935,7 @@ char* CkGenProgram_Prototype(
 		size_t moduleCount;
 		CkLibrary* lib = *(CkLibrary**)CkListAccess( libraries, i );
 
-		_InsertLine( &outsb, "; Library %s", lib->name );
+		_InsertLine( &outsb, "\r; Library %s", lib->name );
 
 		// Global functions
 		glblFuncCount = CkListLength( lib->scope->functionList );

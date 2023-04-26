@@ -20,6 +20,7 @@ CkScope *CkStartScope(
 	if ( optionalParent ) {
 		yield->library = optionalParent->library;
 		yield->module = optionalParent->module;
+		CkListAdd( optionalParent->children, &yield );
 	}
 
 	// Variables
@@ -37,6 +38,8 @@ CkScope *CkStartScope(
 		yield->functionList = CkListStart( allocator, sizeof( CkFunction ) );
 		yield->usertypeList = CkListStart( allocator, sizeof( CkUserType ) );
 	}
+
+	yield->children = CkListStart( allocator, sizeof( CkScope * ) );
 
 	return yield;
 }
@@ -64,6 +67,7 @@ void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName )
 }
 
 void CkAllocateFunction(
+	CkArenaFrame *allocator,
 	CkScope *scope,
 	bool_t bPublic,
 	CkFoodType *signature,
@@ -81,6 +85,7 @@ void CkAllocateFunction(
 	func.body = body;
 	func.bPublic = bPublic;
 	func.name = passedName;
+	func.funscope = CkStartScope( allocator, scope, TRUE, FALSE ); // TODO: nested functions
 	CkListAdd( scope->functionList, &func );
 }
 
