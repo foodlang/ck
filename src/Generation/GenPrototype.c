@@ -1,24 +1,25 @@
 #include <Generation/GenPrototype.h>
 #include <Util/Itoa.h>
+#include <Food.h>
 
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 
-#define NOREG 0xFF
-#define RB 0
-#define RC 1
-#define RD 2
-#define R8 3
-#define R9 4
-#define R10 5
-#define R11 6
-#define R12 7
-#define R13 8
-#define R14 9
-#define R15 10
-#define ACC   11
+#define NOREG	0xFF
+#define RB		0
+#define RC		1
+#define RD		11
+#define R8		2
+#define R9		3
+#define R10		4
+#define R11		5
+#define R12		6
+#define R13		7
+#define R14		8
+#define R15		9
+#define ACC		10
 
 // The counter for local labels.
 static size_t _local_label_counter = 0;
@@ -28,6 +29,9 @@ static size_t _static_unnamed_label_counter = 0;
 
 // Stores the data to be stored in the data section (static data)
 static CkList *_data_section = NULL;
+
+// Whether to use lea instead of mov for the dereference operator.
+static bool_t _lea_deref = FALSE;
 
 // A x86-64 register.
 typedef struct _Register
@@ -54,7 +58,7 @@ typedef struct _StaticData
 	bool_t public;        // Whether the data is public or not
 	bool_t named;         // Whether the data has a given name
 	_StaticDataName name; // The name
-	FoodTypeID typeid;    // The type of the data
+	CkFoodType *type;     // The type of the data
 
 } _StaticData;
 
@@ -63,17 +67,17 @@ static _Register _regint_table[] =
 {
 	/* 0 */ { TRUE, "bl", "bx", "ebx", "rbx" },
 	/* 1 */ { TRUE, "cl", "cx", "ecx", "rcx" },
-	/* 2 */ { TRUE, "dl", "dx", "edx", "rdx" },
-	/* 3 */ { TRUE, "r8b", "r8w", "r8d", "r8" },
-	/* 4 */ { TRUE, "r9b", "r9w", "r9d", "r9" },
-	/* 5 */ { TRUE, "r10b", "r10w", "r10d", "r10" },
-	/* 6 */ { TRUE, "r11b", "r11w", "r11d", "r11" },
-	/* 7 */ { TRUE, "r12b", "r12w", "r12d", "r12" },
-	/* 8 */ { TRUE, "r13b", "r13w", "r13d", "r13" },
-	/* 9 */ { TRUE, "r14b", "r14w", "r14d", "r14" },
-	/* 10 */ { TRUE, "r15b", "r15w", "r15d", "r15" },
+	/* 2 */ { TRUE, "r8b", "r8w", "r8d", "r8" },
+	/* 3 */ { TRUE, "r9b", "r9w", "r9d", "r9" },
+	/* 4 */ { TRUE, "r10b", "r10w", "r10d", "r10" },
+	/* 5 */ { TRUE, "r11b", "r11w", "r11d", "r11" },
+	/* 6 */ { TRUE, "r12b", "r12w", "r12d", "r12" },
+	/* 7 */ { TRUE, "r13b", "r13w", "r13d", "r13" },
+	/* 8 */ { TRUE, "r14b", "r14w", "r14d", "r14" },
+	/* 9 */ { TRUE, "r15b", "r15w", "r15d", "r15" },
 	/* ----------- RESERVED DOWN BELOW ----------- */
-	/* 11 */ { FALSE, "al", "ax", "eax", "rax" } // used for returns
+	/* 10 */ { FALSE, "al", "ax", "eax", "rax" }, // used for returns + division
+	/* 11 */ { FALSE, "dl", "dx", "edx", "rdx" }, // used for division
 };
 
 // A stack variable declaration in the assembly code.
@@ -86,6 +90,55 @@ typedef struct _StackVarDecl
 
 // The variable declarations on the stack (current func)
 static CkList *_stack_var_decls = NULL;
+
+// The size of a type (value types only)
+static size_t _SizeOfV( FoodTypeID t )
+{
+	switch ( t ) {
+	case CK_FOOD_I8:
+	case CK_FOOD_U8:
+	case CK_FOOD_BOOL:
+	case CK_FOOD_VOID:
+		return 1;
+
+	case CK_FOOD_I16:
+	case CK_FOOD_U16:
+	case CK_FOOD_F16:
+		return 2;
+
+	case CK_FOOD_I32:
+	case CK_FOOD_U32:
+	case CK_FOOD_F32:
+	case CK_FOOD_ENUM:
+		return 4;
+
+	case CK_FOOD_I64:
+	case CK_FOOD_U64:
+	case CK_FOOD_F64:
+	case CK_FOOD_POINTER:
+	case CK_FOOD_FUNCPOINTER:
+	case CK_FOOD_REFERENCE:
+	case CK_FOOD_STRING:
+		return 8;
+
+	default:
+		printf( "_SizeOfV() requires compiler defined types, didn't expect %i; returning 0\n", t );
+		return 0;
+	}
+}
+
+// Whether a type is unsigned.
+static bool_t _Unsigned( FoodTypeID t )
+{
+	return t == CK_FOOD_U8
+		|| t == CK_FOOD_U16
+		|| t == CK_FOOD_U32
+		|| t == CK_FOOD_U64
+		|| t == CK_FOOD_POINTER
+		|| t == CK_FOOD_REFERENCE
+		|| t == CK_FOOD_STRING
+		|| t == CK_FOOD_FUNCPOINTER;
+}
 
 // Gets the size of a type.
 static size_t _SizeOfT( CkScope *scope, CkFoodType *T )
@@ -177,8 +230,85 @@ static char* _RegnameInt( size_t reg, FoodTypeID typeid )
 		return _regint_table[reg].name64;
 
 	default:
+		printf( "regname empty: %i\n", typeid );
 		return "";
 	}
+}
+
+static char *_szprefixes[] =
+{
+	/* 0 */ "sz_prefix_invalid_0",
+	/* 1 */ "byte ptr",
+	/* 2 */ "word ptr",
+	/* 3 */ "sz_prefix_invalid_3",
+	/* 4 */ "dword ptr",
+	/* 5 */ "sz_prefix_invalid_4",
+	/* 6 */ "sz_prefix_invalid_5",
+	/* 7 */ "sz_prefix_invalid_6",
+	/* 8 */ "qword ptr",
+};
+
+// Gets a variable reference in the current scope.
+static char *_GetVarReferenceCurrent( CkArenaFrame *allocator, char *name )
+{
+	_StackVarDecl *p_stack_var = NULL;  // Stack var
+	_StaticData   *p_static_var = NULL; // Static var
+	size_t         stack_decllen;       // Length of the decl stack
+	size_t         static_decllen;      // Length of the static decl list
+	char          *buf;                 // Output buffer
+	size_t         bufsize;             // Ouput buffer size
+	size_t         varsize;             // Size of the variable
+	char          *szprefix;            // Size prefix
+
+	// --- Stack-allocated variables ---
+
+	stack_decllen = CkListLength( _stack_var_decls );
+	for ( size_t i = 0; i < stack_decllen; i++ ) {
+		_StackVarDecl *p_current = CkListAccess( _stack_var_decls, i );
+		if ( !strcmp( p_current->vardecl->name, name ) ) {
+			p_stack_var = p_current;
+			break;
+		}
+	}
+
+	if ( p_stack_var ) {
+		// TODO: Implement user data types
+		if ( _lea_deref && CK_TYPE_CLASSED_POINTER( p_stack_var->vardecl->type->id ) )
+			varsize = _SizeOfV( p_stack_var->vardecl->type->child->id );
+		else varsize = _SizeOfV( p_stack_var->vardecl->type->id );
+		szprefix = _szprefixes[varsize <= 8 ? varsize : /*invalid*/ 0];
+		bufsize = snprintf( NULL, 0, "%s [rbp-%zu]", szprefix, p_stack_var->stack_offset );
+		buf = CkArenaAllocate( allocator, bufsize + 1 );
+		sprintf( buf, "%s [rbp-%zu]", szprefix, p_stack_var->stack_offset );
+		return buf;
+	}
+
+	// --- Static variables ---
+
+	static_decllen = CkListLength( _data_section );
+	for ( size_t i = 0; i < static_decllen; i++ ) {
+		_StaticData *p_current = CkListAccess( _data_section, i );
+		if ( !p_current->named ) continue;
+		if ( !strcmp( p_current->name.cstr, name ) ) {
+			p_static_var = p_current;
+			break;
+		}
+	}
+
+	if ( !p_static_var ) {
+		fprintf( stderr, "mismatch between generator symbols and binder symbols\n" );
+		abort();
+	}
+
+	// TODO: Implement user data types
+	if ( _lea_deref && CK_TYPE_CLASSED_POINTER( p_static_var->type->id ) )
+		varsize = _SizeOfV( p_static_var->type->child->id );
+	else varsize = _SizeOfV( p_static_var->type->id );
+	szprefix = _szprefixes[varsize <= 8 ? varsize : /*invalid*/ 0];
+	bufsize = snprintf( NULL, 0, "%s %s", szprefix, p_static_var->name.cstr );
+	buf = CkArenaAllocate( allocator, bufsize + 1 );
+	sprintf( buf, "%s %s", szprefix, buf );
+	return buf;
 }
 
 // Inserts static data.
@@ -186,7 +316,7 @@ static void _InsertStaticData(
 	CkArenaFrame *allocator,
 	bool_t public,
 	void *cdata,
-	FoodTypeID typeid,
+	CkFoodType *type,
 	bool_t named,
 	char *optional_name )
 {
@@ -197,12 +327,12 @@ static void _InsertStaticData(
 
 	entry.named = named;
 	entry.public = public;
-	entry.typeid = typeid;
+	entry.type = type;
 	if ( optional_name ) entry.name.cstr = optional_name;
 	else entry.name.id = _static_unnamed_label_counter++;
 
 	// Replace some characters with escape sequences
-	if ( typeid == CK_FOOD_STRING ) {
+	if ( type->id == CK_FOOD_STRING ) {
 		char c;
 		char *cstr;
 		size_t cstrlen;
@@ -259,28 +389,6 @@ static void _InsertLine( CkStrBuilder *sb, const char* format, ... )
 	free( vbuffer );
 }
 
-// The size of a type (value types only)
-static size_t _SizeOfV( FoodTypeID t )
-{
-	if ( t == CK_FOOD_I8 || t == CK_FOOD_U8 ) return 1;
-	if ( t == CK_FOOD_I16 || t == CK_FOOD_U16 || t == CK_FOOD_F16 ) return 2;
-	if ( t == CK_FOOD_I32 || t == CK_FOOD_U32 || t == CK_FOOD_F32 ) return 4;
-	if ( t == CK_FOOD_I64 || t == CK_FOOD_U64 || t == CK_FOOD_F64 ) return 8;
-	return 0;
-}
-
-static bool_t _Unsigned( FoodTypeID t )
-{
-	return t == CK_FOOD_U8
-		|| t == CK_FOOD_U16
-		|| t == CK_FOOD_U32
-		|| t == CK_FOOD_U64
-		|| t == CK_FOOD_POINTER
-		|| t == CK_FOOD_REFERENCE
-		|| t == CK_FOOD_STRING
-		|| t == CK_FOOD_FUNCPOINTER;
-}
-
 // Extends a register accordingly.
 static void _ExtendRegister( CkStrBuilder *sb, size_t r, FoodTypeID original, FoodTypeID result )
 {
@@ -306,16 +414,33 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 
 	// --- Generating operands ---
 	if ( expr->left ) {
-		left = _InsertExpression( allocator, sb, expr->left );
-		_ExtendRegister( sb, left, expr->left->type->id, expr->type->id );
+		if ( expr->kind != CK_EXPRESSION_ASSIGN
+			&& expr->kind != CK_EXPRESSION_ASSIGN_SUM
+			&& expr->kind != CK_EXPRESSION_ASSIGN_DIFF
+			&& expr->kind != CK_EXPRESSION_ASSIGN_PRODUCT
+			&& expr->kind != CK_EXPRESSION_ASSIGN_QUOTIENT
+			&& expr->kind != CK_EXPRESSION_ASSIGN_OR
+			&& expr->kind != CK_EXPRESSION_ASSIGN_AND
+			&& expr->kind != CK_EXPRESSION_ASSIGN_XOR
+			&& expr->kind != CK_EXPRESSION_ASSIGN_LEFT_SHIFT
+			&& expr->kind != CK_EXPRESSION_ASSIGN_RIGHT_SHIFT
+			&& expr->kind != CK_EXPRESSION_ASSIGN_REMAINDER
+			&& !(expr->kind == CK_EXPRESSION_DEREFERENCE
+				&& expr->left->kind == CK_EXPRESSION_IDENTIFIER) ) {
+			left = _InsertExpression( allocator, sb, expr->left );
+			if ( expr->type->id != CK_FOOD_VOID ) // Discard
+				_ExtendRegister( sb, left, expr->left->type->id, expr->type->id );
+		}
 	}
 	if ( expr->right ) {
 		right = _InsertExpression( allocator, sb, expr->right );
-		_ExtendRegister( sb, right, expr->right->type->id, expr->type->id );
+		if ( expr->type->id != CK_FOOD_VOID ) // Discard
+			_ExtendRegister( sb, right, expr->right->type->id, expr->type->id );
 	}
 	if ( expr->extra ) {
 		extra = _InsertExpression( allocator, sb, expr->extra );
-		_ExtendRegister( sb, extra, expr->extra->type->id, expr->type->id );
+		if ( expr->type->id != CK_FOOD_VOID ) // Discard
+			_ExtendRegister( sb, extra, expr->extra->type->id, expr->type->id );
 	}
 
 	// --- Generating expression ---
@@ -369,7 +494,11 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 
 		out = _AllocateIntRegister();
 		sref = _static_unnamed_label_counter;
-		_InsertStaticData( allocator, FALSE, expr->token.value.ptr, CK_FOOD_STRING, FALSE, NULL );
+		_InsertStaticData(
+			allocator,
+			FALSE,
+			expr->token.value.ptr,
+			CkFoodCreateTypeInstance( allocator, CK_FOOD_STRING, FALSE, NULL), FALSE, NULL);
 		_InsertLine( sb, "lea\t%s, .S%zu", _regint_table[out].name64, sref );
 		break;
 	}
@@ -490,11 +619,12 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		rightname = _RegnameInt( right, expr->type->id );
 		accname = _RegnameInt( ACC, expr->type->id );
 
-		if ( _regint_table[RD].free ) _InsertLine( sb, "push\trdx" );
 		_InsertLine( sb, "mov\t%s, %s", accname, leftname );
-		_InsertLine( sb, "div\t%s", rightname );
+		if ( _Unsigned( expr->type->id ) )
+			_InsertLine( sb, "div\t%s", rightname );
+		else _InsertLine( sb, "idiv\t%s", rightname );
 		_InsertLine( sb, "mov\t%s, %s", leftname, accname );
-		if ( _regint_table[RD].free ) _InsertLine( sb, "pop\trdx" );
+
 		break;
 	}
 	case CK_EXPRESSION_MOD: {
@@ -509,11 +639,11 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		accname = _RegnameInt( ACC, expr->type->id );
 		remaindername = _RegnameInt( RD, expr->type->id );
 
-		if ( _regint_table[RD].free ) _InsertLine( sb, "push\trdx" );
 		_InsertLine( sb, "mov\t%s, %s", accname, leftname );
-		_InsertLine( sb, "div\t%s", rightname );
+		if ( _Unsigned( expr->type->id ) )
+			_InsertLine( sb, "div\t%s", rightname );
+		else _InsertLine( sb, "idiv\t%s", rightname );
 		_InsertLine( sb, "mov\t%s, %s", leftname, remaindername );
-		if ( _regint_table[RD].free ) _InsertLine( sb, "pop\trdx" );
 		break;
 	}
 	case CK_EXPRESSION_BITWISE_OR: {
@@ -655,7 +785,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		out = left;
 
 		leftname = _RegnameInt( left, expr->type->id );
-		rightname = _RegnameInt( right, expr->type->id );
+		rightname = _RegnameInt( right, CK_FOOD_U8 );
 
 		_InsertLine( sb, "sal\t%s, %s", leftname, rightname );
 		break;
@@ -666,41 +796,435 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		out = left;
 
 		leftname = _RegnameInt( left, expr->type->id );
-		rightname = _RegnameInt( right, expr->type->id );
+		rightname = _RegnameInt( right, CK_FOOD_U8 );
 
 		_InsertLine( sb, "shr\t%s, %s", leftname, rightname );
 		break;
 	}
 	case CK_EXPRESSION_DEREFERENCE: {
 		char* regname;
-		char* ptrname;
 
-		ptrname = _RegnameInt( left, expr->left->type->id );
-		regname = _RegnameInt( left, expr->type->id );
+		if ( expr->left->kind == CK_EXPRESSION_IDENTIFIER ) {
+			left = _AllocateIntRegister();
+			if ( _lea_deref ) {
+				regname = _RegnameInt( left, CK_FOOD_POINTER );
+				_InsertLine( sb, "lea\t%s, %s",
+					regname,
+					_GetVarReferenceCurrent( allocator, expr->left->token.value.cstr ) );
+			} else {
+				regname = _RegnameInt( left, expr->left->type->id );
+				_InsertLine(
+					sb, "mov\t%s, %s",
+					regname,
+					_GetVarReferenceCurrent( allocator, expr->left->token.value.cstr ) );
+			}
+		} else {
+			regname = _RegnameInt( left, expr->type->id );
+			char *ptrname = _RegnameInt( left, expr->left->type->id );
+			if ( _lea_deref )
+				_InsertLine( sb, "lea\t%s, [%s]",
+					regname,
+					ptrname );
+			else _InsertLine( sb, "mov\t%s, [%s]", regname, ptrname );
+		}
 
-		_InsertLine( sb, "mov\t%s, [%s]", regname, ptrname );
+		out = left;
+
 		break;
 	}
-		// TODO: Static variables
 	case CK_EXPRESSION_IDENTIFIER: {
-		char* regname;
-		_StackVarDecl *p_stack_decl = NULL;
-		size_t stack_decl_length = 0;
+		char *regname;
+		char *varref;
 
 		out = _AllocateIntRegister();
 		regname = _RegnameInt( out, expr->type->id );
+		varref = _GetVarReferenceCurrent( allocator, expr->token.value.cstr );
 
-		stack_decl_length = CkListLength( _stack_var_decls );
-		for ( size_t i = 0; i < stack_decl_length; i++ ) {
-			_StackVarDecl *p_current = CkListAccess( _stack_var_decls, i );
-			if ( !strcmp( p_current->vardecl->name, expr->token.value.cstr ) ) {
-				p_stack_decl = p_current;
-				break;
-			}
+		_InsertLine( sb, "mov\t%s, %s", regname, varref );
+		break;
+	}
+	case CK_EXPRESSION_ADDRESS_OF:
+	case CK_EXPRESSION_OPAQUE_ADDRESS_OF: {
+		char *regname;
+		char *varref;
+		out = _AllocateIntRegister();
+		regname = _RegnameInt( out, CK_FOOD_POINTER );
+		varref = _GetVarReferenceCurrent( allocator, expr->token.value.cstr );
+		_InsertLine( sb, "lea\t%s, %s", regname, varref );
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN: {
+		char *rightname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "mov\t%s, %s", varref, rightname );
+			break;
 		}
-		if ( p_stack_decl )
-			_InsertLine( sb, "mov\t%s, [rbp-%zu]", regname, p_stack_decl->stack_offset );
-		else abort();
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, rightname);
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_OR: {
+		char *rightname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "or\t%s, %s", varref, rightname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "or\t%s [%s], %s", szprefix, leftname, rightname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+								 {
+		char *rightname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "add\t%s, %s", varref, rightname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "add\t%s [%s], %s", szprefix, leftname, rightname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_AND: {
+		char *rightname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "and\t%s, %s", varref, rightname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "and\t%s [%s], %s", szprefix, leftname, rightname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_XOR: {
+		char *rightname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "xor\t%s, %s", varref, rightname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "xor\t%s [%s], %s", szprefix, leftname, rightname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_LEFT_SHIFT: {
+		char *rightname;
+
+		rightname = _RegnameInt( right, CK_FOOD_U8 );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "sal\t%s, %s", varref, rightname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "sal\t%s [%s], %s", szprefix, leftname, rightname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_SUM: {
+		char *rightname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "add\t%s, %s", varref, rightname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "add\t%s [%s], %s", szprefix, leftname, rightname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_DIFF: {
+		char *rightname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "sub\t%s, %s", varref, rightname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "sub\t%s [%s], %s", szprefix, leftname, rightname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_PRODUCT: {
+		char *rightname;
+		char *leftname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+		left = _InsertExpression( allocator, sb, expr->left );
+		leftname = _RegnameInt( left, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			if ( _Unsigned( expr->left->type->id ) )
+				_InsertLine( sb, "mul\t%s, %s", leftname, rightname );
+			else _InsertLine( sb, "imul\t%s, %s", leftname, rightname );
+			_InsertLine( sb, "mov\t%s, %s", varref, leftname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			if ( _Unsigned( expr->left->type->id ) )
+				_InsertLine( sb, "mul\t%s, %s", rightname, leftname );
+			else _InsertLine( sb, "imul\t%s, %s", rightname, leftname );
+			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, rightname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_QUOTIENT: {
+		char *rightname;
+		char *leftname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+		left = _InsertExpression( allocator, sb, expr->left );
+		leftname = _RegnameInt( left, expr->left->type->id );
+		char *accname = _RegnameInt( ACC, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "mov\t%s, %s", accname, leftname );
+			if ( _Unsigned( expr->left->type->id ) )
+				_InsertLine( sb, "div\t%s", rightname );
+			else _InsertLine( sb, "idiv\t%s", rightname );
+			_InsertLine( sb, "mov\t%s, %s", varref, accname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "mov\t%s, %s", accname, leftname );
+			if ( _Unsigned( expr->left->type->id ) )
+				_InsertLine( sb, "div\t%s", rightname );
+			else _InsertLine( sb, "idiv\t%s", rightname );
+			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, accname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
+		break;
+	}
+	case CK_EXPRESSION_ASSIGN_REMAINDER: {
+		char *rightname;
+		char *leftname;
+
+		rightname = _RegnameInt( right, expr->left->type->id );
+		left = _InsertExpression( allocator, sb, expr->left );
+		leftname = _RegnameInt( left, expr->left->type->id );
+		char *dataname = _RegnameInt( RD, expr->left->type->id );
+
+		switch ( expr->left->kind ) {
+			// TODO: members
+		case CK_EXPRESSION_IDENTIFIER: {
+			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
+			_InsertLine( sb, "mov\t%s, %s", dataname, leftname );
+			if ( _Unsigned( expr->left->type->id ) )
+				_InsertLine( sb, "div\t%s", rightname );
+			else _InsertLine( sb, "idiv\t%s", rightname );
+			_InsertLine( sb, "mov\t%s, %s", varref, dataname );
+			break;
+		}
+		case CK_EXPRESSION_DEREFERENCE: {
+			char *leftname;
+			char *szprefix;
+			size_t rsize;
+			_lea_deref = TRUE;
+			left = _InsertExpression( allocator, sb, expr->left );
+			leftname = _RegnameInt( left, CK_FOOD_POINTER );
+			rsize = _SizeOfV( expr->right->type->id );
+			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
+			_InsertLine( sb, "mov\t%s, %s", dataname, leftname );
+			if ( _Unsigned( expr->left->type->id ) )
+				_InsertLine( sb, "div\t%s", rightname );
+			else _InsertLine( sb, "idiv\t%s", rightname );
+			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, dataname );
+			_lea_deref = FALSE;
+			break;
+		}
+		default:
+			abort();
+			break;
+		}
 		break;
 	}
 	case CK_EXPRESSION_COMPOUND_LITERAL: _FreeIntRegister( right ); break;
@@ -965,7 +1489,7 @@ char* CkGenProgram_Prototype(
 			} else {
 				_InsertLine( &outsb, "\r.S%zu:", sd->name.id );
 			}
-			switch ( sd->typeid ) {
+			switch ( sd->type->id ) {
 			case CK_FOOD_I8:
 			case CK_FOOD_U8:
 			case CK_FOOD_BOOL:
@@ -989,7 +1513,7 @@ char* CkGenProgram_Prototype(
 				_InsertLine( &outsb, "db \"%s\"", (char *)sd->data );
 				break;
 			default:
-				_InsertLine( &outsb, "; unsupported literal %u", sd->typeid );
+				_InsertLine( &outsb, "; unsupported literal %u", sd->type->id );
 				break;
 			}
 		}

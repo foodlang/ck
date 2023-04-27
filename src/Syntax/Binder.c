@@ -522,6 +522,18 @@ static CkExpression *s_ValidateExpression(
 			);
 		}
 
+		if ( left->type->child->id == CK_FOOD_VOID ) {
+			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"An anonymous pointer (void*) cannot be dereferenced." );
+			return CkExpressionCreateUnary( // Avoiding NULL dereference + attempt to maintain order in error messages
+				allocator,
+				&expression->token,
+				expression->kind,
+				CkFoodCopyTypeInstance( allocator, left->type ),
+				left
+			);
+		}
+
 		result = CkExpressionCreateUnary(
 			allocator,
 			&expression->token,
@@ -857,7 +869,14 @@ static CkExpression *s_ValidateExpression(
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
 				"Only an lvalue can be assigned a value." );
 
-		return CkExpressionDuplicate(allocator, expression);
+		// Do not replace with CkExpressionDuplicate
+		return CkExpressionCreateBinary(
+			allocator,
+			&expression->token,
+			expression->kind,
+			CkFoodCopyTypeInstance( allocator, expression->type ),
+			left,
+			right );
 
 		// x[y]
 	case CK_EXPRESSION_SUBSCRIPT:

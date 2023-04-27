@@ -10,6 +10,8 @@
 	}
 	else 8;
 
+	int *ptr;
+
 	while (1) 10;
-	"Hello, World!";
+	*ptr = 3;
 }
