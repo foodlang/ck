@@ -306,7 +306,6 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 
 	// Tokens that use $= and $
 	case '*':
-	case '/':
 	case '%':
 	case '^':
 	case '!':
@@ -317,6 +316,49 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 		if ( next == '=' ) {
 			token->kind = CKTOK2( cur, '=' );
 			lexer->cursor++;
+		} else token->kind = (uint64_t)cur;
+
+		token->position = base;
+		return TRUE;
+	}
+
+	// Uses $=, $ and comments
+	case '/':
+	{
+		char next;
+		lexer->cursor++;
+		next = s_nextChar( lexer );
+		if ( next == '=' ) { // assign quotient
+			token->kind = CKTOK2( cur, '=' );
+			lexer->cursor++;
+		} else if ( next == '/' ) { // C++ comment
+			while ( next != '\n' ) {
+				lexer->cursor++;
+				next = s_nextChar( lexer );
+			}
+			return CkLexReadToken( lexer, token );
+		} else if ( next == '*' ) { // C comment
+			while ( TRUE ) {
+				lexer->cursor++;
+				next = s_nextChar( lexer );
+
+				if ( next == '*' ) {
+					lexer->cursor++;
+					next = s_nextChar( lexer );
+					if ( next == '/' ) {
+						lexer->cursor++;
+						return CkLexReadToken( lexer, token );
+					} else {
+						lexer->cursor--;
+						continue;
+					}
+				} else if ( next == 0 ) { // EOF not allowed
+					token->position = base;
+					token->kind = 0;
+					token->value.u64 = 0;
+					return FALSE;
+				}
+			}
 		} else token->kind = (uint64_t)cur;
 
 		token->position = base;

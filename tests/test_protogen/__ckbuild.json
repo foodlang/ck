@@ -11,7 +11,7 @@
     "warningsAsErrors": false,
     "debug": true,
     "optimizationLevel": 1,
-    "sources": [ "Main.fd", "VarTest.fd" ],
+    "sources": [ "Main.fd", "VarTest.fd", "Comments.fd" ],
     "libraries": [],
 
     "profiles": []

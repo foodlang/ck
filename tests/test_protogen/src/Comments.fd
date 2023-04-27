@@ -1,0 +1,5 @@
+{
+	i8 a; // test
+	3 + 2; /* test some more */
+	5;
+}

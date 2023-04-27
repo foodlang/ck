@@ -185,7 +185,7 @@ static size_t _SizeOfT( CkScope *scope, CkFoodType *T )
 // Allocates a new integer register.
 static size_t _AllocateIntRegister( void )
 {
-	for ( size_t i = 0; i < sizeof( _regint_table ) / sizeof( _Register ) - 1; i++ ) {
+	for ( size_t i = 0; i < sizeof( _regint_table ) / sizeof( _Register ) - 2; i++ ) {
 		if ( _regint_table[i].free ) {
 			_regint_table[i].free = FALSE;
 			return i;
@@ -876,6 +876,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, rightname);
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -907,6 +908,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "or\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -938,6 +940,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "add\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -969,6 +972,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "and\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -1000,6 +1004,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "xor\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -1031,6 +1036,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "sal\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -1062,6 +1068,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "add\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -1093,6 +1100,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "sub\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -1133,6 +1141,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			else _InsertLine( sb, "imul\t%s, %s", rightname, leftname );
 			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -1176,6 +1185,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			else _InsertLine( sb, "idiv\t%s", rightname );
 			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, accname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -1219,6 +1229,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			else _InsertLine( sb, "idiv\t%s", rightname );
 			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, dataname );
 			_lea_deref = FALSE;
+			out = left;
 			break;
 		}
 		default:
@@ -1361,6 +1372,8 @@ static void _InsertFuncName( CkStrBuilder* sb, CkFunction* pFunc )
 	free( buffer );
 }
 
+#define X86_64_ALIGN 16
+
 // Gets the size of a scope.
 static size_t _SizeOfScope( CkScope *scope )
 {
@@ -1378,6 +1391,7 @@ static size_t _SizeOfScope( CkScope *scope )
 		stackdecl.vardecl = pVar; // Fixed cause of arena
 		CkListAdd( _stack_var_decls, &stackdecl );
 		scope_size += size_type;
+		scope_size = (scope_size + (X86_64_ALIGN - 1)) & ~(X86_64_ALIGN - 1);
 	}
 
 	child_scopes = CkListLength( scope->children );
