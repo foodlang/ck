@@ -247,7 +247,15 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 			// Declaration parsing
 			index = parser->position;
 			// TODO: Support for local funcs & typedefs
-			if ( CkParseDecl( parser->genArena, block->data.block.scope, parser, FALSE, FALSE, TRUE, FALSE ) ) continue;
+			if ( CkParseDecl(
+				parser->genArena,
+				block->data.block.scope,
+				parser,
+				FALSE,
+				FALSE,
+				TRUE,
+				FALSE,
+				block->data.block.stmts) ) continue;
 			else CkParserGoto( parser, index );
 
 			// Statement parsing

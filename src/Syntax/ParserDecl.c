@@ -1,5 +1,7 @@
 #include <Syntax/ParserDecl.h>
+#include <Syntax/ParserExpressions.h>
 #include <Syntax/ParserTypes.h>
+#include <Syntax/Binder.h>
 #include <CDebug.h>
 
 bool_t CkParseDecl(
@@ -9,7 +11,8 @@ bool_t CkParseDecl(
 	bool_t allowModule         /* Whether parsing modules is allowed. */,
 	bool_t allowFuncStruct     /* Whether parsing functions and structures is allowed. */,
 	bool_t allowNonConstAssign /* If this decl is a variable, whether it should allow non-constant assigns (FALSE for args) */,
-	bool_t allowExposureQual   /* Whether the public, static or extern specifiers should be allowed */
+	bool_t allowExposureQual   /* Whether the public, static or extern specifiers should be allowed */,
+	CkList *stmtList           /* A list of statements. Used to add statements if needed, elem = CkStatement * */
 ) /* ret TRUE => decl, FALSE => not decl */
 {
 	CkToken token;          // The Current token.
@@ -106,7 +109,7 @@ bool_t CkParseDecl(
 				return TRUE;
 			}
 			CkParserRewind( parser, 1 );
-			CkParseDecl( parser->genArena, pModule->scope, parser, FALSE, TRUE, FALSE, TRUE );
+			CkParseDecl( parser->genArena, pModule->scope, parser, FALSE, TRUE, FALSE, TRUE, NULL );
 		}
 
 		return TRUE;
@@ -140,6 +143,27 @@ bool_t CkParseDecl(
 	CkParserReadToken( parser, &token );
 	if ( token.kind == ';' ) { // T name; (un-assigned variable)
 		CkAllocateVariable( context, declType, name.value.cstr );
+		return TRUE;
+	} else if ( token.kind == '=' ) {
+		CkStatement *assign;
+		CkAllocateVariable( context, declType, name.value.cstr );
+		assign = CkArenaAllocate( allocator, sizeof( CkStatement ) );
+		assign->stmt = CK_STMT_EXPRESSION;
+		// The assignment expression, "synthesized"
+		assign->data.expression = CkExpressionCreateBinary(
+			allocator,
+			&token,
+			CK_EXPRESSION_ASSIGN,
+			CkFoodCreateTypeInstance( allocator, CK_FOOD_VOID, 0, NULL ),
+			CkExpressionCreateLiteral(
+				allocator,
+				&name,
+				CK_EXPRESSION_IDENTIFIER,
+				declType
+			),
+			CkParserExpression( context, parser )
+		);
+		CkListAdd( stmtList, &assign );
 		return TRUE;
 	} else {
 		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",

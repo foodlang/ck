@@ -23,7 +23,8 @@ bool_t CkParseDecl(
 	bool_t allowModule         /* Whether parsing modules is allowed. */,
 	bool_t allowFuncStruct     /* Whether parsing functions and structures is allowed. */,
 	bool_t allowNonConstAssign /* If this decl is a variable, whether it should allow non-constant assigns (FALSE for args) */,
-	bool_t allowExposureQual   /* Whether the public, static or extern specifiers should be allowed */
+	bool_t allowExposureQual   /* Whether the public, static or extern specifiers should be allowed */,
+	CkList *stmtList           /* A list of statements. Used to add statements if needed, elem type = CkStatement * */
 );
 
 #endif
