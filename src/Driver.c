@@ -2,6 +2,7 @@
 #include <Diagnostics.h>
 #include <Syntax/Lex.h>
 #include <Syntax/Parser.h>
+#include <Syntax/ParserDecl.h>
 #include <Syntax/ParserStatements.h>
 #include <Syntax/Binder.h>
 #include <Util/Time.h>
@@ -16,7 +17,7 @@ void CkDriverCompile(
 	CkDiagnosticHandlerInstance *pDhi,
 	CkArenaFrame *threadArena,
 	CkArenaFrame *genArena,
-	CkModule *temp_dest,
+	CkLibrary *lib,
 	CkDriverCompilationResult *result,
 	CkDriverStartupConfiguration *startupConfig
 )
@@ -26,9 +27,6 @@ void CkDriverCompile(
 
 	CkLexInstance lexer;            // The lexer.
 	CkParserInstance parser;        // The parser.
-
-	CkStatement *temp_funcstmt;
-	CkFunction *pMain;
 
 	CK_ARG_NON_NULL( pDhi );
 	CK_ARG_NON_NULL( threadArena );
@@ -56,17 +54,16 @@ void CkDriverCompile(
 	}
 
 	// 4. Parsing
-	CkParserCreateInstance( threadArena, genArena, &parser, tokenList, CkListLength( tokenList ), pDhi );
-	CkAllocateFunction(
+	CkParserCreateInstance(
 		threadArena,
-		temp_dest->scope,
-		TRUE,
-		CkFoodCreateTypeInstance( genArena, CK_FOOD_FUNCPOINTER, 0, NULL ),
-		"main",
-		NULL );
-	pMain = (CkFunction *)CkListAccess( temp_dest->scope->functionList, 0 );
-	temp_funcstmt = CkParseStmt( pMain->funscope, &parser );
-	pMain->body = temp_funcstmt;
+		genArena,
+		&parser,
+		tokenList,
+		CkListLength( tokenList ),
+		pDhi );
+	// Parsing all declarations
+	while ( parser.position < parser.passedTokenCount )
+		CkParseDecl( genArena, lib->scope, &parser, TRUE, TRUE, FALSE, TRUE, NULL );
 	CkDiagnosticDisplay( pDhi );
 	CkDiagnosticClear( pDhi );
 

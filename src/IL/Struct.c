@@ -51,7 +51,7 @@ CkScope *CkLeaveScope( CkScope *current )
 	return current->parent ? current->parent : current;
 }
 
-void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName )
+void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName, bool_t param )
 {
 	CkVariable var = {};
 
@@ -62,11 +62,12 @@ void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName )
 	var.parentScope = scope;
 	var.name = passedName;
 	var.type = type;
+	var.param = param;
 
 	CkListAdd( scope->variableList, &var );
 }
 
-void CkAllocateFunction(
+CkFunction *CkAllocateFunction(
 	CkArenaFrame *allocator,
 	CkScope *scope,
 	bool_t bPublic,
@@ -87,6 +88,7 @@ void CkAllocateFunction(
 	func.name = passedName;
 	func.funscope = CkStartScope( allocator, scope, TRUE, FALSE ); // TODO: nested functions
 	CkListAdd( scope->functionList, &func );
+	return CkListAccess( scope->functionList, CkListLength( scope->functionList ) - 1 );
 }
 
 CkLibrary *CkCreateLibrary( CkArenaFrame *allocator, char *passedName )

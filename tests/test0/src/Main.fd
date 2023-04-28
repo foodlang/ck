@@ -1,8 +1,9 @@
+public module TestModule
 {
-	int a;
-	bool b;
-
-	2 + (int)(a && b);
-	int c;
-	(c);
+	public void Test(int a, int b)
+	{
+		int i;
+		for (i = 0; i < 3; i += 1)
+			a;
+	}
 }

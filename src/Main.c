@@ -28,10 +28,11 @@ int main( int argc, char *argv[], char **envp )
 	char *profileName = NULL;                 // The name of the profile to use.
 	size_t sourceCount;                       // Used for iterating through all source files
 	CkLibrary *result;                        // The resulting library.
-	CkModule *temp_driverModule;              // (TEMPORARY) The module for the current driver.
 	CkDiagnosticHandlerInstance dhi;          // Handles diagnostics.
-	CkTimePoint compilerStart;                // The start of the compilation
-	CkTimePoint compilerEnd;                  // The end of the compilation
+	CkTimePoint tcompilerStart;               // The start of the compilation
+	CkTimePoint tcompilerEnd;                 // The end of the compilation
+	CkTimePoint tdriverStart;                 // The start of the driver parsing
+	CkTimePoint tdriverEnd;                   // The end of the driver parsing
 	bool_t success = TRUE;                    // Compilation & linkage status
 	CkList* libs;                             // Library list
 
@@ -52,7 +53,7 @@ int main( int argc, char *argv[], char **envp )
 		return 0;
 	}
 
-	CkTimeGetCurrent( &compilerStart );
+	CkTimeGetCurrent( &tcompilerStart );
 	CkArenaStartFrame( &globalArena, 0 );
 
 	if ( argc >= 2 ) buildDirectory = argv[1];
@@ -84,6 +85,8 @@ int main( int argc, char *argv[], char **envp )
 		size_t nameLen;
 		size_t sourceLen;
 
+		CkTimeGetCurrent( &tdriverStart );
+
 		if ( !source ) {
 			fprintf( stderr, "ck: Attempted to read out of bounds of file list.\n" );
 			abort();
@@ -106,8 +109,6 @@ int main( int argc, char *argv[], char **envp )
 		cwk_path_join( buildDirectory, applied->sourceDir, sourceTotal, sourceLen + 1 );
 		cwk_path_join( sourceTotal, source, sourceTotal, sourceLen + 1 );
 
-		printf( "ck: compiling file '%s'\n", sourceTotal );
-
 		// Source loading
 		driverStart.source = CkReadFileContents( &globalArena, sourceTotal );
 		if ( !driverStart.source ) {
@@ -119,8 +120,11 @@ int main( int argc, char *argv[], char **envp )
 		driverStart.wError = applied->wError;
 
 		// Driver compilation
-		temp_driverModule = CkCreateModule( &globalArena, result, source, TRUE, TRUE );
-		CkDriverCompile( &dhi, &globalArena, &globalArena, temp_driverModule, &driverResult, &driverStart );
+		CkDriverCompile( &dhi, &globalArena, &globalArena, result, &driverResult, &driverStart );
+		CkTimeGetCurrent( &tdriverEnd );
+		printf( "\t- '%s' (%f ms)\n",
+			sourceTotal,
+			(double)(CkTimeElapsed_mcs( &tdriverStart, &tdriverEnd )) / 1000.0 );
 	}
 
 	// Binding
@@ -135,10 +139,10 @@ int main( int argc, char *argv[], char **envp )
 		puts( CkGenProgram_Prototype( &dhi, &globalArena, libs ) );
 	}
 	CkArenaEndFrame( &globalArena );
-	CkTimeGetCurrent( &compilerEnd );
+	CkTimeGetCurrent( &tcompilerEnd );
 	printf(
 		"Full compilation time: %f ms\n",
-		(double)(CkTimeElapsed_mcs(&compilerStart, &compilerEnd)) / 1000.0 );
+		(double)(CkTimeElapsed_mcs(&tcompilerStart, &tcompilerEnd)) / 1000.0 );
 
 	(void)envp;
 	(void)success;

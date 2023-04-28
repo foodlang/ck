@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef _WIN32
 #define universal_fseek(f, c, o) _fseeki64_nolock(f, c, o)
@@ -64,4 +65,17 @@ void CkGetRowColString( const char *string, size_t pos, size_t *pRow, size_t *pC
 			*pCol = 1;
 		} else (*pCol)++;
 	}
+}
+
+char *CkStrDup( CkArenaFrame *allocator, char *src )
+{
+	size_t len;
+	char *buf;
+	CK_ARG_NON_NULL( allocator );
+	CK_ARG_NON_NULL( src );
+
+	len = strlen( src );
+	buf = CkArenaAllocate( allocator, len + 1 );
+	strcpy( buf, src );
+	return buf;
 }

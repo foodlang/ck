@@ -1,7 +1,10 @@
 #include <Syntax/ParserDecl.h>
 #include <Syntax/ParserExpressions.h>
+#include <Syntax/ParserStatements.h>
+#include <Syntax/Parser.h>
 #include <Syntax/ParserTypes.h>
 #include <Syntax/Binder.h>
+#include <FileIO.h>
 #include <CDebug.h>
 
 bool_t CkParseDecl(
@@ -72,6 +75,7 @@ bool_t CkParseDecl(
 	}
 
 	// 2. Parsing potential module
+	CkParserReadToken(parser, &token);
 	if ( token.kind == KW_MODULE ) {
 		CkModule *pModule; // Pointer to module instance
 
@@ -113,7 +117,7 @@ bool_t CkParseDecl(
 		}
 
 		return TRUE;
-	}
+	} else CkParserRewind( parser, 1 );
 
 	// Static is not allowed for non-module decl
 	if ( bStatic ) {
@@ -142,11 +146,11 @@ bool_t CkParseDecl(
 	// 5. Parsing arguments or inline assignment
 	CkParserReadToken( parser, &token );
 	if ( token.kind == ';' ) { // T name; (un-assigned variable)
-		CkAllocateVariable( context, declType, name.value.cstr );
+		CkAllocateVariable( context, declType, name.value.cstr, FALSE );
 		return TRUE;
 	} else if ( token.kind == '=' ) {
 		CkStatement *assign;
-		CkAllocateVariable( context, declType, name.value.cstr );
+		CkAllocateVariable( context, declType, name.value.cstr, FALSE );
 		assign = CkArenaAllocate( allocator, sizeof( CkStatement ) );
 		assign->stmt = CK_STMT_EXPRESSION;
 		// The assignment expression, "synthesized"
@@ -163,11 +167,123 @@ bool_t CkParseDecl(
 			),
 			CkParserExpression( context, parser )
 		);
+		if ( !allowNonConstAssign && !assign->data.expression->isConstant ) {
+			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"Only compiler-time constant expressions are allowed in this context." );
+			return TRUE;
+		}
 		CkListAdd( stmtList, &assign );
+		return TRUE;
+	} else if ( token.kind == '(' ) {
+		CkList *params;
+		CkStatement *body;
+		CkFoodType *signature;
+		CkFunction *dest;
+		size_t paramsLen = 0;
+		// Argument parsing
+		params = CkListStart( allocator, sizeof( CkVariable ) );
+		while ( TRUE ) {
+			CkFoodType *T;
+			CkVariable tmp;
+
+			CkParserReadToken( parser, &token );
+			if ( token.kind == ')' ) break;
+
+			// Type
+			CkParserRewind( parser, 1 );
+			T = CkParserType( context, parser );
+			if ( !T ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Expected a typename" );
+				continue;
+			}
+			
+			// Name
+			CkParserReadToken( parser, &token );
+			if ( token.kind != 'I' ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Expected an identifier" );
+				continue;
+			}
+
+			// TODO: default arguments
+			tmp.name = CkStrDup(allocator, token.value.cstr);
+			tmp.type = T;
+			tmp.parentScope = NULL;
+			CkListAdd( params, &tmp );
+			paramsLen++;
+
+			// Comma
+			CkParserReadToken( parser, &token );
+			if ( token.kind == ',' )
+				continue;
+			else if ( token.kind == ')' ) {
+				CkParserRewind( parser, 1 );
+			} else {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Expected a comma" );
+			}
+		}
+		signature = CkFoodCreateTypeInstance(
+			allocator,
+			CK_FOOD_FUNCPOINTER,
+			CK_QUALIFIER_CONST_BIT,
+			declType
+		);
+		signature->extra = CkListStart( allocator, sizeof( CkFoodType *) );
+		for ( size_t i = 0; i < paramsLen; i++ ) {
+			CkListAdd(
+				(CkList *)signature->extra,
+				((CkVariable*)CkListAccess( params, i ))->type
+			);
+		}
+
+		// Declaring
+		dest = CkAllocateFunction(
+			allocator,
+			context,
+			bPublic,
+			signature,
+			CkStrDup( allocator, name.value.cstr ),
+			NULL );
+		for ( size_t i = 0; i < paramsLen; i++ ) {
+			CkVariable *var = CkListAccess( params, i );
+			CkAllocateVariable(
+				dest->funscope,
+				var->type,
+				var->name,
+				TRUE );
+		}
+
+		// Body
+		CkParserReadToken( parser, &token );
+		// Expression body
+		if ( token.kind == CKTOK2( '=', '>' ) ) {
+			body = CkArenaAllocate( allocator, sizeof( CkStatement ) );
+			body->stmt = CK_STMT_EXPRESSION;
+			body->data.expression = CkParserExpression( context, parser );
+
+			CkParserReadToken( parser, &token );
+			if ( token.kind != ';' ) {
+				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Expected a semicolon" );
+				return TRUE;
+			}
+		// Block body
+		} else if ( token.kind == '{' ) {
+			CkParserRewind( parser, 1 );
+			body = CkParseStmt( dest->funscope, parser );
+		} else {
+			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"Expected a thick arrow `=>` or a block `{}`." );
+			return TRUE;
+		}
+		dest->body = body;
+		
 		return TRUE;
 	} else {
 		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-			"Only un-assigned variables can declared for now. TODO: Add support for functions and more" );
+			"Functions and user types are not yet supported (TODO)" );
 		return TRUE;
 	}
 }

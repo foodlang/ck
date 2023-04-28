@@ -10,7 +10,7 @@
 #define NOREG	0xFF
 #define RB		0
 #define RC		1
-#define RD		11
+#define RD		13
 #define R8		2
 #define R9		3
 #define R10		4
@@ -19,7 +19,9 @@
 #define R13		7
 #define R14		8
 #define R15		9
-#define ACC		10
+#define RSI     10
+#define RDI     11
+#define ACC		12
 
 // The counter for local labels.
 static size_t _local_label_counter = 0;
@@ -75,16 +77,20 @@ static _Register _regint_table[] =
 	/* 7 */ { TRUE, "r13b", "r13w", "r13d", "r13" },
 	/* 8 */ { TRUE, "r14b", "r14w", "r14d", "r14" },
 	/* 9 */ { TRUE, "r15b", "r15w", "r15d", "r15" },
+	/* 10 */ { TRUE, "sil", "si", "esi", "rsi" },
+	/* 11 */ { TRUE, "dil", "di", "edi", "rdi" },
 	/* ----------- RESERVED DOWN BELOW ----------- */
-	/* 10 */ { FALSE, "al", "ax", "eax", "rax" }, // used for returns + division
-	/* 11 */ { FALSE, "dl", "dx", "edx", "rdx" }, // used for division
+	/* 12 */ { FALSE, "al", "ax", "eax", "rax" }, // used for returns + division
+	/* 13 */ { FALSE, "dl", "dx", "edx", "rdx" }, // used for division
 };
+
+typedef int64_t _StackPos;
 
 // A stack variable declaration in the assembly code.
 typedef struct _StackVarDecl
 {
-	size_t stack_offset; // The stack offset of the variable in its scope.
-	CkVariable *vardecl; // The frontend variable declaration.
+	_StackPos stack_offset; // The stack offset of the variable in its scope. Can be negative.
+	CkVariable *vardecl;    // The frontend variable declaration.
 
 } _StackVarDecl;
 
@@ -277,9 +283,15 @@ static char *_GetVarReferenceCurrent( CkArenaFrame *allocator, char *name )
 			varsize = _SizeOfV( p_stack_var->vardecl->type->child->id );
 		else varsize = _SizeOfV( p_stack_var->vardecl->type->id );
 		szprefix = _szprefixes[varsize <= 8 ? varsize : /*invalid*/ 0];
-		bufsize = snprintf( NULL, 0, "%s [rbp-%zu]", szprefix, p_stack_var->stack_offset );
-		buf = CkArenaAllocate( allocator, bufsize + 1 );
-		sprintf( buf, "%s [rbp-%zu]", szprefix, p_stack_var->stack_offset );
+		if ( p_stack_var->stack_offset > 0 ) {
+			bufsize = snprintf( NULL, 0, "%s [rbp-%zu]", szprefix, p_stack_var->stack_offset );
+			buf = CkArenaAllocate( allocator, bufsize + 1 );
+			sprintf( buf, "%s [rbp-%zu]", szprefix, p_stack_var->stack_offset );
+		} else {
+			bufsize = snprintf( NULL, 0, "%s [rbp+%zu]", szprefix, -p_stack_var->stack_offset );
+			buf = CkArenaAllocate( allocator, bufsize + 1 );
+			sprintf( buf, "%s [rbp+%zu]", szprefix, -p_stack_var->stack_offset );
+		}
 		return buf;
 	}
 
@@ -404,6 +416,29 @@ static void _ExtendRegister( CkStrBuilder *sb, size_t r, FoodTypeID original, Fo
 	else _InsertLine( sb, "movzx %s, %s", resultname, sourcename );
 }
 
+// Pushes all used registers.
+[[maybe_unused]]
+static void _SaveRegs( CkStrBuilder *sb )
+{
+	for ( size_t i = 0; i < sizeof( _regint_table ) / sizeof( _Register ); i++ )
+		if ( _regint_table[i].free ) _InsertLine( sb, "push %s", _regint_table[i].name64 );
+}
+
+// Loads all used registers.
+[[maybe_unused]]
+static void _LoadRegs( CkStrBuilder *sb )
+{
+	for ( size_t i = 0; i < sizeof( _regint_table ) / sizeof( _Register ); i++ )
+		if ( _regint_table[i].free ) _InsertLine( sb, "pop %s", _regint_table[i].name64 );
+}
+
+#define IS_CONDITION(x) ((x) == CK_EXPRESSION_EQUAL \
+                      || (x) == CK_EXPRESSION_NOT_EQUAL \
+                      || (x) == CK_EXPRESSION_LOWER \
+                      || (x) == CK_EXPRESSION_LOWER_EQUAL \
+                      || (x) == CK_EXPRESSION_GREATER \
+                      || (x) == CK_EXPRESSION_GREATER_EQUAL)
+
 // Inserts an expression. Returns the output register
 static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkExpression* expr )
 {
@@ -428,18 +463,18 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			&& !(expr->kind == CK_EXPRESSION_DEREFERENCE
 				&& expr->left->kind == CK_EXPRESSION_IDENTIFIER) ) {
 			left = _InsertExpression( allocator, sb, expr->left );
-			if ( expr->type->id != CK_FOOD_VOID ) // Discard
+			if ( expr->type->id != CK_FOOD_VOID && !IS_CONDITION(expr->kind) ) // Discard
 				_ExtendRegister( sb, left, expr->left->type->id, expr->type->id );
 		}
 	}
 	if ( expr->right ) {
 		right = _InsertExpression( allocator, sb, expr->right );
-		if ( expr->type->id != CK_FOOD_VOID ) // Discard
+		if ( expr->type->id != CK_FOOD_VOID && !IS_CONDITION( expr->kind ) ) // Discard
 			_ExtendRegister( sb, right, expr->right->type->id, expr->type->id );
 	}
 	if ( expr->extra ) {
 		extra = _InsertExpression( allocator, sb, expr->extra );
-		if ( expr->type->id != CK_FOOD_VOID ) // Discard
+		if ( expr->type->id != CK_FOOD_VOID && !IS_CONDITION( expr->kind ) ) // Discard
 			_ExtendRegister( sb, extra, expr->extra->type->id, expr->type->id );
 	}
 
@@ -708,75 +743,86 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 	}
 	case CK_EXPRESSION_LOWER: {
 		char* leftname;
+		char* leftnameb;
 		char* rightname;
 		out = left;
 
-		leftname = _RegnameInt( left, expr->type->id );
-		rightname = _RegnameInt( right, expr->type->id );
+		leftname = _RegnameInt( left, expr->left->type->id );
+		leftnameb = _RegnameInt( left, CK_FOOD_BOOL );
+		rightname = _RegnameInt( right, expr->left->type->id );
 
 		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
-		_InsertLine( sb, "setl\t%s", leftname );
+		_InsertLine( sb, "setl\t%s", leftnameb );
 		break;
 	}
 	case CK_EXPRESSION_LOWER_EQUAL: {
-		char* leftname;
-		char* rightname;
+		char *leftname;
+		char *leftnameb;
+		char *rightname;
 		out = left;
 
-		leftname = _RegnameInt( left, expr->type->id );
-		rightname = _RegnameInt( right, expr->type->id );
+		leftname = _RegnameInt( left, expr->left->type->id );
+		leftnameb = _RegnameInt( left, CK_FOOD_BOOL );
+		rightname = _RegnameInt( right, expr->left->type->id );
 
 		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
-		_InsertLine( sb, "setle\t%s", leftname );
+		_InsertLine( sb, "setle\t%s", leftnameb );
 		break;
 	}
 	case CK_EXPRESSION_GREATER: {
 		char* leftname;
+		char* leftnameb;
 		char* rightname;
 		out = left;
 
-		leftname = _RegnameInt( left, expr->type->id );
-		rightname = _RegnameInt( right, expr->type->id );
+		leftname = _RegnameInt( left, expr->left->type->id );
+		leftnameb = _RegnameInt( left, CK_FOOD_BOOL );
+		rightname = _RegnameInt( right, expr->left->type->id );
 
 		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
-		_InsertLine( sb, "setg\t%s", leftname );
+		_InsertLine( sb, "setg\t%s", leftnameb );
 		break;
 	}
 	case CK_EXPRESSION_GREATER_EQUAL: {
-		char* leftname;
-		char* rightname;
+		char *leftname;
+		char *leftnameb;
+		char *rightname;
 		out = left;
 
-		leftname = _RegnameInt( left, expr->type->id );
-		rightname = _RegnameInt( right, expr->type->id );
+		leftname = _RegnameInt( left, expr->left->type->id );
+		leftnameb = _RegnameInt( left, CK_FOOD_BOOL );
+		rightname = _RegnameInt( right, expr->left->type->id );
 
 		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
-		_InsertLine( sb, "setge\t%s", leftname );
+		_InsertLine( sb, "setge\t%s", leftnameb );
 		break;
 	}
 	case CK_EXPRESSION_EQUAL: {
 		char* leftname;
+		char* leftnameb;
 		char* rightname;
 		out = left;
 
-		leftname = _RegnameInt( left, expr->type->id );
-		rightname = _RegnameInt( right, expr->type->id );
+		leftname = _RegnameInt( left, expr->left->type->id );
+		leftnameb = _RegnameInt( left, CK_FOOD_BOOL );
+		rightname = _RegnameInt( right, expr->left->type->id );
 
 		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
-		_InsertLine( sb, "sete\t%s", leftname );
+		_InsertLine( sb, "sete\t%s", leftnameb );
 		break;
 	}
-
 	case CK_EXPRESSION_NOT_EQUAL: {
-		char* leftname;
-		char* rightname;
+		char *leftname;
+		char *leftnameb;
+		char *rightname;
 		out = left;
 
-		leftname = _RegnameInt( left, expr->type->id );
-		rightname = _RegnameInt( right, expr->type->id );
+		leftname = _RegnameInt( left, expr->left->type->id );
+		leftnameb = _RegnameInt( left, CK_FOOD_BOOL );
+		rightname = _RegnameInt( right, expr->left->type->id );
 
 		_InsertLine( sb, "cmp\t%s, %s", leftname, rightname );
-		_InsertLine( sb, "setne\t%s", leftname );
+		_InsertLine( sb, "setne\t%s", leftnameb );
 		break;
 	}
 	case CK_EXPRESSION_LEFT_SHIFT: {
@@ -907,38 +953,6 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			rsize = _SizeOfV( expr->right->type->id );
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "or\t%s [%s], %s", szprefix, leftname, rightname );
-			_lea_deref = FALSE;
-			out = left;
-			break;
-		}
-		default:
-			abort();
-			break;
-		}
-		break;
-	}
-								 {
-		char *rightname;
-
-		rightname = _RegnameInt( right, expr->left->type->id );
-
-		switch ( expr->left->kind ) {
-			// TODO: members
-		case CK_EXPRESSION_IDENTIFIER: {
-			char *varref = _GetVarReferenceCurrent( allocator, expr->left->token.value.cstr );
-			_InsertLine( sb, "add\t%s, %s", varref, rightname );
-			break;
-		}
-		case CK_EXPRESSION_DEREFERENCE: {
-			char *leftname;
-			char *szprefix;
-			size_t rsize;
-			_lea_deref = TRUE;
-			left = _InsertExpression( allocator, sb, expr->left );
-			leftname = _RegnameInt( left, CK_FOOD_POINTER );
-			rsize = _SizeOfV( expr->right->type->id );
-			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
-			_InsertLine( sb, "add\t%s [%s], %s", szprefix, leftname, rightname );
 			_lea_deref = FALSE;
 			out = left;
 			break;
@@ -1306,6 +1320,28 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		_InsertLine( sb, "\r.L%zu:", lLead );
 		break;
 	}
+	case CK_STMT_FOR: {
+		size_t lLead;
+		size_t lLoop;
+		size_t exprReg;
+		char *regname;
+
+		lLoop = _local_label_counter++;
+		lLead = _local_label_counter++;
+
+		_GenerateStatement( allocator, sb, stmt->data.for_.cInit );
+		_InsertLine( sb, "\r.L%zu:", lLoop );
+		exprReg = _InsertExpression( allocator, sb, stmt->data.for_.condition );
+		regname = _RegnameInt( exprReg, stmt->data.for_.condition->type->id );
+		_InsertLine( sb, "test\t%s, %s", regname, regname );
+		_InsertLine( sb, "jz\t.L%zu", lLead );
+		_FreeIntRegister( exprReg );
+		_GenerateStatement( allocator, sb, stmt->data.for_.body );
+		_FreeIntRegister( _InsertExpression( allocator, sb, stmt->data.for_.lead ) );
+		_InsertLine( sb, "goto\t.L%zu", lLoop );
+		_InsertLine( sb, "\r.L%zu:", lLead );
+		break;
+	}
 	}
 }
 
@@ -1380,6 +1416,7 @@ static size_t _SizeOfScope( CkScope *scope )
 	size_t child_scopes = 0; // The amount of child scopes
 	size_t var_count = 0;    // the count of variables.
 	size_t scope_size = 0;   // The size of the scope.
+	size_t param_size = 0;   // The size of the parameter area.
 
 	var_count = CkListLength( scope->variableList );
 	for ( size_t i = 0; i < var_count; i++ ) {
@@ -1387,11 +1424,17 @@ static size_t _SizeOfScope( CkScope *scope )
 		size_t size_type = 0;
 		_StackVarDecl stackdecl = {};
 		size_type = _SizeOfT( scope, pVar->type );
-		stackdecl.stack_offset = scope_size + size_type;
-		stackdecl.vardecl = pVar; // Fixed cause of arena
+		stackdecl.vardecl = pVar; // Fixed cause of arens
+		if ( !pVar->param ) {
+			stackdecl.stack_offset = scope_size + size_type;
+			scope_size += size_type;
+			scope_size = (scope_size + (X86_64_ALIGN - 1)) & ~(X86_64_ALIGN - 1);
+		} else {
+			stackdecl.stack_offset = -(param_size + size_type);
+			param_size += size_type;
+			// TODO: alignment
+		}
 		CkListAdd( _stack_var_decls, &stackdecl );
-		scope_size += size_type;
-		scope_size = (scope_size + (X86_64_ALIGN - 1)) & ~(X86_64_ALIGN - 1);
 	}
 
 	child_scopes = CkListLength( scope->children );
@@ -1404,7 +1447,7 @@ static size_t _SizeOfScope( CkScope *scope )
 // Inserts a function.
 static void _InsertFunction( CkArenaFrame *allocator, CkStrBuilder* sb, CkFunction* pFunc )
 {
-	size_t stack_size = 0; // The size of the stack to reserve.
+	size_t stack_size = 0;     // The size of the stack to reserve.
 
 	// --- Insert function header ---
 

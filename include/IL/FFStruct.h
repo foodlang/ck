@@ -67,14 +67,10 @@ typedef struct CkModule CkModule;
 // A variable declaration.
 typedef struct CkVariable
 {
-	// The name of the variable.
-	char *name;
-
-	// The scope that contains the variable.
-	CkScope *parentScope;
-
-	// The type of the variable.
-	CkFoodType *type;
+	char *name;           // The name of the variable.
+	CkScope *parentScope; // The scope that contains the variable.
+	CkFoodType *type;     // The type of the variable.
+	bool_t param;         // If this is true, this variable is a function argument.
 
 } CkVariable;
 
@@ -398,10 +394,10 @@ CkScope *CkStartScope( CkArenaFrame *allocator, CkScope *optionalParent, bool_t 
 CkScope *CkLeaveScope( CkScope *current );
 
 // Attempts to allocate a variable in a scope.
-void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName );
+void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName, bool_t param );
 
 // Attempts to allocate a new function in a scope.
-void CkAllocateFunction(
+CkFunction *CkAllocateFunction(
 	CkArenaFrame *frame,
 	CkScope *scope,
 	bool_t bPublic,

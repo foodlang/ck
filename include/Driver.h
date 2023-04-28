@@ -54,7 +54,7 @@ void CkDriverCompile(
 	CkDiagnosticHandlerInstance *pDhi,
 	CkArenaFrame *threadArena,
 	CkArenaFrame *genArena,
-	CkModule *temp_dest,
+	CkLibrary *lib,
 	CkDriverCompilationResult *result,
 	CkDriverStartupConfiguration *startupConfig);
 
