@@ -1,5 +1,6 @@
 #include <Syntax/Binder.h>
 #include <Syntax/Expression.h>
+#include <Syntax/ConstExpr.h>
 #include <CDebug.h>
 #include <Food.h>
 
@@ -209,15 +210,15 @@ static bool_t s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkSco
 	return FALSE;
 }
 
-static CkExpression *s_ValidateExpression(
+static CkExpression *s_ValidateExpressionNC(
 	CkScope *scope,
 	CkDiagnosticHandlerInstance *pDhi,
 	CkArenaFrame *allocator,
 	CkExpression *expression )
 {
-	CkExpression *left = expression->left ? s_ValidateExpression( scope, pDhi, allocator, expression->left ) : NULL;
-	CkExpression *right = expression->right ? s_ValidateExpression( scope, pDhi, allocator, expression->right ) : NULL;
-	CkExpression *extra = expression->extra ? s_ValidateExpression( scope, pDhi, allocator, expression->extra ) : NULL;
+	CkExpression *left = expression->left ? s_ValidateExpressionNC( scope, pDhi, allocator, expression->left ) : NULL;
+	CkExpression *right = expression->right ? s_ValidateExpressionNC( scope, pDhi, allocator, expression->right ) : NULL;
+	CkExpression *extra = expression->extra ? s_ValidateExpressionNC( scope, pDhi, allocator, expression->extra ) : NULL;
 
 	switch ( expression->kind ) {
 		// Literals have their types figured out at parser-level
@@ -226,8 +227,11 @@ static CkExpression *s_ValidateExpression(
 	case CK_EXPRESSION_BOOL_LITERAL:
 	case CK_EXPRESSION_STRING_LITERAL:
 	case CK_EXPRESSION_TYPE:
-	case CK_EXPRESSION_COMPOUND_LITERAL:
-		return CkExpressionDuplicate(allocator, expression);
+	case CK_EXPRESSION_COMPOUND_LITERAL: {
+		CkExpression *expr = CkExpressionDuplicate( allocator, expression );
+		expr->isConstant = TRUE;
+		return expr;
+	}
 
 		// TODO: Scoped references
 	case CK_EXPRESSION_SCOPED_REFERENCE:
@@ -943,6 +947,15 @@ static CkExpression *s_ValidateExpression(
 		printf( "ck internal error: Missing type binder for operator %d.\n", expression->kind );
 		abort();
 	}
+}
+
+static CkExpression *s_ValidateExpression(
+	CkScope *scope,
+	CkDiagnosticHandlerInstance *pDhi,
+	CkArenaFrame *allocator,
+	CkExpression *expression )
+{
+	return CkConstExprReduce( allocator, s_ValidateExpressionNC( scope, pDhi, allocator, expression ) );
 }
 
 static void s_ValidateBlock( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *allocator, CkStatement *blk );
