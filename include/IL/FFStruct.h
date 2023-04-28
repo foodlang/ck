@@ -57,6 +57,9 @@ typedef enum CkStatementKind
 	// A sponge statement.
 	CK_STMT_SPONGE,
 
+	// A return statement.
+	CK_STMT_RETURN,
+
 } CkStatementKind;
 
 typedef struct CkStatement CkStatement;
@@ -187,12 +190,9 @@ typedef struct CkStatementData_Assert // Assert statement data. Static assert is
 
 } CkStatementData_Assert;
 
-typedef struct CkStatementData_Sponge // Sponge statement data
-{
-	// The statement.
-	CkStatement *statement;
+typedef CkStatement *CkStatementData_Sponge; // Sponge statement data
 
-} CkStatementData_Sponge;
+typedef CkExpression *CkStatementData_Return; // Return statement data
 
 // The data passed along with a statement.
 typedef union CkStatementData
@@ -210,6 +210,7 @@ typedef union CkStatementData
 	CkStatementData_Goto       goto_;
 	CkStatementData_Assert     assert;
 	CkStatementData_Sponge     sponge;
+	CkStatementData_Return     return_;
 
 } CkStatementData;
 

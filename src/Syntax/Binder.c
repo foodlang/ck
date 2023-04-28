@@ -968,7 +968,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 	case CK_STMT_BREAK: break; // Handled at generation
 	case CK_STMT_CONTINUE: break; // Handled at generation
 	case CK_STMT_EXPRESSION: stmt->data.expression = s_ValidateExpression( scope, pDhi, allocator, stmt->data.expression ); break;
-	case CK_STMT_SPONGE: s_ValidateStmt( pDhi, allocator, stmt->data.sponge.statement, scope );
+	case CK_STMT_SPONGE: s_ValidateStmt( pDhi, allocator, stmt->data.sponge, scope );
 	case CK_STMT_ASSERT:
 		stmt->data.assert.expression = s_ValidateExpression( scope, pDhi, allocator, stmt->data.expression );
 		if ( !s_BooleanType(stmt->data.assert.expression->type->id) )
@@ -1013,6 +1013,12 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 				CkDiagnosticThrow( pDhi, stmt->data.while_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
 					"Computed goto requires a void pointer operand." );
 		}
+		break;
+
+	case CK_STMT_RETURN:
+		if ( stmt->data.return_ )
+			stmt->data.return_ =
+				s_ValidateExpression( scope, pDhi, allocator, stmt->data.return_ );
 		break;
 
 	case CK_STMT_SWITCH:

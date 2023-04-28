@@ -207,6 +207,39 @@ static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 	return returned;
 }
 
+static CkStatement *s_ReturnStatement( CkScope *context, CkParserInstance *parser )
+{
+	CkToken token;            // Used for reading tokens
+	CkExpression *returnexpr; // The returned expression (optional)
+	CkStatement *yield;       // Destination statement
+
+	yield = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
+	yield->stmt = CK_STMT_RETURN;
+
+	// return >>;<<
+	CkParserReadToken( parser, &token );
+	if ( token.kind == ';' ) { // void return or return via yield
+		
+		return yield;
+	}
+
+	// return >>expr<< ;
+	CkParserRewind( parser, 1 );
+	returnexpr = CkParserExpression( context, parser );
+
+	// return expr >>;<<
+	CkParserReadToken( parser, &token );
+
+	if ( token.kind != ';' ) {
+		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			"A semicolon ; is expected." );
+		return NULL;
+	}
+
+	yield->data.return_ = returnexpr;
+	return yield;
+}
+
 CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 {
 	CkToken token;
@@ -277,6 +310,9 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 	
 		// For statement
 	case KW_FOR: return s_ForStatement( context, parser );
+
+		// Return statement
+	case KW_RETURN: return s_ReturnStatement( context, parser );
 
 		// Attempts to parse an expression/declaration
 	default:

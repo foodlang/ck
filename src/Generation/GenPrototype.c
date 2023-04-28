@@ -1320,6 +1320,22 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		_InsertLine( sb, "\r.L%zu:", lLead );
 		break;
 	}
+	case CK_STMT_DO_WHILE: {
+		size_t lLoop;
+		size_t exprReg;
+		char *regname;
+
+		lLoop = _local_label_counter++;
+
+		_InsertLine( sb, "\r.L%zu:", lLoop );
+		_GenerateStatement( allocator, sb, stmt->data.doWhile.cWhile );
+		exprReg = _InsertExpression( allocator, sb, stmt->data.doWhile.condition );
+		regname = _RegnameInt( exprReg, stmt->data.doWhile.condition->type->id );
+		_InsertLine( sb, "test\t%s, %s", regname, regname );
+		_InsertLine( sb, "jnz\t.L%zu", lLoop );
+		_FreeIntRegister( exprReg );
+		break;
+	}
 	case CK_STMT_FOR: {
 		size_t lLead;
 		size_t lLoop;
@@ -1342,6 +1358,18 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		_InsertLine( sb, "\r.L%zu:", lLead );
 		break;
 	}
+	case CK_STMT_RETURN:
+		if ( stmt->data.return_ ) {
+			char *rname;
+			char *aname;
+			size_t r = _InsertExpression( allocator, sb, stmt->data.return_ );
+			rname = _RegnameInt( r, stmt->data.return_->type->id );
+			aname = _RegnameInt( ACC, stmt->data.return_->type->id );
+			_InsertLine( sb, "mov\t%s, %s", aname, rname );
+			_FreeIntRegister( r );
+			break;
+		}
+		_InsertLine( sb, "ret" );
 	}
 }
 
