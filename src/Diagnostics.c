@@ -1,5 +1,6 @@
 #include <Diagnostics.h>
 #include <CDebug.h>
+#include <Util/EscapeCodes.h>
 #include <FileIO.h>
 
 #include <malloc.h>
@@ -8,8 +9,8 @@
 #include <stdio.h>
 
 #define MAXDIAGLENGTH                 512
-#define DIAGNOSTICPREFIXFORMAT        "ck: %s issued from (%zu, %zu): "
-#define DIAGNOSTICPREFIXFORMAT_1D     "ck: %s issued from (%zu): "
+#define DIAGNOSTICPREFIXFORMAT        "%s issued from (%zu, %zu): " ESCRESET
+#define DIAGNOSTICPREFIXFORMAT_1D     "%s issued from (%zu): " ESCRESET
 
 void CkDiagnosticHandlerCreateInstance(
 	CkArenaFrame *arena,
@@ -109,13 +110,13 @@ void CkDiagnosticThrow(
 
 	switch ( severity ) {
 	case CK_DIAG_SEVERITY_MESSAGE:
-		severityTxt = "message";
+		severityTxt = ESCB256F CYAN256 "message";
 		break;
 	case CK_DIAG_SEVERITY_WARNING:
-		severityTxt = "warning";
+		severityTxt = ESCB256F YELLOW256 "warning";
 		break;
 	case CK_DIAG_SEVERITY_ERROR:
-		severityTxt = "error";
+		severityTxt = ESCB256F RED256 "error";
 		break;
 	default:
 		abort();
