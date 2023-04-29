@@ -27,10 +27,8 @@ static const CkFoodType *s_TryGetSymbolType( char *symbol, CkScope *context )
 	for ( size_t i = 0; i < funcCount; i++ ) {
 		const CkFunction *pFunc = CkListAccess( context->functionList, i );
 		/*
-			It would be wrong to assume that we want to return type of the
-			function. We actually want its signature, because we have no idea
-			if this is a return type. We simply want to know whats the function's
-			signature.
+			We don't want the return type, we want the signature
+			(contains the return type and each argument's types)
 		*/
 		if ( !strcmp( pFunc->name, symbol ) )
 			return pFunc->signature;
@@ -209,6 +207,12 @@ static bool_t s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkSco
 
 	return FALSE;
 }
+
+static CkExpression *s_ValidateExpression(
+	CkScope *scope,
+	CkDiagnosticHandlerInstance *pDhi,
+	CkArenaFrame *allocator,
+	CkExpression *expression );
 
 static CkExpression *s_ValidateExpressionNC(
 	CkScope *scope,
@@ -938,12 +942,54 @@ static CkExpression *s_ValidateExpressionNC(
 			extra
 		);
 
+		// x(y...)
+	case CK_EXPRESSION_FUNCCALL: {
+		CkExpression *acc;
+		CkFoodType *returnType = left->type->child;
+		CkList *paramsType = (CkList *)left->type->extra;
+		CkList *boundParams = CkListStart( allocator, sizeof( CkExpression * ) );
+		size_t paramsCount = CkListLength( expression->extended_extra );
+		size_t signatureParamsCount = CkListLength( paramsType );
+
+		CK_ASSERT( left );
+		CK_ASSERT( expression->extended_extra );
+
+		if ( paramsCount != signatureParamsCount ) {
+			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				"Invalid function call signature, expected %zu arguments, got %zu",
+				signatureParamsCount, paramsCount );
+		}
+
+		for ( size_t i = 0; i < paramsCount && i < signatureParamsCount; i++ ) {
+			CkExpression *unbound =
+				*(CkExpression **)CkListAccess( (CkList *)expression->extended_extra, i );
+			CkExpression *bound = s_ValidateExpression( scope, pDhi, allocator, unbound );
+			if ( !s_CompatibleTypesCheck(
+				bound->type,
+				*(CkFoodType **)CkListAccess( paramsType, i ),
+				scope ) ) {
+				CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Incompatible type for argument %zu", i
+				);
+			}
+			CkListAdd( boundParams, &bound );
+		}
+
+		acc = CkExpressionCreateUnary(
+			allocator,
+			&expression->token,
+			CK_EXPRESSION_FUNCCALL,
+			returnType,
+			left );
+		acc->extended_extra = boundParams;
+		return acc;
+	}
+
 	case CK_EXPRESSION_DUMMY:
 	case CK_EXPRESSION_NAMEOF:
 	case CK_EXPRESSION_TYPEOF:
 	case CK_EXPRESSION_MEMBER_ACCESS:
 	case CK_EXPRESSION_POINTER_MEMBER_ACCESS:
-	case CK_EXPRESSION_FUNCCALL:
 		printf( "ck internal error: Missing type binder for operator %d.\n", expression->kind );
 		abort();
 	}
@@ -1040,7 +1086,7 @@ static void s_ValidateFunc( CkScope *scope, CkDiagnosticHandlerInstance *pDhi, C
 	CK_ARG_NON_NULL( func );
 	CK_ARG_NON_NULL( func->body );
 	if ( func->body->stmt == CK_STMT_EXPRESSION )
-		func->body->data.expression = s_ValidateExpression( scope, pDhi, allocator, func->body->data.expression );
+		func->body->data.expression = s_ValidateExpression( func->funscope, pDhi, allocator, func->body->data.expression );
 	else s_ValidateBlock( pDhi, allocator, func->body );
 }
 

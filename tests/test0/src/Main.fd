@@ -1,9 +1,10 @@
-public module TestModule
+public static module TestModule
 {
-	public void Test(int a, int b)
+	public int Sum(int a, int b) => a + b;
+
+	public int Main()
 	{
-		int i;
-		for (i = 0; i < 3; i += 1)
-			return;
+		int c = Sum(1, 2);
+		return 0;
 	}
 }

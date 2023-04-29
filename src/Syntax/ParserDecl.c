@@ -52,7 +52,7 @@ bool_t CkParseDecl(
 				return TRUE;
 			}
 			// Duplicate checking
-			if ( bPublic ) {
+			if ( bStatic ) {
 				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 					"Duplicate static exposure qualifier." );
 				return TRUE;
@@ -234,7 +234,7 @@ bool_t CkParseDecl(
 		for ( size_t i = 0; i < paramsLen; i++ ) {
 			CkListAdd(
 				(CkList *)signature->extra,
-				((CkVariable*)CkListAccess( params, i ))->type
+				&((CkVariable*)CkListAccess( params, i ))->type
 			);
 		}
 

@@ -278,6 +278,9 @@ typedef struct CkExpression
 	// Whether the expression is constant or not.
 	bool_t isConstant;
 
+	// Extended extra data (used for function calls)
+	void *extended_extra;
+
 } CkExpression;
 
 #define CK_TYPE_CLASSED_INT(x) ((x) == CK_FOOD_I8 || (x) == CK_FOOD_U8 || (x) == CK_FOOD_I16 || (x) == CK_FOOD_U16 || \

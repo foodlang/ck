@@ -20,13 +20,16 @@ CkFoodType *CkFoodCreateTypeInstance(
 
 CkFoodType *CkFoodCopyTypeInstance( CkArenaFrame *arena, CkFoodType *instance )
 {
+	CkFoodType *yield;
 	CK_ARG_NON_NULL( arena );
 	CK_ARG_NON_NULL( instance );
 
-	return CkFoodCreateTypeInstance(
+	yield = CkFoodCreateTypeInstance(
 		arena,
 		instance->id,
 		instance->qualifiers,
 		instance->child ? CkFoodCopyTypeInstance( arena, instance->child ) : NULL
 	);
+	yield->extra = instance->extra;
+	return yield;
 }

@@ -97,6 +97,9 @@ typedef struct _StackVarDecl
 // The variable declarations on the stack (current func)
 static CkList *_stack_var_decls = NULL;
 
+// Global symbols.
+static CkScope *_glbls = NULL;
+
 // The size of a type (value types only)
 static size_t _SizeOfV( FoodTypeID t )
 {
@@ -254,13 +257,94 @@ static char *_szprefixes[] =
 	/* 8 */ "qword ptr",
 };
 
+// Inserts a function's name.
+static char *_InsertFuncName( CkFunction *pFunc )
+{
+	char* buffer;        // The output buffer
+	size_t bufferLength; // The output buffer's length
+
+	// With module name
+	if ( pFunc->parent->module != NULL ) {
+		bufferLength = snprintf(
+			NULL,
+			0,
+			"%s_%s_%s",
+			pFunc->parent->library->name,
+			pFunc->parent->module->name,
+			pFunc->name );
+		buffer = malloc( bufferLength + 1 );
+		(void)sprintf(
+			buffer,
+			"%s_%s_%s",
+			pFunc->parent->library->name,
+			pFunc->parent->module->name,
+			pFunc->name );
+	} else { // Without module
+		bufferLength = sprintf(
+			NULL,
+			"%s_%s",
+			pFunc->parent->library->name,
+			pFunc->name );
+		buffer = malloc( bufferLength + 1 );
+		(void)sprintf(
+			buffer,
+			"%s_%s",
+			pFunc->parent->library->name,
+			pFunc->name );
+	}
+
+	return buffer;
+}
+
+// Inserts a function's name.
+static char *_InsertVarName( CkVariable *pVar )
+{
+	char* buffer;        // The output buffer
+	size_t bufferLength; // The output buffer's length
+
+	// With module name
+	if ( pVar->parentScope->module != NULL ) {
+		bufferLength = snprintf(
+			NULL,
+			0,
+			"%s_%s_%s",
+			pVar->parentScope->library->name,
+			pVar->parentScope->module->name,
+			pVar->name );
+		buffer = malloc( bufferLength + 1 );
+		(void)sprintf(
+			buffer,
+			"%s_%s_%s",
+			pVar->parentScope->library->name,
+			pVar->parentScope->module->name,
+			pVar->name );
+	} else { // Without module
+		bufferLength = sprintf(
+			NULL,
+			"%s_%s",
+			pVar->parentScope->library->name,
+			pVar->name );
+		buffer = malloc( bufferLength + 1 );
+		(void)sprintf(
+			buffer,
+			"%s_%s",
+			pVar->parentScope->library->name,
+			pVar->name );
+	}
+
+	return buffer;
+}
+
 // Gets a variable reference in the current scope.
 static char *_GetVarReferenceCurrent( CkArenaFrame *allocator, char *name )
 {
 	_StackVarDecl *p_stack_var = NULL;  // Stack var
 	_StaticData   *p_static_var = NULL; // Static var
+	CkScope       *glbl_current_scope;  // Backup of _glbls
 	size_t         stack_decllen;       // Length of the decl stack
 	size_t         static_decllen;      // Length of the static decl list
+	size_t         glbl_varlen;         // Length of the global var list
+	size_t         glbl_funclen;        // Length of the func var list
 	char          *buf;                 // Output buffer
 	size_t         bufsize;             // Ouput buffer size
 	size_t         varsize;             // Size of the variable
@@ -307,20 +391,41 @@ static char *_GetVarReferenceCurrent( CkArenaFrame *allocator, char *name )
 		}
 	}
 
-	if ( !p_static_var ) {
-		fprintf( stderr, "mismatch between generator symbols and binder symbols\n" );
-		abort();
+	if ( p_static_var ) {
+		// TODO: Implement user data types
+		if ( _lea_deref && CK_TYPE_CLASSED_POINTER( p_static_var->type->id ) )
+			varsize = _SizeOfV( p_static_var->type->child->id );
+		else varsize = _SizeOfV( p_static_var->type->id );
+		szprefix = _szprefixes[varsize <= 8 ? varsize : /*invalid*/ 0];
+		bufsize = snprintf( NULL, 0, "%s %s", szprefix, p_static_var->name.cstr );
+		buf = CkArenaAllocate( allocator, bufsize + 1 );
+		sprintf( buf, "%s %s", szprefix, buf );
+		return buf;
 	}
 
-	// TODO: Implement user data types
-	if ( _lea_deref && CK_TYPE_CLASSED_POINTER( p_static_var->type->id ) )
-		varsize = _SizeOfV( p_static_var->type->child->id );
-	else varsize = _SizeOfV( p_static_var->type->id );
-	szprefix = _szprefixes[varsize <= 8 ? varsize : /*invalid*/ 0];
-	bufsize = snprintf( NULL, 0, "%s %s", szprefix, p_static_var->name.cstr );
-	buf = CkArenaAllocate( allocator, bufsize + 1 );
-	sprintf( buf, "%s %s", szprefix, buf );
-	return buf;
+	while ( TRUE ) {
+		// --- Global variables ---
+		glbl_varlen = CkListLength( _glbls->variableList );
+		for ( size_t i = 0; i < glbl_varlen; i++ ) {
+			CkVariable *p_current = CkListAccess( _glbls->variableList, i );
+			if ( !strcmp( p_current->name, name ) )
+				return _InsertVarName( p_current );
+		}
+
+		// --- Global functions --- 
+		glbl_funclen = CkListLength( _glbls->functionList );
+		for ( size_t i = 0; i < glbl_funclen; i++ ) {
+			CkFunction *p_current = CkListAccess( _glbls->functionList, i );
+			if ( !strcmp( p_current->name, name ) )
+				return _InsertFuncName( p_current );
+		}
+		glbl_current_scope = _glbls->parent;
+		if ( glbl_current_scope == NULL )
+			break;
+	}
+
+	fprintf( stderr, "mismatch between generator symbols and binder symbols\n" );
+	abort();
 }
 
 // Inserts static data.
@@ -412,8 +517,8 @@ static void _ExtendRegister( CkStrBuilder *sb, size_t r, FoodTypeID original, Fo
 	sourcename = _RegnameInt( r, original );
 	resultname = _RegnameInt( r, result );
 
-	if ( !_Unsigned( result ) ) _InsertLine( sb, "movsx %s, %s", resultname, sourcename );
-	else _InsertLine( sb, "movzx %s, %s", resultname, sourcename );
+	if ( !_Unsigned( result ) ) _InsertLine( sb, "movsx\t%s, %s", resultname, sourcename );
+	else _InsertLine( sb, "movzx\t%s, %s", resultname, sourcename );
 }
 
 // Pushes all used registers.
@@ -421,7 +526,7 @@ static void _ExtendRegister( CkStrBuilder *sb, size_t r, FoodTypeID original, Fo
 static void _SaveRegs( CkStrBuilder *sb )
 {
 	for ( size_t i = 0; i < sizeof( _regint_table ) / sizeof( _Register ); i++ )
-		if ( _regint_table[i].free ) _InsertLine( sb, "push %s", _regint_table[i].name64 );
+		if ( _regint_table[i].free ) _InsertLine( sb, "push\t%s", _regint_table[i].name64 );
 }
 
 // Loads all used registers.
@@ -429,7 +534,7 @@ static void _SaveRegs( CkStrBuilder *sb )
 static void _LoadRegs( CkStrBuilder *sb )
 {
 	for ( size_t i = 0; i < sizeof( _regint_table ) / sizeof( _Register ); i++ )
-		if ( _regint_table[i].free ) _InsertLine( sb, "pop %s", _regint_table[i].name64 );
+		if ( _regint_table[i].free ) _InsertLine( sb, "pop\t%s", _regint_table[i].name64 );
 }
 
 #define IS_CONDITION(x) ((x) == CK_EXPRESSION_EQUAL \
@@ -1252,6 +1357,37 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		}
 		break;
 	}
+	case CK_EXPRESSION_FUNCCALL: {
+		char *leftname;
+		char *accname;
+		char *leftname_result;
+		size_t param_count;
+
+		leftname = _RegnameInt( left, CK_FOOD_FUNCPOINTER );
+		leftname_result = _RegnameInt( left, expr->type->id );
+		accname = _RegnameInt( ACC, expr->type->id );
+		param_count = CkListLength( (CkList *)expr->extended_extra );
+		// Pushing arguments
+		if ( param_count != 0 )
+		for ( size_t i = param_count; i-- > 0; ) {
+			CkExpression *p_current =
+				*(CkExpression **)CkListAccess( (CkList *)expr->extended_extra, i );
+			size_t param_reg = _InsertExpression( allocator, sb, p_current );
+			_InsertLine( sb, "push\t%s", _RegnameInt( param_reg, p_current->type->id ) );
+			_FreeIntRegister( param_reg );
+		}
+		_InsertLine( sb, "call\t%s", leftname );
+		_InsertLine( sb, "mov\t%s, %s", leftname_result, accname );
+		// Popping arguments
+		if ( param_count != 0 )
+		for ( size_t i = param_count; i-- > 0; ) {
+			CkExpression *p_current =
+				*(CkExpression **)CkListAccess( (CkList *)expr->extended_extra, i );
+			_InsertLine( sb, "pop\t%s", _RegnameInt( ACC, p_current->type->id ) );
+		}
+		out = left;
+		break;
+	}
 	case CK_EXPRESSION_COMPOUND_LITERAL: _FreeIntRegister( right ); break;
 	default:
 		_InsertLine( sb, "; unsupported expression %d", expr->kind );
@@ -1264,7 +1400,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 }
 
 // Generates a statement.
-static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkStatement* stmt )
+static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkStatement* stmt, bool_t vars )
 {
 	switch ( stmt->stmt ) {
 	case CK_STMT_EMPTY: break;
@@ -1273,7 +1409,7 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		size_t stmtCount = CkListLength( stmt->data.block.stmts );
 		for ( size_t i = 0; i < stmtCount; i++ ) {
 			CkStatement* cstmt = *(CkStatement**)CkListAccess( stmt->data.block.stmts, i );
-			_GenerateStatement( allocator, sb, cstmt );
+			_GenerateStatement( allocator, sb, cstmt, vars );
 		}
 		break;
 	}
@@ -1291,11 +1427,11 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		_InsertLine( sb, "test\t%s, %s", regname, regname );
 		_InsertLine( sb, "jz\t.L%zu", lElse != 0 ? lElse : lLead );
 		_FreeIntRegister( exprReg );
-		_GenerateStatement( allocator, sb, stmt->data.if_.cThen );
+		_GenerateStatement( allocator, sb, stmt->data.if_.cThen, vars );
 		if ( stmt->data.if_.cElse != NULL ) {
 			_InsertLine( sb, "goto\t.L%zu", lLead );
 			_InsertLine( sb, "\r.L%zu:", lElse );
-			_GenerateStatement( allocator, sb, stmt->data.if_.cElse );
+			_GenerateStatement( allocator, sb, stmt->data.if_.cElse, vars );
 		}
 		_InsertLine( sb, "\r.L%zu:", lLead );
 		break;
@@ -1315,7 +1451,7 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		_InsertLine( sb, "test\t%s, %s", regname, regname );
 		_InsertLine( sb, "jz\t.L%zu", lLead );
 		_FreeIntRegister( exprReg );
-		_GenerateStatement( allocator, sb, stmt->data.while_.cWhile );
+		_GenerateStatement( allocator, sb, stmt->data.while_.cWhile, vars );
 		_InsertLine( sb, "goto\t.L%zu", lLoop );
 		_InsertLine( sb, "\r.L%zu:", lLead );
 		break;
@@ -1328,7 +1464,7 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		lLoop = _local_label_counter++;
 
 		_InsertLine( sb, "\r.L%zu:", lLoop );
-		_GenerateStatement( allocator, sb, stmt->data.doWhile.cWhile );
+		_GenerateStatement( allocator, sb, stmt->data.doWhile.cWhile, vars );
 		exprReg = _InsertExpression( allocator, sb, stmt->data.doWhile.condition );
 		regname = _RegnameInt( exprReg, stmt->data.doWhile.condition->type->id );
 		_InsertLine( sb, "test\t%s, %s", regname, regname );
@@ -1345,14 +1481,14 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 		lLoop = _local_label_counter++;
 		lLead = _local_label_counter++;
 
-		_GenerateStatement( allocator, sb, stmt->data.for_.cInit );
+		_GenerateStatement( allocator, sb, stmt->data.for_.cInit, vars );
 		_InsertLine( sb, "\r.L%zu:", lLoop );
 		exprReg = _InsertExpression( allocator, sb, stmt->data.for_.condition );
 		regname = _RegnameInt( exprReg, stmt->data.for_.condition->type->id );
 		_InsertLine( sb, "test\t%s, %s", regname, regname );
 		_InsertLine( sb, "jz\t.L%zu", lLead );
 		_FreeIntRegister( exprReg );
-		_GenerateStatement( allocator, sb, stmt->data.for_.body );
+		_GenerateStatement( allocator, sb, stmt->data.for_.body, vars );
 		_FreeIntRegister( _InsertExpression( allocator, sb, stmt->data.for_.lead ) );
 		_InsertLine( sb, "goto\t.L%zu", lLoop );
 		_InsertLine( sb, "\r.L%zu:", lLead );
@@ -1367,9 +1503,11 @@ static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkSta
 			aname = _RegnameInt( ACC, stmt->data.return_->type->id );
 			_InsertLine( sb, "mov\t%s, %s", aname, rname );
 			_FreeIntRegister( r );
-			break;
 		}
+		if ( vars )
+			_InsertLine( sb, "pop\trbp" );
 		_InsertLine( sb, "ret" );
+		break;
 	}
 }
 
@@ -1393,47 +1531,6 @@ static uint32_t _InsertLocalLabel( CkStrBuilder* sb )
 
 	// Returning current label
 	return _local_label_counter++;
-}
-
-// Inserts a function's name.
-static void _InsertFuncName( CkStrBuilder* sb, CkFunction* pFunc )
-{
-	char* buffer;        // The output buffer
-	size_t bufferLength; // The output buffer's length
-
-	// With module name
-	if ( pFunc->parent->module != NULL ) {
-		bufferLength = snprintf(
-			NULL,
-			0,
-			"%s_%s_%s",
-			pFunc->parent->library->name,
-			pFunc->parent->module->name,
-			pFunc->name );
-		buffer = malloc( bufferLength + 1 );
-		(void)sprintf(
-			buffer,
-			"%s_%s_%s",
-			pFunc->parent->library->name,
-			pFunc->parent->module->name,
-			pFunc->name );
-	} else { // Without module
-		bufferLength = sprintf(
-			NULL,
-			"%s_%s",
-			pFunc->parent->library->name,
-			pFunc->name );
-		buffer = malloc( bufferLength + 1 );
-		(void)sprintf(
-			buffer,
-			"%s_%s",
-			pFunc->parent->library->name,
-			pFunc->name );
-	}
-
-	// Outputting
-	CkStrBuilderAppendString( sb, buffer );
-	free( buffer );
 }
 
 #define X86_64_ALIGN 16
@@ -1476,17 +1573,13 @@ static size_t _SizeOfScope( CkScope *scope )
 static void _InsertFunction( CkArenaFrame *allocator, CkStrBuilder* sb, CkFunction* pFunc )
 {
 	size_t stack_size = 0;     // The size of the stack to reserve.
+	char *fname = _InsertFuncName( pFunc );
 
 	// --- Insert function header ---
 
-	if ( pFunc->bPublic ) {
-		CkStrBuilderAppendString( sb, "global " );
-		_InsertFuncName( sb, pFunc );
-		CkStrBuilderAppendChar( sb, '\n' );
-	}
-
-	_InsertFuncName( sb, pFunc );
-	CkStrBuilderAppendString( sb, ":\n" );
+	if ( pFunc->bPublic )
+		_InsertLine( sb, "\rglobal %s", fname );
+	_InsertLine( sb, "\r%s:", fname );
 
 	// --- Variables ---
 	if (!_stack_var_decls)
@@ -1500,24 +1593,40 @@ static void _InsertFunction( CkArenaFrame *allocator, CkStrBuilder* sb, CkFuncti
 	}
 
 	// --- Insert function body ---
-	_GenerateStatement( allocator, sb, pFunc->body );
+	if ( pFunc->body->stmt == CK_STMT_EXPRESSION ) {
+		char *accname;
+		char *rname;
+		size_t r = _InsertExpression( allocator, sb, pFunc->body->data.expression );
+		rname = _RegnameInt( r, pFunc->body->data.expression->type->id );
+		accname = _RegnameInt( ACC, pFunc->body->data.expression->type->id );
+		_InsertLine( sb, "mov\t%s, %s", accname, rname );
+		_InsertLine( sb, "ret" );
+		_FreeIntRegister( r );
+	}
+	else {
+		_GenerateStatement( allocator, sb, pFunc->body, stack_size != 0 );
+		_InsertLine( sb, "; default return" );
+		if ( stack_size != 0 )
+			_InsertLine( sb, "pop\trbp" );
+		_InsertLine( sb, "ret" );
+	}
 
 	CkListClear( _stack_var_decls );
-	_InsertLine( sb, "" );
-	if ( stack_size != 0 )
-		_InsertLine( sb, "pop\trbp" );
-	_InsertLine( sb, "ret\t; default return" );
 }
 
 // Inserts a new module.
 static void _InsertModule( CkArenaFrame *allocator, CkStrBuilder* sb, CkModule* module )
 {
 	size_t funcCount;
+	CkScope *oldGlbl;
 	_InsertLine( sb, "\r; Module %s::%s", module->scope->library->name, module->name );
 
 	funcCount = CkListLength( module->scope->functionList );
+	oldGlbl = module->scope;
+	_glbls = module->scope;
 	for ( size_t i = 0; i < funcCount; i++ )
 		_InsertFunction( allocator, sb, CkListAccess( module->scope->functionList, i ) );
+	_glbls = oldGlbl;
 }
 
 char* CkGenProgram_Prototype(
@@ -1545,6 +1654,7 @@ char* CkGenProgram_Prototype(
 		CkLibrary* lib = *(CkLibrary**)CkListAccess( libraries, i );
 
 		_InsertLine( &outsb, "\r; Library %s", lib->name );
+		_glbls = lib->scope;
 
 		// Global functions
 		glblFuncCount = CkListLength( lib->scope->functionList );
@@ -1603,7 +1713,7 @@ char* CkGenProgram_Prototype(
 			}
 		}
 	}
-	
+
 	// --- Copying output to arena allocated memory ---
 	out = CkArenaAllocate( allocator, outsb.length + 1 );
 	strcpy( out, outsb.base );

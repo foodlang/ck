@@ -291,6 +291,9 @@ static CkExpression *s_ParsePrimaryExpression( CkScope* scope, CkParserInstance 
 	}
 }
 
+// Parses a conditional expression.
+static CkExpression *s_ParseConditional( CkScope* scope, CkParserInstance *parser );
+
 // Parses access, postfix increment and decrement operators.
 static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 {
@@ -332,11 +335,49 @@ static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 
 			// Array subscript
 		case '[':
-			acc = CkExpressionCreateBinary( parser->arena, &token, CK_EXPRESSION_SUBSCRIPT, NULL, acc, CkParserExpression( scope, parser ) );
+			acc = CkExpressionCreateBinary(
+				parser->arena,
+				&token,
+				CK_EXPRESSION_SUBSCRIPT,
+				NULL,
+				acc,
+				CkParserExpression( scope, parser ) );
 			CkParserReadToken( parser, &token );
 			if ( token.kind != ']' ) {
 				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
 					"Missing closing bracket in array subscript operation." );
+			}
+			break;
+
+			// Function call
+		case '(':
+			acc = CkExpressionCreateUnary(
+				parser->arena,
+				&token,
+				CK_EXPRESSION_FUNCCALL,
+				NULL,
+				acc );
+			acc->extended_extra = CkListStart( parser->arena, sizeof( CkExpression * ) );
+			// Arguments
+			while ( TRUE ) {
+				CkExpression *param;
+				CkParserReadToken( parser, &token );
+				if ( token.kind == ')' ) break;
+				else if ( token.kind == 0 ) {
+					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+						"Missing closing bracket in function call." );
+					break;
+				}
+				CkParserRewind( parser, 1 );
+				param = s_ParseConditional( scope, parser );
+				CkListAdd( (CkList *)acc->extended_extra, &param );
+				CkParserReadToken( parser, &token );
+				if ( token.kind == ')' ) CkParserRewind( parser, 1 );
+				else if ( token.kind == ',' ) continue;
+				else {
+					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+						"Expecting a colon , or a closing bracket" );
+				}
 			}
 			break;
 
