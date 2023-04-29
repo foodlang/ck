@@ -280,8 +280,9 @@ static char *_InsertFuncName( CkFunction *pFunc )
 			pFunc->parent->module->name,
 			pFunc->name );
 	} else { // Without module
-		bufferLength = sprintf(
+		bufferLength = snprintf(
 			NULL,
+			0,
 			"%s_%s",
 			pFunc->parent->library->name,
 			pFunc->name );

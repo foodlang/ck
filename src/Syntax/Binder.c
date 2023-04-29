@@ -719,10 +719,12 @@ static CkExpression *s_ValidateExpressionNC(
 					"Two references cannot be compared if they don't have the same subtype. "
 					"If you wish to compare two references that don't have the same subtype, use pointers." );
 			}
-		} else if ( (CK_TYPE_CLASSED_INTFLOAT( left->type->id ) || CK_TYPE_CLASSED_POINTER( left->type->id ))
-			&& (CK_TYPE_CLASSED_INTFLOAT( right->type->id ) || CK_TYPE_CLASSED_POINTER( left->type->id )) ) {
+		} else if ( !(left->type->id == right->type->id
+			|| CK_TYPE_CLASSED_INTFLOAT(left->type->id ) == CK_TYPE_CLASSED_INTFLOAT(right->type->id )
+			|| CK_TYPE_CLASSED_POINTER(left->type->id ) == CK_TYPE_CLASSED_POINTER(right->type->id)) ) {
 			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
-				"Equality comparison requires two identical types for user-types, or two arithmetic types or pointers." );
+				"Equality comparison requires two identical types for user-types, or two arithmetic types or pointers. %i, %i",
+				left->type->id, right->type->id );
 		}
 
 		return CkExpressionCreateBinary(

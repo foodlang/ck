@@ -1,10 +1,19 @@
 public static module TestModule
 {
-	public int Sum(int a, int b) => a + b;
+	
+}
 
-	public int Main()
-	{
-		int c = Sum(1, 2);
-		return 0;
-	}
+public int Sum(int a, int b) => a + b;
+
+public u64 Factorial(u64 n)
+{
+	if (n == 0) return 1;
+	if (n <= 2) return n;
+	return n * Factorial(n - 1);
+}
+
+public int Main()
+{
+	int c = Sum(1, 2);
+	return 0;
 }

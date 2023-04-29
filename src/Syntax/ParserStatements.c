@@ -264,7 +264,8 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 		block->data.block.scope = CkStartScope(
 			parser->genArena, context,
 			TRUE,
-			context == context->library->scope || context->module->scope == context ? TRUE : FALSE
+			context == context->library->scope
+			|| (context->module ? context->module->scope == context : FALSE) ? TRUE : FALSE
 		);
 		block->data.block.stmts = CkListStart( parser->genArena, sizeof( CkStatement * ) );
 		while ( TRUE ) {
