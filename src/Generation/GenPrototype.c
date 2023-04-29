@@ -568,7 +568,9 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			&& !(expr->kind == CK_EXPRESSION_DEREFERENCE
 				&& expr->left->kind == CK_EXPRESSION_IDENTIFIER) ) {
 			left = _InsertExpression( allocator, sb, expr->left );
-			if ( expr->type->id != CK_FOOD_VOID && !IS_CONDITION(expr->kind) ) // Discard
+			if ( expr->type->id != CK_FOOD_VOID
+				&& !IS_CONDITION(expr->kind)
+				&& expr->kind != CK_EXPRESSION_FUNCCALL ) // Discard
 				_ExtendRegister( sb, left, expr->left->type->id, expr->type->id );
 		}
 	}
