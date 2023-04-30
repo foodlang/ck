@@ -11,6 +11,7 @@
 
 #ifndef CK_GEN_COMMON_H_
 #define CK_GEN_COMMON_H_
+#ifdef SKIP
 
 #include "../Memory/List.h"
 #include "../IL/FFStruct.h"
@@ -31,4 +32,5 @@ char *CkGenProgram(
 	lua_State *script                  // The Lua state used as a gen script
 	);
 
+#endif
 #endif

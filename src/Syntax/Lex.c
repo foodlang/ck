@@ -603,6 +603,11 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 			if ( cur == '\\' ) {
 				lexer->cursor++;
 				(void)s_escapeSequence( lexer );
+			} else if ( cur == '\n' ) { // Newline not allowed
+				token->position = base;
+				token->kind = 'S';
+				lexer->cursor++;
+				return FALSE;
 			}
 			lexer->cursor++;
 			length++;

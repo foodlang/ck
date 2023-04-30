@@ -44,13 +44,25 @@ void CkDriverCompile(
 	CkDiagnosticHandlerCreateInstance( threadArena, pDhi, &lexer );
 	while ( TRUE ) {
 		if ( !CkLexReadToken( &lexer, &current ) ) {
-			CkDiagnosticThrow( pDhi, current.position, CK_DIAG_SEVERITY_ERROR, "",
-				"Failed to parse token (%c)\n", (char)current.kind );
+			if ( current.kind == 'S' ) {
+				CkDiagnosticThrow( pDhi, current.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Newline is not allowed in string literal" );
+			} else {
+				CkDiagnosticThrow( pDhi, current.position, CK_DIAG_SEVERITY_ERROR, "",
+					"Failed to parse token '%c'", (char)current.kind );
+			}
 			result->successful = FALSE;
 		}
 		if ( !current.kind )
 			break;
 		CkListAdd( tokenList, &current );
+	}
+
+	if ( !result->successful ) {
+		CkDiagnosticThrow( pDhi, current.position, CK_DIAG_SEVERITY_MESSAGE, "",
+			"Parsing will not be performed if the tokenizer or preprocessor have failed in any capacity.", (char)current.kind );
+		CkLexDestroyInstance( &lexer );
+		return;
 	}
 
 	// 4. Parsing

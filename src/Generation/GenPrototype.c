@@ -1691,24 +1691,24 @@ char* CkGenProgram_Prototype(
 			case CK_FOOD_I8:
 			case CK_FOOD_U8:
 			case CK_FOOD_BOOL:
-				_InsertLine( &outsb, "db %hhu", *(uint8_t *)sd->data );
+				_InsertLine( &outsb, "db\t%hhu", *(uint8_t *)sd->data );
 				break;
 			case CK_FOOD_I16:
 			case CK_FOOD_U16:
-				_InsertLine( &outsb, "dw %hu", *(uint16_t *)sd->data );
+				_InsertLine( &outsb, "dw\t%hu", *(uint16_t *)sd->data );
 				break;
 			case CK_FOOD_I32:
 			case CK_FOOD_U32:
 			case CK_FOOD_ENUM:
-				_InsertLine( &outsb, "dd %u", *(uint32_t *)sd->data );
+				_InsertLine( &outsb, "dd\t%u", *(uint32_t *)sd->data );
 				break;
 			case CK_FOOD_I64:
 			case CK_FOOD_U64:
 			case CK_FOOD_POINTER:
-				_InsertLine( &outsb, "dq %llu", *(uint64_t *)sd->data );
+				_InsertLine( &outsb, "dq\t%llu", *(uint64_t *)sd->data );
 				break;
 			case CK_FOOD_STRING:
-				_InsertLine( &outsb, "db \"%s\"", (char *)sd->data );
+				_InsertLine( &outsb, "db\t\"%s\"", (char *)sd->data );
 				break;
 			default:
 				_InsertLine( &outsb, "; unsupported literal %u", sd->type->id );

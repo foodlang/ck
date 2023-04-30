@@ -98,4 +98,4 @@ project "ck"
 	links { "cJSON", "cwalk", "lua" }
 
 	-- Copying Lua helper code to bin directory
-	postbuildcommands { "{COPYDIR} luasrc bin/" }
+	postbuildcommands { "{COPYDIR} lapi bin/" }
