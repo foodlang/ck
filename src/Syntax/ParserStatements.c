@@ -19,7 +19,7 @@ static CkStatement *s_IfStatement( CkScope *context, CkParserInstance *parser )
 	// if >>>(<<< condition ) stmt
 	CkParserReadToken( parser, &token );
 	if ( token.kind != '(' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of an if statement must be wrapped inside brackets." );
 		return NULL;
 	}
@@ -27,7 +27,7 @@ static CkStatement *s_IfStatement( CkScope *context, CkParserInstance *parser )
 	// if ( >>>condition<<< ) stmt
 	condition = s_ParseExpr( context, parser );
 	if ( !condition ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of an if statement must be an expression." );
 		return NULL;
 	}
@@ -35,7 +35,7 @@ static CkStatement *s_IfStatement( CkScope *context, CkParserInstance *parser )
 	// if ( condition >>>)<<< stmt
 	CkParserReadToken( parser, &token );
 	if ( token.kind != ')' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of an if statement must be wrapped inside brackets." );
 		return NULL;
 	}
@@ -66,7 +66,7 @@ static CkStatement *s_WhileStatement( CkScope *context, CkParserInstance *parser
 	// while >>>(<<< condition ) stmt
 	CkParserReadToken( parser, &token );
 	if ( token.kind != '(' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of a while statement must be wrapped inside brackets." );
 		return NULL;
 	}
@@ -74,7 +74,7 @@ static CkStatement *s_WhileStatement( CkScope *context, CkParserInstance *parser
 	// while ( >>>condition<<< ) stmt
 	condition = s_ParseExpr( context, parser );
 	if ( !condition ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of a while statement must be an expression." );
 		return NULL;
 	}
@@ -82,7 +82,7 @@ static CkStatement *s_WhileStatement( CkScope *context, CkParserInstance *parser
 	// while ( condition >>>)<<< stmt
 	CkParserReadToken( parser, &token );
 	if ( token.kind != ')' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"The condition of a while statement must be wrapped inside brackets." );
 		return NULL;
 	}
@@ -109,7 +109,7 @@ static CkStatement *s_DoWhileStatement( CkScope *context, CkParserInstance *pars
 	// do stmt >>>while<<< ( condition ) ;
 	CkParserReadToken( parser, &token );
 	if ( token.kind != KW_WHILE ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"The while keyword is expected, as a do ... while statement was started." );
 		return NULL;
 	}
@@ -117,7 +117,7 @@ static CkStatement *s_DoWhileStatement( CkScope *context, CkParserInstance *pars
 	// do stmt while >>>(<<< condition ) ;
 	CkParserReadToken( parser, &token );
 	if ( token.kind != '(' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"A opening bracket ( is expected after the while keyword in the do ... while statement." );
 		return NULL;
 	}
@@ -128,7 +128,7 @@ static CkStatement *s_DoWhileStatement( CkScope *context, CkParserInstance *pars
 	// do stmt while ( condition >>>)<<< ;
 	CkParserReadToken( parser, &token );
 	if ( token.kind != ')' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"A closing bracket ) is expected after the condition in the do ... while statement." );
 		return NULL;
 	}
@@ -136,7 +136,7 @@ static CkStatement *s_DoWhileStatement( CkScope *context, CkParserInstance *pars
 	// do stmt while ( condition ) >>>;<<<
 	CkParserReadToken( parser, &token );
 	if ( token.kind != ';' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"A semicolon is expected at the end of the do ... while statement." );
 		return NULL;
 	}
@@ -162,7 +162,7 @@ static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 	// for >>>(<<< init ; condition ; lead ) block
 	CkParserReadToken( parser, &token );
 	if ( token.kind != '(' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"A opening bracket ( is expected after the for keyword in the for statement." );
 		return NULL;
 	}
@@ -177,7 +177,7 @@ static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 	// for ( init ; condition >>>;<<< lead ) block
 	CkParserReadToken( parser, &token );
 	if ( token.kind != ';' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"A semicolon ; is expected after the condition expression in the for statement." );
 		return NULL;
 	}
@@ -188,7 +188,7 @@ static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 	// for ( init ; condition ; lead >>>)<<< block
 	CkParserReadToken( parser, &token );
 	if ( token.kind != ')' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"A closing bracket ) is expected after the lead expression in the for statement." );
 		return NULL;
 	}
@@ -231,7 +231,7 @@ static CkStatement *s_ReturnStatement( CkScope *context, CkParserInstance *parse
 	CkParserReadToken( parser, &token );
 
 	if ( token.kind != ';' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"A semicolon ; is expected." );
 		return NULL;
 	}
@@ -326,13 +326,13 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 
 		// Expressions
 		if ( !expr ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Unknown statement." );
 			return NULL;
 		}
 		CkParserReadToken( parser, &token );
 		if ( token.kind != ';' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Expected semicolon at end of statement." );
 			return NULL;
 		}

@@ -1,0 +1,1 @@
+bin\ck tests\test0

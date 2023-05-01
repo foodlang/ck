@@ -1,0 +1,16 @@
+void _TestInternalFunction(int a, void* b) {}
+void _TestInternalProcedure() {}
+
+public int PublicFunction(int a, int b) => a + b;
+public void PublicFunction2(int a, int b)
+{
+	if (a < b)
+		return;
+}
+
+static module _PrivateStaticModule
+{
+	public void ExposedStaticFunction() {}
+
+	void _InternalStaticModuleFunction(int d) { 3 + 2; }
+}

@@ -217,7 +217,7 @@ static CkExpression *s_ParsePrimaryExpression( CkScope* scope, CkParserInstance 
 		CkExpression *expr = CkParserExpression( scope, parser );
 		CkParserReadToken( parser, &token );
 		if ( token.kind != ')' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing closing bracket in parenthesized expression." );
 		}
 		return expr;
@@ -229,17 +229,17 @@ static CkExpression *s_ParsePrimaryExpression( CkScope* scope, CkParserInstance 
 		CkToken exprToken = token;
 		CkParserReadToken( parser, &token );
 		if ( token.kind != '(' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing opening bracket in sizeof() operator." );
 		}
 		type = CkParserType( scope, parser );
 		if ( !type ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"The operand of sizeof() must a type." );
 		}
 		CkParserReadToken( parser, &token );
 		if ( token.kind != ')' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing closing bracket in sizeof() operator." );
 		}
 		return CkExpressionCreateUnary(
@@ -256,17 +256,17 @@ static CkExpression *s_ParsePrimaryExpression( CkScope* scope, CkParserInstance 
 		CkToken exprToken = token;
 		CkParserReadToken( parser, &token );
 		if ( token.kind != '(' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing opening bracket in alignof() operator." );
 		}
 		type = CkParserType( scope, parser );
 		if ( !type ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"The operand of alignof() must a type." );
 		}
 		CkParserReadToken( parser, &token );
 		if ( token.kind != ')' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing closing bracket in alignof() operator." );
 		}
 		return CkExpressionCreateUnary(
@@ -279,7 +279,7 @@ static CkExpression *s_ParsePrimaryExpression( CkScope* scope, CkParserInstance 
 
 	// Anything that isn't an expression but is passed as an expression.
 	default:
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"An expression was expected in this context." );
 
 		return CkExpressionCreateLiteral(
@@ -344,7 +344,7 @@ static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 				CkParserExpression( scope, parser ) );
 			CkParserReadToken( parser, &token );
 			if ( token.kind != ']' ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Missing closing bracket in array subscript operation." );
 			}
 			break;
@@ -364,7 +364,7 @@ static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 				CkParserReadToken( parser, &token );
 				if ( token.kind == ')' ) break;
 				else if ( token.kind == 0 ) {
-					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 						"Missing closing bracket in function call." );
 					break;
 				}
@@ -375,7 +375,7 @@ static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 				if ( token.kind == ')' ) CkParserRewind( parser, 1 );
 				else if ( token.kind == ',' ) continue;
 				else {
-					CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+					CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 						"Expecting a colon , or a closing bracket" );
 				}
 			}
@@ -448,7 +448,7 @@ static CkExpression *s_ParseLevel2( CkScope *scope, CkParserInstance *parser )
 		}
 		CkParserReadToken( parser, &token );
 		if ( token.kind != ')' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Missing closing bracket in C-style cast." );
 		}
 		accumulator = CkExpressionCreateBinary(
@@ -505,7 +505,7 @@ static CkExpression *s_ParseFoodCast( CkScope* scope, CkParserInstance *parser )
 	while ( op.kind == CKTOK2( '=', '>' ) ) {
 		CkFoodType *t = CkParserType( scope, parser );
 		if ( t == NULL ) {
-			CkDiagnosticThrow( parser->pDhi, op.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &op, CK_DIAG_SEVERITY_ERROR, "",
 				"Expected a type in Food-style cast." );
 		}
 		acc = CkExpressionCreateBinary( parser->arena, &op, CK_EXPRESSION_FOOD_CAST, NULL, acc, CkExpressionCreateType( parser->arena, t ) );
@@ -536,7 +536,7 @@ static CkExpression *s_ParseConditional( CkScope* scope, CkParserInstance *parse
 	left = s_ParseConditional( scope, parser );
 	CkParserReadToken( parser, &token );
 	if ( token.kind != ':' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"Expected colon in conditional expression." );
 	}
 	right = s_ParseConditional( scope, parser );

@@ -1,0 +1,18 @@
+{
+    "name": "TestSuite",
+    "sourceDirectory": "src/",
+    "objectDirectory": "obj/",
+    "outputDirectory": "bin/",
+
+    "binaryType": 1,
+    "platform": "universal",
+    "system": "universal",
+
+    "warningsAsErrors": false,
+    "debug": true,
+    "optimizationLevel": 1,
+    "sources": [ "FunctionDecl.fd" ],
+    "libraries": [],
+
+    "profiles": []
+}

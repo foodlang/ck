@@ -14,22 +14,15 @@
 #define CK_LEX_H_
 
 #include <Types.h>
+#include <FileIO.h>
 #include <Memory/Arena.h>
 
 // Stores the state of a lexer.
 typedef struct CkLexInstance
 {
-	// The source buffer of the lexer.
-	char *source;
-
-	// The length of the source buffer.
-	size_t sourceLength;
-
-	// The current position of the lexer in the source buffer.
-	size_t cursor;
-
-	// The arena used for allocations.
-	CkArenaFrame *arena;
+	CkSource *source;    // The source buffer of the lexer.
+	size_t cursor;       // The current position of the lexer in the source buffer.
+	CkArenaFrame *arena; // The arena used for allocations.
 
 } CkLexInstance;
 
@@ -107,7 +100,7 @@ typedef enum CkKeyword
 #define CKTOK4(a, b, c, d) (uint64_t)((a) << 24 | (b) << 16 | (c) << 8 | (d))
 
 // Creates a new lexer instance.
-void CkLexCreateInstance(CkArenaFrame *arena, CkLexInstance *dest, char *source);
+void CkLexCreateInstance(CkArenaFrame *arena, CkLexInstance *dest, CkSource *source);
 
 // Reads a token from the lexer source code.
 bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *dest);

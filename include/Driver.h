@@ -27,7 +27,7 @@ typedef struct CkDriverStartupConfiguration
 	char *name;
 
 	// The source code.
-	char *source;
+	CkSource *source;
 
 	// If true, warnings act as errors (prevent compilation).
 	bool_t wError;

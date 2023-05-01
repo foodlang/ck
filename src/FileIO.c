@@ -5,24 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#define universal_fseek(f, c, o) _fseeki64_nolock(f, c, o)
-#define universal_ftell(f) _ftelli64_nolock(f)
-#define universal_fread(b, z, n, f) _fread_nolock(b, z, n, f)
-#define universal_fclose(f) _fclose_nolock(f)
-typedef size_t off_t;
-#else
-#define universal_fseek(f, c, o) fseek(f, c, o)
-#define universal_ftell(f) ftell(f)
-#define universal_fread(b, z, n, f) fread(b, z, n, f)
-#define universal_fclose(f) fclose(f)
-#endif
-
-char *CkReadFileContents( CkArenaFrame *arena, const char *path )
+CkSource *CkReadFileContents( CkArenaFrame *arena, const char *path )
 {
 	FILE *fileStruct;
 	register off_t fileLength;
 	register char *cstrBuffer;
+	register CkSource *src;
 
 	CK_ARG_NON_NULL( arena );
 	CK_ARG_NON_NULL( path );
@@ -45,7 +33,11 @@ char *CkReadFileContents( CkArenaFrame *arena, const char *path )
 	cstrBuffer[fileLength] = 0;
 	universal_fclose( fileStruct );
 
-	return cstrBuffer;
+	src = CkArenaAllocate( arena, sizeof( CkSource ) );
+	src->filename = CkStrDup(arena, (char *)path);
+	src->len = fileLength;
+	src->code = cstrBuffer;
+	return src;
 }
 
 void CkGetRowColString( const char *string, size_t pos, size_t *pRow, size_t *pCol )
@@ -78,4 +70,52 @@ char *CkStrDup( CkArenaFrame *allocator, char *src )
 	buf = CkArenaAllocate( allocator, len + 1 );
 	strcpy( buf, src );
 	return buf;
+}
+
+char **CkGetLinesFreeable( char *str, size_t *lnum )
+{
+	size_t str_len;
+	size_t max_row;
+	size_t max_col;
+	size_t str_pos;
+	char **array;
+
+	CK_ARG_NON_NULL( str );
+	CK_ARG_NON_NULL( lnum );
+
+	str_len = strlen( str );
+	CkGetRowColString( str, str_len - 1, &max_row, &max_col );
+	array = malloc( max_row * sizeof(char *) );
+	*lnum = max_row;
+	str_pos = 0;
+	for ( size_t i = 0; i < max_row; i++ ) {
+		char *lbuffer;
+		size_t lbuffer_len = 0;
+		char *cline_base = str + str_pos;
+		char *cline_c = cline_base;
+
+		char c = *cline_c;
+		while ( TRUE ) {
+			c = *(cline_c++);
+
+			if ( !(c != '\n' && c != 0) )
+				break;
+
+			lbuffer_len++;
+		}
+
+		lbuffer = malloc( lbuffer_len + 1 );
+		memcpy( lbuffer, cline_base, lbuffer_len );
+		lbuffer[lbuffer_len] = 0;
+		array[i] = lbuffer;
+		str_pos += lbuffer_len + 1;
+	}
+	return array;
+}
+
+void CkFreeLines( char **lines, size_t lnum )
+{
+	for ( size_t i = 0; i < lnum; i++ )
+		free( lines[i] );
+	free( lines );
 }

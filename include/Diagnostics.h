@@ -37,11 +37,11 @@ typedef enum CkDiagnosticSeverity
 // Stores essential data about a thrown diagnostic.
 typedef struct CkThrownDiagnostic
 {
-	// The message. This is already formatted and allocated on the heap.
-	char *message;
-
-	// The severity of the diagnostic.
-	uint8_t severity;
+	char *message;    // The message. This is already formatted and allocated on the heap.
+	uint8_t severity; // The severity of the diagnostic.
+	size_t line;      // The line number. Used to display context lines.
+	size_t column;    // The column. Used to display context lines.
+	CkSource *source; // The source file. Used to display context lines.
 
 } CkThrownDiagnostic;
 
@@ -50,10 +50,6 @@ typedef struct CkThrownDiagnostic
 // and displays them nicely to the user.
 typedef struct CkDiagnosticHandlerInstance
 {
-	// A pointer to the lexer instance reading the source
-	// code.
-	CkLexInstance *pPassedSource;
-
 	// Stores all of the blacklisted diagnostics (diagnostics to skip over.)
 	CkList *blacklistVector;
 
@@ -79,7 +75,7 @@ typedef struct CkDiagnosticHandlerInstance
 } CkDiagnosticHandlerInstance;
 
 // Creates a new diagnostic handler instance.
-void CkDiagnosticHandlerCreateInstance( CkArenaFrame *arena, CkDiagnosticHandlerInstance *dhi, CkLexInstance *pPassedLexer );
+void CkDiagnosticHandlerCreateInstance( CkArenaFrame *arena, CkDiagnosticHandlerInstance *dhi );
 
 // Destroys a diagnostic handler and frees all used resources (except
 // for the passed lexer.)
@@ -97,7 +93,7 @@ void CkDiagnosticWhitelist( CkDiagnosticHandlerInstance *dhi, char *name );
 // Throws a diagnostic.
 void CkDiagnosticThrow(
 	CkDiagnosticHandlerInstance *dhi,
-	uint64_t position,
+	CkToken *p_token,
 	uint8_t severity,
 	char *name,
 	const char *restrict format,

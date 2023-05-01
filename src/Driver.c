@@ -20,36 +20,35 @@ void CkDriverCompile(
 	CkLibrary *lib,
 	CkDriverCompilationResult *result,
 	CkDriverStartupConfiguration *startupConfig
-)
+	)
 {
 	CkList *tokenList; // The list used for tokens.
 	CkToken current;
-
+	
 	CkLexInstance lexer;            // The lexer.
 	CkParserInstance parser;        // The parser.
-
+	
 	CK_ARG_NON_NULL( pDhi );
 	CK_ARG_NON_NULL( threadArena );
 	CK_ARG_NON_NULL( result );
 	CK_ARG_NON_NULL( startupConfig );
-
+	
 	// 1. Default output values
 	result->successful = TRUE;
-
+	
 	// 2. Allocating memory for the token buffer
 	tokenList = CkListStart( threadArena, sizeof( CkToken ) );
-
+	
 	// 3. Lexical Analysis
 	CkLexCreateInstance( threadArena, &lexer, startupConfig->source );
-	CkDiagnosticHandlerCreateInstance( threadArena, pDhi, &lexer );
 	while ( TRUE ) {
 		if ( !CkLexReadToken( &lexer, &current ) ) {
 			if ( current.kind == 'S' ) {
-				CkDiagnosticThrow( pDhi, current.position, CK_DIAG_SEVERITY_ERROR, "",
-					"Newline is not allowed in string literal" );
+				CkDiagnosticThrow( pDhi, &current, CK_DIAG_SEVERITY_ERROR, "",
+								  "Newline is not allowed in string literal" );
 			} else {
-				CkDiagnosticThrow( pDhi, current.position, CK_DIAG_SEVERITY_ERROR, "",
-					"Failed to parse token '%c'", (char)current.kind );
+				CkDiagnosticThrow( pDhi, &current, CK_DIAG_SEVERITY_ERROR, "",
+								  "Failed to parse token '%c'", (char)current.kind );
 			}
 			result->successful = FALSE;
 		}
@@ -57,28 +56,29 @@ void CkDriverCompile(
 			break;
 		CkListAdd( tokenList, &current );
 	}
-
+	
 	if ( !result->successful ) {
-		CkDiagnosticThrow( pDhi, current.position, CK_DIAG_SEVERITY_MESSAGE, "",
-			"Parsing will not be performed if the tokenizer or preprocessor have failed in any capacity.", (char)current.kind );
+		CkDiagnosticThrow( pDhi, &current, CK_DIAG_SEVERITY_MESSAGE, "",
+						  "Parsing will not be performed if the tokenizer or preprocessor have failed in any capacity.", (char)current.kind );
 		CkLexDestroyInstance( &lexer );
 		return;
 	}
-
+	
 	// 4. Parsing
 	CkParserCreateInstance(
-		threadArena,
-		genArena,
-		&parser,
-		tokenList,
-		CkListLength( tokenList ),
-		pDhi );
+						   threadArena,
+						   genArena,
+						   &parser,
+						   tokenList,
+						   CkListLength( tokenList ),
+						   pDhi );
 	// Parsing all declarations
 	while ( parser.position < parser.passedTokenCount )
-		CkParseDecl( genArena, lib->scope, &parser, TRUE, TRUE, FALSE, TRUE, NULL );
-	CkDiagnosticDisplay( pDhi );
-	CkDiagnosticClear( pDhi );
-
+		if ( !CkParseDecl( genArena, lib->scope, &parser, TRUE, TRUE, FALSE, TRUE, NULL ) ) {
+			result->successful = FALSE;
+			break;
+		}
+	
 	// Cleanup
 	CkLexDestroyInstance( &lexer );
 	CkParserDelete( &parser );

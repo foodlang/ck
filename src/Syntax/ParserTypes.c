@@ -48,7 +48,7 @@ static uint8_t s_ParseQualifiers( CkParserInstance *parser )
 
 			// Const is already specified
 			if ( attr & CK_QUALIFIER_CONST_BIT ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Duplicate const qualifier." );
 			}
 			attr |= CK_QUALIFIER_CONST_BIT;
@@ -59,7 +59,7 @@ static uint8_t s_ParseQualifiers( CkParserInstance *parser )
 
 			// Volatile is already specified
 			if ( attr & CK_QUALIFIER_VOLATILE_BIT ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Duplicate volatile qualifier." );
 			}
 			attr |= CK_QUALIFIER_VOLATILE_BIT;
@@ -70,7 +70,7 @@ static uint8_t s_ParseQualifiers( CkParserInstance *parser )
 
 			// Restrict is already specified
 			if ( attr & CK_QUALIFIER_RESTRICT_BIT ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Duplicate restrict qualifier." );
 			}
 			attr |= CK_QUALIFIER_RESTRICT_BIT;
@@ -79,7 +79,7 @@ static uint8_t s_ParseQualifiers( CkParserInstance *parser )
 			// Atomic qualifier
 		case KW_ATOMIC:
 			if ( attr & CK_QUALIFIER_ATOMIC_BIT ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Duplicate atomic qualifier." );
 			}
 			attr |= CK_QUALIFIER_ATOMIC_BIT;
@@ -118,6 +118,7 @@ CkFoodType *CkParserType( CkScope *scope, CkParserInstance *parser )
 		// User type
 		if ( token.kind == 'I' ) {
 			acc = CkFoodCreateTypeInstance( parser->arena, CK_FOOD_USER, attr, NULL );
+			return acc;
 		}
 		else {
 			CkParserRewind( parser, 1 );
@@ -144,11 +145,11 @@ CkFoodType *CkParserType( CkScope *scope, CkParserInstance *parser )
 			acc->extra = CkParserExpression( scope, parser ); // [ >>>expr<<< ]
 			CkParserReadToken( parser, &token );
 			if ( !acc->extra ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Expected an expression for array parser." );
 			}
 			if ( token.kind != ']' ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Expected closing square bracket at this token." );
 			}
 

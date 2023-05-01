@@ -239,7 +239,6 @@ static char* _RegnameInt( size_t reg, FoodTypeID typeid )
 		return _regint_table[reg].name64;
 
 	default:
-		printf( "regname empty: %i\n", typeid );
 		return "";
 	}
 }

@@ -33,13 +33,13 @@ bool_t CkParseDecl(
 		CkParserReadToken( parser, &token );
 		if (token.kind == KW_PUBLIC) {
 			if ( !allowExposureQual ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Exposure qualifiers (like public) are not allowed in this context." );
 				return TRUE;
 			}
 			// Duplicate checking
 			if (bPublic) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Duplicate public exposure qualifier." );
 				return TRUE;
 			}
@@ -47,13 +47,13 @@ bool_t CkParseDecl(
 			bPublic = TRUE;
 		} else if ( token.kind == KW_STATIC ) {
 			if ( !allowExposureQual ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Exposure qualifiers (like static) are not allowed in this context." );
 				return TRUE;
 			}
 			// Duplicate checking
 			if ( bStatic ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Duplicate static exposure qualifier." );
 				return TRUE;
 			}
@@ -62,7 +62,7 @@ bool_t CkParseDecl(
 		} else if ( token.kind == KW_EXTERN ) {
 			// Duplicate checking
 			if ( bExtern ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Duplicate extern qualifier." );
 				return TRUE;
 			}
@@ -86,18 +86,18 @@ bool_t CkParseDecl(
 		// module >>>name<<< { decls }
 		CkParserReadToken( parser, &name );
 		if ( name.kind != 'I' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Module name must be an identifier." );
 			return TRUE;
 		}
 
 		// Return value is ignored
 		pModule = CkCreateModule( allocator, context->library, name.value.cstr, bPublic, bStatic );
-		
+
 		// module name >>>{<<< decls }
 		CkParserReadToken( parser, &token );
 		if ( token.kind != '{' ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Module declaration must be followed by module member declarations." );
 			return TRUE;
 		}
@@ -108,7 +108,7 @@ bool_t CkParseDecl(
 			if ( token.kind == '}' )
 				break;
 			if ( token.kind == 0 ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Module member declarations must be terminated with a closing curly bracket }." );
 				return TRUE;
 			}
@@ -121,7 +121,7 @@ bool_t CkParseDecl(
 
 	// Static is not allowed for non-module decl
 	if ( bStatic ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"Static exposure qualifier is invalid for non-module declarations. "
 			"You might be looking for internal (local to the translation unit) exposure, "
 		    "which is the default exposure in Food." );
@@ -130,6 +130,7 @@ bool_t CkParseDecl(
 
 	// 3. Parsing the type
 	CkParserReadToken( parser, &token );
+	if ( token.kind == 0 ) return FALSE;
 	if ( token.kind == 'I' && CkSymbolDeclared(context, token.value.cstr) ) return FALSE; // Is symbol?
 	CkParserRewind( parser, 1 );
 	declType = CkParserType( context, parser );
@@ -138,7 +139,7 @@ bool_t CkParseDecl(
 	// 4. Parsing the name
 	CkParserReadToken( parser, &name );
 	if ( name.kind != 'I' ) {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 			"A declaration's name must be an identifier." );
 		return TRUE;
 	}
@@ -148,7 +149,7 @@ bool_t CkParseDecl(
 	if ( token.kind == ';' ) { // T name; (un-assigned variable)
 		CkAllocateVariable( context, declType, name.value.cstr, FALSE );
 		return TRUE;
-	} else if ( token.kind == '=' ) {
+	} else if ( token.kind == '=' && !bExtern ) {
 		CkStatement *assign;
 		CkAllocateVariable( context, declType, name.value.cstr, FALSE );
 		assign = CkArenaAllocate( allocator, sizeof( CkStatement ) );
@@ -168,7 +169,7 @@ bool_t CkParseDecl(
 			CkParserExpression( context, parser )
 		);
 		if ( !allowNonConstAssign && !assign->data.expression->isConstant ) {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Only compiler-time constant expressions are allowed in this context." );
 			return TRUE;
 		}
@@ -179,7 +180,10 @@ bool_t CkParseDecl(
 		CkStatement *body;
 		CkFoodType *signature;
 		CkFunction *dest;
-		size_t paramsLen = 0;
+		size_t params_len = 0;
+
+		CkParserRewind( parser, 1 );
+
 		// Argument parsing
 		params = CkListStart( allocator, sizeof( CkVariable ) );
 		while ( TRUE ) {
@@ -188,22 +192,34 @@ bool_t CkParseDecl(
 
 			CkParserReadToken( parser, &token );
 			if ( token.kind == ')' ) break;
+			else if ( token.kind == ',' );
+			else if ( token.kind == '(' ) {
+				CkParserReadToken( parser, &token );
+				if ( token.kind == ')' )
+					break;
+				else CkParserRewind( parser, 1 );
+			}
+			else {
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
+					"Expected a closing bracket ) or comma , in function parameter list" );
+				break;
+			}
 
 			// Type
-			CkParserRewind( parser, 1 );
 			T = CkParserType( context, parser );
 			if ( !T ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Expected a typename" );
-				continue;
+				break;
 			}
 			
 			// Name
 			CkParserReadToken( parser, &token );
 			if ( token.kind != 'I' ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Expected an identifier" );
-				continue;
+				CkParserRewind( parser, 1 );
+				break;
 			}
 
 			// TODO: default arguments
@@ -211,17 +227,17 @@ bool_t CkParseDecl(
 			tmp.type = T;
 			tmp.parentScope = NULL;
 			CkListAdd( params, &tmp );
-			paramsLen++;
+			params_len++;
 
 			// Comma
 			CkParserReadToken( parser, &token );
-			if ( token.kind == ',' )
-				continue;
-			else if ( token.kind == ')' ) {
+			if ( token.kind == ',' || token.kind == ')' )
 				CkParserRewind( parser, 1 );
-			} else {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			else {
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Expected a comma" );
+				CkParserRewind( parser, 1 );
+				break;
 			}
 		}
 		signature = CkFoodCreateTypeInstance(
@@ -231,7 +247,7 @@ bool_t CkParseDecl(
 			declType
 		);
 		signature->extra = CkListStart( allocator, sizeof( CkFoodType *) );
-		for ( size_t i = 0; i < paramsLen; i++ ) {
+		for ( size_t i = 0; i < params_len; i++ ) {
 			CkListAdd(
 				(CkList *)signature->extra,
 				&((CkVariable*)CkListAccess( params, i ))->type
@@ -246,7 +262,7 @@ bool_t CkParseDecl(
 			signature,
 			CkStrDup( allocator, name.value.cstr ),
 			NULL );
-		for ( size_t i = 0; i < paramsLen; i++ ) {
+		for ( size_t i = 0; i < params_len; i++ ) {
 			CkVariable *var = CkListAccess( params, i );
 			CkAllocateVariable(
 				dest->funscope,
@@ -258,6 +274,14 @@ bool_t CkParseDecl(
 		// Body
 		CkParserReadToken( parser, &token );
 		// Expression body
+		if ( bExtern ) {
+			body = NULL;
+			if ( token.kind != ';' ) {
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
+					"Extern functions cannot have a body, expected semicolon ;" );
+				return TRUE;
+			}
+		}
 		if ( token.kind == CKTOK2( '=', '>' ) ) {
 			body = CkArenaAllocate( allocator, sizeof( CkStatement ) );
 			body->stmt = CK_STMT_EXPRESSION;
@@ -265,7 +289,7 @@ bool_t CkParseDecl(
 
 			CkParserReadToken( parser, &token );
 			if ( token.kind != ';' ) {
-				CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 					"Expected a semicolon" );
 				return TRUE;
 			}
@@ -274,7 +298,7 @@ bool_t CkParseDecl(
 			CkParserRewind( parser, 1 );
 			body = CkParseStmt( dest->funscope, parser );
 		} else {
-			CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
 				"Expected a thick arrow `=>` or a block `{}`." );
 			return TRUE;
 		}
@@ -282,8 +306,8 @@ bool_t CkParseDecl(
 		
 		return TRUE;
 	} else {
-		CkDiagnosticThrow( parser->pDhi, token.position, CK_DIAG_SEVERITY_ERROR, "",
-			"Functions and user types are not yet supported (TODO)" );
+		CkDiagnosticThrow( parser->pDhi, &token, CK_DIAG_SEVERITY_ERROR, "",
+			"Expected a semicolon ;" );
 		return TRUE;
 	}
 }

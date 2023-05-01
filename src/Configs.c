@@ -267,7 +267,7 @@ CkBuildConfig *CkConfigGetBuildConfig(
 	cwk_path_join( filepathBuffer, CK_BUILD_FILE_RELATIVE, filepathBuffer, MAXPATHLENGTH );
 
 	// Reading file
-	fileConfigBuffer = CkReadFileContents( allocator, filepathBuffer );
+	fileConfigBuffer = CkReadFileContents( allocator, filepathBuffer )->code;
 	if ( !fileConfigBuffer ) // CkReadFileContents() already generates an error message
 		return NULL;
 

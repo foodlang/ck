@@ -107,9 +107,9 @@ static KeywordEntryPair s_keywordDict[] =
 // Gets the next character in the source code.
 static inline char s_nextChar( CkLexInstance *lexer )
 {
-	if ( lexer->cursor >= lexer->sourceLength )
+	if ( lexer->cursor >= lexer->source->len )
 		return 0;
-	return lexer->source[lexer->cursor];
+	return lexer->source->code[lexer->cursor];
 }
 
 // Parses an escape sequence.
@@ -203,17 +203,15 @@ static inline uint8_t s_escapeSequence( CkLexInstance *lexer )
 	}
 }
 
-void CkLexCreateInstance( CkArenaFrame *arena, CkLexInstance *dest, char *source )
+void CkLexCreateInstance( CkArenaFrame *arena, CkLexInstance *dest, CkSource *source )
 {
 	CK_ARG_NON_NULL( arena );
 	CK_ARG_NON_NULL( dest );
 	CK_ARG_NON_NULL( source );
 
 	dest->cursor = 0;
-	dest->sourceLength = strlen( source );
-	dest->source = CkArenaAllocate( arena, dest->sourceLength + 1 );
+	dest->source = source;
 	dest->arena = arena;
-	strcpy( dest->source, source );
 }
 
 void CkLexDestroyInstance( CkLexInstance *lexer )
@@ -228,6 +226,8 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 
 	CK_ARG_NON_NULL( lexer );
 	CK_ARG_NON_NULL( token );
+
+	token->source = lexer->source;
 
 	cur = s_nextChar( lexer );
 
@@ -552,7 +552,7 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 		}
 
 		strbuf = CkArenaAllocate( lexer->arena, length + 1 );
-		memcpy( strbuf, lexer->source + base, length );
+		memcpy( strbuf, lexer->source->code + base, length );
 		strbuf[length] = 0;
 		for ( size_t i = 0; i < sizeof( s_keywordDict ) / sizeof( KeywordEntryPair ); i++ ) {
 			if ( !strcmp( strbuf, s_keywordDict[i].key ) ) {

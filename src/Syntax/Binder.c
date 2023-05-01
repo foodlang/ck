@@ -254,7 +254,7 @@ static CkExpression *s_ValidateExpressionNC(
 				CkFoodCopyTypeInstance( allocator, (CkFoodType *)symType )
 			);
 		else {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The symbol '%s' cannot be found in this scope.", expression->token.value.cstr );
 			result = CkExpressionCreateLiteral( // int type by default. Still shouldn't compile.
 				allocator,
@@ -325,7 +325,7 @@ static CkExpression *s_ValidateExpressionNC(
 			newTypeID = left->type->id;
 			subtype = left->type->child;
 		} else {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Addition and subtraction require arithmetic types on both operands. A pointer type is allowed on one of the two operands." );
 		}
 
@@ -361,7 +361,7 @@ static CkExpression *s_ValidateExpressionNC(
 		else if ( CK_TYPE_CLASSED_FLOAT( left->type->id ) && CK_TYPE_CLASSED_INT( right->type->id ) ) // float * int => float
 			newTypeID = max( left->type->id, s_GetFloatTContainsIntU( right->type->id ) );
 		else {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Multiplication and division require arithmetic types on both operands." );
 		}
 
@@ -389,7 +389,7 @@ static CkExpression *s_ValidateExpressionNC(
 		if ( CK_TYPE_CLASSED_INT( left->type->id ) && CK_TYPE_CLASSED_INT( right->type->id ) )
 			newTypeID = max( left->type->id, right->type->id );
 		else {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Modulo requires both its operands to be of integer type." );
 		}
 
@@ -415,12 +415,12 @@ static CkExpression *s_ValidateExpressionNC(
 		*/
 		CK_ASSERT( left );
 		if ( !(CK_TYPE_CLASSED_INT( left->type->id ) || CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id )) ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Postfix/prefix increment or decrement operators require an integer or pointer operand." );
 		}
 
 		if ( !left->isLValue ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Postfix/prefix increment or decrement operators require an lvalue operand." );
 		}
 
@@ -446,7 +446,7 @@ static CkExpression *s_ValidateExpressionNC(
 
 		CK_ASSERT( left );
 		if ( !CK_TYPE_CLASSED_INTFLOAT( left->type->id ) ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The unary plus and minus operators require an operand of integer or float type." );
 		}
 
@@ -467,7 +467,7 @@ static CkExpression *s_ValidateExpressionNC(
 
 		CK_ASSERT( left );
 		if ( !CK_TYPE_CLASSED_INT( left->type->id ) ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The bitwise not operator (~x) requires an integer operand." );
 		}
 
@@ -490,7 +490,7 @@ static CkExpression *s_ValidateExpressionNC(
 
 		CK_ASSERT( left );
 		if ( !s_BooleanType( extra->type->id ) ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The logical not operator (!x) requires an integer, pointer or boolean operand." );
 		}
 
@@ -519,7 +519,7 @@ static CkExpression *s_ValidateExpressionNC(
 			left->type->id != CK_FOOD_POINTER
 			&& left->type->id != CK_FOOD_REFERENCE
 			&& left->type->id != CK_FOOD_ARRAY ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Only a pointer, reference or array may be dereferenced." );
 			return CkExpressionCreateUnary( // Avoiding NULL dereference + attempt to maintain order in error messages
 				allocator,
@@ -531,7 +531,7 @@ static CkExpression *s_ValidateExpressionNC(
 		}
 
 		if ( left->type->child->id == CK_FOOD_VOID ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"An anonymous pointer (void*) cannot be dereferenced." );
 			return CkExpressionCreateUnary( // Avoiding NULL dereference + attempt to maintain order in error messages
 				allocator,
@@ -570,12 +570,12 @@ static CkExpression *s_ValidateExpressionNC(
 
 		CK_ASSERT( left );
 		if ( !left->isLValue ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"It is impossible to take the address of a non-lvalue object." );
 		}
 
 		if ( left->type->id == CK_FOOD_REFERENCE ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"It is impossible to take the address of a reference." );
 		}
 
@@ -603,12 +603,12 @@ static CkExpression *s_ValidateExpressionNC(
 
 		CK_ASSERT( left );
 		if ( !left->isLValue ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"It is impossible to take the opaque address of a non-lvalue object." );
 		}
 
 		if ( left->type->id == CK_FOOD_REFERENCE ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"It is impossible to take the opaque address of a reference." );
 		}
 
@@ -640,12 +640,12 @@ static CkExpression *s_ValidateExpressionNC(
 		CK_ASSERT( right );
 
 		if ( !CK_TYPE_CLASSED_INT( right->type->id ) ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The right operand of a bitwise shift must be of integer type." );
 		}
 
 		if ( !CK_TYPE_CLASSED_INT( left->type->id ) && !CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id ) ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The left operand of a bitwise shift must be an integer or an arithmetic-capable pointer." );
 		}
 
@@ -675,11 +675,11 @@ static CkExpression *s_ValidateExpressionNC(
 		CK_ASSERT( right );
 		if ( CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id ) && CK_TYPE_CLASSED_POINTER( right->type->id ) ) {
 			if ( left->type->child->id != right->type->child->id ) {
-				CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 					"Two pointers of non-equal subtypes cannot be compared, even if one of them is an opaque pointer." );
 			}
 		} else if ( !CK_TYPE_CLASSED_INTFLOAT( left->type->id ) && !CK_TYPE_CLASSED_INTFLOAT( right->type->id ) ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The operands of a comparison must either be two pointers with the same subtype, integers or floats." );
 		}
 
@@ -715,14 +715,14 @@ static CkExpression *s_ValidateExpressionNC(
 			printf( "user types equality validity unsupported; defaults to valid\n" );
 		} else if ( (left->type->id == right->type->id) && left->type->id == CK_FOOD_REFERENCE ) {
 			if ( left->type->child->id != right->type->child->id ) {
-				CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 					"Two references cannot be compared if they don't have the same subtype. "
 					"If you wish to compare two references that don't have the same subtype, use pointers." );
 			}
 		} else if ( !(left->type->id == right->type->id
 			|| CK_TYPE_CLASSED_INTFLOAT(left->type->id ) == CK_TYPE_CLASSED_INTFLOAT(right->type->id )
 			|| CK_TYPE_CLASSED_POINTER(left->type->id ) == CK_TYPE_CLASSED_POINTER(right->type->id)) ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Equality comparison requires two identical types for user-types, or two arithmetic types or pointers. %i, %i",
 				left->type->id, right->type->id );
 		}
@@ -761,7 +761,7 @@ static CkExpression *s_ValidateExpressionNC(
 			newTypeID = right->type->id;
 			subtype = right->type->child;
 		} else {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The classic bitwise operators (&, |, ^) require their operands to be integer, with one operand allowed to be a pointer." );
 		}
 
@@ -787,10 +787,10 @@ static CkExpression *s_ValidateExpressionNC(
 		CK_ASSERT( right );
 
 		if ( !s_BooleanType( left->type->id ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The left operand of a logical operator (&&, ||) must be either a boolean, an integer or a pointer." );
 		if ( !s_BooleanType( right->type->id ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The right operand of a logical operator (&&, ||) must be either a boolean, an integer or a pointer." );
 
 		return CkExpressionCreateBinary(
@@ -810,7 +810,7 @@ static CkExpression *s_ValidateExpressionNC(
 
 		// (T&)expr is not allowed
 		if ( expression->type->id == CK_FOOD_REFERENCE )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Casting to a reference is not allowed." );
 
 		// C-style discard
@@ -819,12 +819,12 @@ static CkExpression *s_ValidateExpressionNC(
 
 		if ( expression->type->id == CK_FOOD_STRUCT
 			|| expression->type->id == CK_FOOD_UNION)
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The result of a cast must be of scalar type." );
 
 		if ( left->type->id == CK_FOOD_STRUCT
 			|| left->type->id == CK_FOOD_UNION)
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The input of a cast must be of scalar type." );
 
 		return CkExpressionDuplicate(allocator, expression);
@@ -845,22 +845,22 @@ static CkExpression *s_ValidateExpressionNC(
 		CK_ASSERT( right );
 
 		if ( !s_CompatibleTypesCheck(left->type, right->type, scope) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"An assignment requires compatible value types." );
 
 		if ( (expression->kind == CK_EXPRESSION_ASSIGN_SUM || expression->kind == CK_EXPRESSION_ASSIGN_DIFF)
 			&& ( !CK_TYPE_CLASSED_INTFLOAT( left->type->id ) && !CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id ) ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"You can only increment or decrement a value of arithmetic type." );
 
 		if ( (expression->kind == CK_EXPRESSION_ASSIGN_PRODUCT || expression->kind == CK_EXPRESSION_ASSIGN_QUOTIENT)
 			&& ( !CK_TYPE_CLASSED_INTFLOAT( left->type->id ) ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"You can only multiply or divide a value of arithmetic type." );
 
 		if ( ( expression->kind == CK_EXPRESSION_MOD )
 			&& (!CK_TYPE_CLASSED_INT( left->type->id ) || !CK_TYPE_CLASSED_INT( right->type->id ) ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The modulo assignment operator requires both of its operands to be integers." );
 
 		if ( (expression->kind == CK_EXPRESSION_LEFT_SHIFT
@@ -872,11 +872,11 @@ static CkExpression *s_ValidateExpressionNC(
 				( !CK_TYPE_CLASSED_INT( left->type->id )
 				&& !CK_TYPE_CLASSED_POINTER_ARITHM( left->type->id ) )
 				|| !CK_TYPE_CLASSED_INT( right->type->id )) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Incorrect usage of bitwise operator." );
 
 		if ( !left->isLValue )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Only an lvalue can be assigned a value." );
 
 		// Do not replace with CkExpressionDuplicate
@@ -894,15 +894,15 @@ static CkExpression *s_ValidateExpressionNC(
 		CK_ASSERT( right );
 
 		if ( !CK_TYPE_CLASSED_POINTER_ARITHM( left->kind ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"You can only index via subscript an arithmetic pointer." );
 
 		if ( !CK_TYPE_CLASSED_INT( right->kind ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The index of the subscript operator must be an integer." );
 
 		if ( left->type->child->id == CK_FOOD_VOID )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Cannot index a void pointer via subscript." );
 
 		return CkExpressionCreateBinary(
@@ -927,11 +927,11 @@ static CkExpression *s_ValidateExpressionNC(
 		CK_ASSERT( extra );
 
 		if ( !s_BooleanType( extra->type->id ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The condition of a conditional statement (a in a ? b : c) must be an integer, a pointer or a boolean." );
 
 		if ( !s_CompatibleTypesCheck( left->type, right->type, scope ) )
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The two operands of the conditional statement must be of practical equality/be compatible." );
 
 		return CkExpressionCreateTernary(
@@ -957,7 +957,7 @@ static CkExpression *s_ValidateExpressionNC(
 		CK_ASSERT( expression->extended_extra );
 
 		if ( paramsCount != signatureParamsCount ) {
-			CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Invalid function call signature, expected %zu arguments, got %zu",
 				signatureParamsCount, paramsCount );
 		}
@@ -970,7 +970,7 @@ static CkExpression *s_ValidateExpressionNC(
 				bound->type,
 				*(CkFoodType **)CkListAccess( paramsType, i ),
 				scope ) ) {
-				CkDiagnosticThrow( pDhi, expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 					"Incompatible type for argument %zu", i
 				);
 			}
@@ -1020,14 +1020,14 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 	case CK_STMT_ASSERT:
 		stmt->data.assert.expression = s_ValidateExpression( scope, pDhi, allocator, stmt->data.expression );
 		if ( !s_BooleanType(stmt->data.assert.expression->type->id) )
-			CkDiagnosticThrow( pDhi, stmt->data.assert.expression->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &stmt->data.assert.expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Assert requires a boolean condition." );
 		break;
 
 	case CK_STMT_IF:
 		stmt->data.if_.condition = s_ValidateExpression( scope, pDhi, allocator, stmt->data.expression );
 		if ( !s_BooleanType( stmt->data.if_.condition->type->id ) )
-			CkDiagnosticThrow( pDhi, stmt->data.if_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &stmt->data.if_.condition->token, CK_DIAG_SEVERITY_ERROR, "",
 				"If requires a boolean condition." );
 		s_ValidateStmt( pDhi, allocator, stmt->data.if_.cThen, scope );
 		if (stmt->data.if_.cElse) s_ValidateStmt( pDhi, allocator, stmt->data.if_.cElse, scope );
@@ -1037,7 +1037,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 	case CK_STMT_DO_WHILE:
 		stmt->data.while_.condition = s_ValidateExpression( scope, pDhi, allocator, stmt->data.expression );
 		if ( !s_BooleanType( stmt->data.while_.condition->type->id ) )
-			CkDiagnosticThrow( pDhi, stmt->data.while_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &stmt->data.while_.condition->token, CK_DIAG_SEVERITY_ERROR, "",
 				"If requires a boolean condition." );
 		s_ValidateStmt( pDhi, allocator, stmt->data.while_.cWhile, scope );
 		break;
@@ -1048,7 +1048,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 		stmt->data.for_.lead = s_ValidateExpression( stmt->data.for_.scope, pDhi, allocator, stmt->data.for_.lead );
 
 		if ( !s_BooleanType(stmt->data.for_.condition->type->id) )
-			CkDiagnosticThrow( pDhi, stmt->data.while_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
+			CkDiagnosticThrow( pDhi, &stmt->data.while_.condition->token, CK_DIAG_SEVERITY_ERROR, "",
 				"For's condition must be a boolean." );
 
 		s_ValidateStmt( pDhi, allocator, stmt->data.for_.body, stmt->data.for_.scope );
@@ -1058,7 +1058,7 @@ static void s_ValidateStmt( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *all
 		if ( stmt->data.goto_.computed ) {
 			stmt->data.goto_.computedExpression = s_ValidateExpression( scope, pDhi, allocator, stmt->data.goto_.computedExpression );
 			if ( stmt->data.goto_.computedExpression->type->id == CK_FOOD_POINTER && stmt->data.goto_.computedExpression->type->child->id == CK_FOOD_VOID )
-				CkDiagnosticThrow( pDhi, stmt->data.while_.condition->token.position, CK_DIAG_SEVERITY_ERROR, "",
+				CkDiagnosticThrow( pDhi, &stmt->data.while_.condition->token, CK_DIAG_SEVERITY_ERROR, "",
 					"Computed goto requires a void pointer operand." );
 		}
 		break;
@@ -1086,10 +1086,13 @@ static void s_ValidateBlock( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *al
 static void s_ValidateFunc( CkScope *scope, CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *allocator, CkFunction *func )
 {
 	CK_ARG_NON_NULL( func );
-	CK_ARG_NON_NULL( func->body );
-	if ( func->body->stmt == CK_STMT_EXPRESSION )
-		func->body->data.expression = s_ValidateExpression( func->funscope, pDhi, allocator, func->body->data.expression );
-	else s_ValidateBlock( pDhi, allocator, func->body );
+	if ( !func->bExtern ) {
+		CK_ARG_NON_NULL( func->body );
+		if ( func->body->stmt == CK_STMT_EXPRESSION )
+			func->body->data.expression
+			= s_ValidateExpression( func->funscope, pDhi, allocator, func->body->data.expression );
+		else s_ValidateBlock( pDhi, allocator, func->body );
+	}
 }
 
 void CkBinderValidateAndBind( CkDiagnosticHandlerInstance *pDhi, CkArenaFrame *allocator, CkLibrary *library )

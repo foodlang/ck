@@ -15,6 +15,21 @@
 #include <string.h>
 #include <stdlib.h>
 
+#if _WIN32
+#include <direct.h>
+
+#define _OFF_T_DEFINED // for stat.h (stdlib bug)
+typedef off_t _off_t;  // for stat.h (stdlib bug)
+#endif
+
+#include <sys/stat.h>
+
+#if _WIN32
+#define ported_mkdir(x) _mkdir(x)
+#else
+#define ported_mkdir(x) mkdir(x, 0x1FF)
+#endif
+
 #include <cwalk.h>
 
 int main( int argc, char *argv[], char **envp )
@@ -35,38 +50,37 @@ int main( int argc, char *argv[], char **envp )
 	CkTimePoint tdriverEnd;                   // The end of the driver parsing
 	bool_t success = TRUE;                    // Compilation & linkage status
 	CkList* libs;                             // Library list
-
+    
 	puts( "CK, The Official Food Compiler" );
 	puts( "Copyright (C) 2023 The Food Project" );
-
+    
 #if defined(_DEBUG)
-	puts( "This is a debug build of CK. The compiler might not perform as fast as release builds." );
-	puts( "  -> Please report any bugs you find at https://discord.gg/8SdtguX3P9 (#bug-reports channel.)" );
+	puts( "Compiler is running in debug mode!" );
 #endif
-
+    
 	puts( "" );
-
+    
 	if ( argc == 1 ) {
 		puts( "Usage: ck <build_dir> <profile>" );
 		puts( "\tbuild_dir\tThe directory where the build file is located." );
 		puts( "\tprofile\t\tThe name of the profile to use. This parameter is optional." );
 		return 0;
 	}
-
-	CkTimeGetCurrent( &tcompilerStart );
-	CkArenaStartFrame( &globalArena, 0 );
-
+    
+    CkArenaStartFrame( &globalArena, 0 );
+    CkTimeGetCurrent( &tcompilerStart );
+    
 	if ( argc >= 2 ) buildDirectory = argv[1];
 	if ( argc >= 3 ) profileName = argv[2];
 	if ( argc > 3 ) puts( "ck: Parameters beyond <profile> are ignored." );
-
+    
 	base = CkConfigGetBuildConfig( &globalArena, buildDirectory );
 	if ( !base ) {
 		puts( "ck: Failed to parse build configuration, exiting.\n" );
 		CkArenaEndFrame( &globalArena );
 		return -1;
 	}
-
+    
 	applied = CkConfigApplied( &globalArena, base, profileName );
 	if ( !applied ) {
 		if ( !profileName )
@@ -75,56 +89,69 @@ int main( int argc, char *argv[], char **envp )
 			puts( "ck: The profile cannot be applied to the configuration, or it doesn't exist.\n" );
 		return -1;
 	}
-
+    
 	result = CkCreateLibrary( &globalArena, applied->name );
-
+	CkDiagnosticHandlerCreateInstance( &globalArena, &dhi );
+    
 	sourceCount = CkListLength( applied->sources );
 	for ( size_t i = 0; i < sourceCount; i++ ) {
 		char *source = CkConfigGetSource( applied, i );
 		char *sourceTotal;
 		size_t nameLen;
 		size_t sourceLen;
-
+        
 		CkTimeGetCurrent( &tdriverStart );
-
+        
 		if ( !source ) {
 			fprintf( stderr, "ck: Attempted to read out of bounds of file list.\n" );
 			abort();
 		}
-
+        
 		// Init
 		nameLen = strlen( applied->name ) + strlen( "::" ) + strlen( source );
 		sourceLen = strlen( buildDirectory ) + strlen( applied->sourceDir ) + strlen( "//" ) + strlen( source );
 		memset( &driverStart, 0, sizeof( CkDriverStartupConfiguration ) );
 		memset( &driverResult, 0, sizeof( CkDriverCompilationResult ) );
-
+        
 		// Name (ProjectName::FileName)
 		driverStart.name = CkArenaAllocate( &globalArena, nameLen + 1 );
 		strcpy( driverStart.name, applied->name );
 		strcat( driverStart.name, "::" );
 		strcat( driverStart.name, source );
-
+        
 		// Source filepath (SourceDir/Filepath)
 		sourceTotal = CkArenaAllocate( &globalArena, sourceLen + 1 );
 		cwk_path_join( buildDirectory, applied->sourceDir, sourceTotal, sourceLen + 1 );
 		cwk_path_join( sourceTotal, source, sourceTotal, sourceLen + 1 );
-
+        
 		// Source loading
 		driverStart.source = CkReadFileContents( &globalArena, sourceTotal );
 		if ( !driverStart.source ) {
 			fprintf( stderr, "ck: Project '%s' does not have source file '%s'.\n", applied->name, sourceTotal );
 			continue;
 		}
-
+        
 		// Loading settings
 		driverStart.wError = applied->wError;
-
+        
 		// Driver compilation
 		CkDriverCompile( &dhi, &globalArena, &globalArena, result, &driverResult, &driverStart );
 		CkTimeGetCurrent( &tdriverEnd );
-		printf( "\t- '%s' (%f ms)\n",
-			sourceTotal,
-			(double)(CkTimeElapsed_mcs( &tdriverStart, &tdriverEnd )) / 1000.0 );
+		printf( "  - '%s' (%f ms)\n",
+               sourceTotal,
+               (double)(CkTimeElapsed_mcs( &tdriverStart, &tdriverEnd )) / 1000.0 );
+	}
+    
+	if ( dhi.anyErrors || (applied->wError && dhi.anyWarnings) || !driverResult.successful ) {
+		CkDiagnosticThrow( &dhi, NULL, CK_DIAG_SEVERITY_MESSAGE, "",
+			"Semantic analysis/type binding will not be performed if parsing failed." );
+		CkDiagnosticDisplay( &dhi );
+		CkTimeGetCurrent( &tcompilerEnd );
+		CkArenaEndFrame( &globalArena );
+		printf(
+			"Full compilation time: %f ms\n",
+			(double)(CkTimeElapsed_mcs( &tcompilerStart, &tcompilerEnd )) / 1000.0 );
+		return 0;
 	}
 
 	// Binding
@@ -132,20 +159,43 @@ int main( int argc, char *argv[], char **envp )
 	CkDiagnosticDisplay( &dhi );
 	if ( dhi.anyErrors || (applied->wError && dhi.anyWarnings) )
 		success = FALSE;
-
+    
 	if ( success ) {
+		FILE  *output;
+		char  *output_path;
+		size_t output_path_len;
+		struct stat st;
+
 		libs = CkListStart( &globalArena, sizeof( CkLibrary* ) );
 		CkListAdd( libs, &result );
-		puts( CkGenProgram_Prototype( &dhi, &globalArena, libs ) );
-	}
-	CkArenaEndFrame( &globalArena );
-	CkTimeGetCurrent( &tcompilerEnd );
-	printf(
-		"Full compilation time: %f ms\n",
-		(double)(CkTimeElapsed_mcs(&tcompilerStart, &tcompilerEnd)) / 1000.0 );
 
+		// ----- Path -----
+		output_path_len =
+			strlen( buildDirectory )
+			+ strlen( applied->outDir )
+			+ strlen( "//" )
+			+ strlen( applied->name ) + strlen( ".s" );
+		output_path = CkArenaAllocate( &globalArena, output_path_len + 1 );
+		cwk_path_join( buildDirectory, applied->outDir, output_path, output_path_len );
+		if ( stat( output_path, &st ) == -1 )
+			ported_mkdir( output_path );
+		cwk_path_join( output_path, applied->name, output_path, output_path_len );
+		cwk_path_change_extension( output_path, ".s", output_path, output_path_len );
+
+		// ----- Opening and generating file -----q
+		output = fopen( output_path, "wb" );
+		fputs( CkGenProgram_Prototype( &dhi, &globalArena, libs ), output );
+		universal_fclose( output );
+		printf( "Output file: '%s'\n", output_path );
+	}
+    CkTimeGetCurrent( &tcompilerEnd );
+	CkArenaEndFrame( &globalArena );
+	printf(
+           "Full compilation time: %f ms\n",
+           (double)(CkTimeElapsed_mcs(&tcompilerStart, &tcompilerEnd)) / 1000.0 );
+    
 	(void)envp;
 	(void)success;
-
+    
 	return 0;
 }

@@ -380,8 +380,11 @@ typedef struct CkFunction
 	// The name of the function.
 	char *name;
 
-	// If this is true, the module is public.
+	// If this is true, the function is public.
 	bool_t bPublic;
+
+	// If this is true, the function is external.
+	bool_t bExtern;
 
 	// The body of the function.
 	CkStatement *body;

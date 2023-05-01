@@ -14,6 +14,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <math.h>
 
 #ifdef __GNUC__
@@ -22,6 +23,19 @@
 #else
 #define ALIGN(x) __declspec(align(x))
 #define PACKED __declspec(align(1))
+#endif
+
+#ifdef _WIN32
+#define universal_fseek(f, c, o) _fseeki64_nolock(f, c, o)
+#define universal_ftell(f) _ftelli64_nolock(f)
+#define universal_fread(b, z, n, f) _fread_nolock(b, z, n, f)
+#define universal_fclose(f) _fclose_nolock(f)
+typedef size_t off_t;
+#else
+#define universal_fseek(f, c, o) fseek(f, c, o)
+#define universal_ftell(f) ftell(f)
+#define universal_fread(b, z, n, f) fread(b, z, n, f)
+#define universal_fclose(f) fclose(f)
 #endif
 
 typedef signed char bool_t;
@@ -76,33 +90,42 @@ typedef struct CkStrBuilder
 
 } CkStrBuilder;
 
+// A file source.
+typedef struct CkSource
+{
+	char  *filename; // The name of the source file (or source buffer.)
+	char  *code;     // The code.
+	size_t len;      // The length of the code.
+
+} CkSource;
+
+
+typedef union CkTokenValue
+{
+	bool_t boolean;
+	int8_t i8;
+	uint8_t u8;
+	int16_t i16;
+	uint16_t u16;
+	int32_t i32;
+	uint32_t u32;
+	int64_t i64;
+	uint64_t u64;
+	float f32;
+	double f64;
+	char *cstr;
+	void *ptr;
+
+} CkTokenValue;
+
 // Represents a token, an indivisible bit of text that is used to
 // represent the syntax of the source code.
 typedef struct CkToken
 {
-
-	// Where the token is located.
-	size_t position;
-
-	// The kind of the token.
-	uint64_t kind;
-
-	// An additional value stored with the token.
-	union {
-		bool_t boolean;
-		int8_t i8;
-		uint8_t u8;
-		int16_t i16;
-		uint16_t u16;
-		int32_t i32;
-		uint32_t u32;
-		int64_t i64;
-		uint64_t u64;
-		float f32;
-		double f64;
-		char *cstr;
-		void *ptr;
-	} value;
+	size_t position;    // Where the token is located.
+	uint64_t kind;      // The kind of the token.
+	CkTokenValue value; // An additional value stored with the token.
+	CkSource *source;   // The source of the token.
 
 } CkToken;
 
