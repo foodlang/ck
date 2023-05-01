@@ -1,5 +1,8 @@
 #include <Syntax/Lex.h>
+#include <Memory/List.h>
+#include <Syntax/Preprocessor.h>
 #include <CDebug.h>
+
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
@@ -15,6 +18,12 @@ typedef struct KeywordEntryPair
 	uint64_t value;
 
 } KeywordEntryPair;
+
+typedef struct MacroDirectiveEntryPair
+{
+	const char *key;
+	uint64_t value;
+} MacroDirectiveEntryPair;
 
 static KeywordEntryPair s_keywordDict[] =
 {
@@ -102,6 +111,23 @@ static KeywordEntryPair s_keywordDict[] =
 	{ "throw", KW_THROW },
 	{ "typeof", KW_TYPEOF },
 	{ "asm", KW_ASM }
+};
+
+static MacroDirectiveEntryPair s_macroDict[] =
+{
+	{ "define", PP_DIRECTIVE_DEFINE },
+	{ "undef", PP_DIRECTIVE_UNDEFINE },
+	{ "ifdef", PP_DIRECTIVE_IFDEF },
+	{ "ifndef", PP_DIRECTIVE_IFNDEF },
+	{ "elifdef", PP_DIRECTIVE_ELIFDEF },
+	{ "elifndef", PP_DIRECTIVE_ELIFNDEF },
+	{ "else", PP_DIRECTIVE_ELSE },
+	{ "message", PP_DIRECTIVE_MESSAGE },
+	{ "msg", PP_DIRECTIVE_MESSAGE },
+	{ "warning", PP_DIRECTIVE_WARNING },
+	{ "warn", PP_DIRECTIVE_WARNING },
+	{ "error", PP_DIRECTIVE_ERROR },
+	{ "err", PP_DIRECTIVE_ERROR },
 };
 
 // Gets the next character in the source code.
@@ -203,6 +229,225 @@ static inline uint8_t s_escapeSequence( CkLexInstance *lexer )
 	}
 }
 
+// Skips spaces.
+static inline void _SkipSpaces( CkLexInstance *lexer )
+{
+	char c = s_nextChar( lexer );
+	while ( isspace( c ) ) {
+		lexer->cursor++;
+		c = s_nextChar( lexer );
+	}
+}
+
+// Parses a preprocessor directive.
+static bool_t _ParsePreprocessorDirective(
+	CkArenaFrame *arena,
+	CkLexInstance *lexer,
+	CkToken *token )
+{
+	char c;
+	char *direct = token->value.cstr;
+	CkToken ctoken;
+
+	// ---- Skipping spaces ----
+	_SkipSpaces( lexer );
+
+	c = s_nextChar( lexer );
+	if ( c == 0 ) {
+		token->kind = PP_DIRECTIVE_MALFORMED;
+		return FALSE;
+	}
+
+	// ---- Parsing define ----
+	if ( token->kind == PP_DIRECTIVE_DEFINE ) {
+		size_t   pos_backup;
+		CkList  *expands;
+		CkList  *binder_params;
+		size_t   binder_params_count = 0;
+		CkMacro *dest;
+		char    *name;
+
+		CkLexReadToken( lexer, &ctoken, FALSE ); // Yes, actually calling the lexer inside itself.
+		if (ctoken.kind != 'I' ) {
+			token->kind = PP_DIRECTIVE_MALFORMED;
+			token->value.cstr = direct;
+			return FALSE;
+		}
+		name = ctoken.value.cstr;
+
+		expands = CkListStart( arena, sizeof( CkToken ) );
+
+		pos_backup = lexer->cursor;
+		CkLexReadToken( lexer, &ctoken, FALSE );
+		if ( ctoken.kind == '(' ) { // Parsing arguments
+			binder_params = CkListStart( arena, sizeof( char * ) );
+			while ( TRUE ) {
+				CkLexReadToken( lexer, &ctoken, FALSE );
+				if ( ctoken.kind == 'I' ) {
+					CkListAdd( binder_params, &ctoken.value.cstr );
+					binder_params_count++;
+				} else if ( ctoken.kind == ')' ) break;
+				else {
+					token->kind = PP_DIRECTIVE_MALFORMED;
+					token->value.cstr = direct;
+					return FALSE;
+				}
+				pos_backup = lexer->cursor;
+				CkLexReadToken( lexer, &ctoken, FALSE );
+				if ( ctoken.kind == ',' );
+				else if ( ctoken.kind == ')' ) lexer->cursor = pos_backup;
+				else {
+					token->kind = PP_DIRECTIVE_MALFORMED;
+					token->value.cstr = direct;
+					return FALSE;
+				}
+			}
+		} else lexer->cursor = pos_backup;
+
+		CkLexReadToken( lexer, &ctoken, FALSE );
+		if ( ctoken.kind != '$' ) {
+			token->kind = PP_DIRECTIVE_MALFORMED;
+			token->value.cstr = direct;
+			return FALSE;
+		}
+
+		// Parsing body, until $
+		while ( TRUE ) {
+			CkLexReadToken( lexer, &ctoken, FALSE );
+			if ( ctoken.kind == 'I' ) {
+				for ( size_t i = 0; i < binder_params_count; i++ ) {
+					char *name = *(char **)CkListAccess( binder_params, i );
+					if ( !strcmp( ctoken.value.cstr, name ) ) {
+						CkToken wildcard = ctoken;
+						wildcard.value.u64 = i;
+						wildcard.kind = PP_MACRO_WILDCARD;
+						CkListAdd( expands, &wildcard );
+						goto LBreakOutNoAdd;
+					}
+				}
+			} else if ( ctoken.kind == '$' )
+				break;
+			else if ( ctoken.kind == 0 ) {
+				token->kind = PP_DIRECTIVE_MALFORMED;
+				token->value.cstr = direct;
+				return FALSE;
+			}
+			CkListAdd( expands, &ctoken );
+		LBreakOutNoAdd:;
+		}
+
+		token->value.ptr = CkArenaAllocate( arena, sizeof( CkMacro ) );
+		dest = (CkMacro *)token->value.ptr;
+		dest->argcount = binder_params_count;
+		dest->name = name;
+		dest->expands = expands;
+		return TRUE;
+	}
+	// ----- Parsing undef -----
+	else if ( token->kind == PP_DIRECTIVE_UNDEFINE) {
+		CkLexReadToken( lexer, &ctoken, FALSE );
+		if ( ctoken.kind != 'I' ) {
+			token->kind = PP_DIRECTIVE_MALFORMED;
+			token->value.cstr = direct;
+			return FALSE;
+		}
+		token->value.cstr = ctoken.value.cstr;
+		return TRUE;
+ 	}
+	// ----- Parsing ifdef and ifndef -----
+	else if ( token->kind == PP_DIRECTIVE_IFDEF
+		   || token->kind == PP_DIRECTIVE_IFNDEF
+		   || token->kind == PP_DIRECTIVE_ELIFDEF
+		   || token->kind == PP_DIRECTIVE_ELIFNDEF ) {
+		size_t            pos_backup;
+		CkList           *expands;
+		CkPreprocessorIf *ppif;
+
+		token->value.ptr = CkArenaAllocate( arena, sizeof( CkPreprocessorIf ) );
+		ppif = (CkPreprocessorIf *)token->value.ptr;
+		ppif->negative =
+			token->kind == PP_DIRECTIVE_IFNDEF || token->kind == PP_DIRECTIVE_ELIFNDEF;
+		expands = CkListStart( arena, sizeof( CkToken ) );
+		ppif->expands = expands;
+
+		CkLexReadToken( lexer, &ctoken, FALSE );
+		if ( ctoken.kind != 'I' ) {
+			token->kind = PP_DIRECTIVE_MALFORMED;
+			token->value.cstr = direct;
+			return FALSE;
+		}
+		ppif->condition = ctoken.value.cstr;
+		
+		CkLexReadToken( lexer, &ctoken, FALSE );
+		if ( ctoken.kind != '$' ) {
+			token->kind = PP_DIRECTIVE_MALFORMED;
+			token->value.cstr = direct;
+			return FALSE;
+		}
+
+		while ( TRUE ) {
+			CkLexReadToken( lexer, &ctoken, TRUE );
+			if ( ctoken.kind == '$' ) break;
+			else if ( ctoken.kind == 0 ) {
+				token->kind = PP_DIRECTIVE_MALFORMED;
+				token->value.cstr = direct;
+				return FALSE;
+			}
+			CkListAdd( expands, &ctoken );
+		}
+
+		pos_backup = lexer->cursor;
+		CkLexReadToken( lexer, &ctoken, TRUE );
+		if ( ctoken.kind == PP_DIRECTIVE_ELIFDEF
+			|| ctoken.kind == PP_DIRECTIVE_ELIFNDEF
+			|| ctoken.kind == PP_DIRECTIVE_ELSE )
+			ppif->elseBranch = (CkPreprocessorIf *)ctoken.value.ptr;
+		else lexer->cursor = pos_backup;
+		return TRUE;
+	}
+	else if ( token->kind == PP_DIRECTIVE_ELSE ) {
+		CkList           *expands;
+		CkPreprocessorIf *ppif;
+
+		token->value.ptr = CkArenaAllocate( arena, sizeof( CkPreprocessorIf ) );
+		ppif = (CkPreprocessorIf *)token->value.ptr;
+		expands = CkListStart( arena, sizeof( CkToken ) );
+		ppif->expands = expands;
+
+		CkLexReadToken( lexer, &ctoken, FALSE );
+		if ( ctoken.kind != '$' ) {
+			token->kind = PP_DIRECTIVE_MALFORMED;
+			token->value.cstr = direct;
+			return FALSE;
+		}
+
+		while ( TRUE ) {
+			CkLexReadToken( lexer, &ctoken, TRUE );
+			if ( ctoken.kind == '$' ) break;
+			else if ( ctoken.kind == 0 ) {
+				token->kind = PP_DIRECTIVE_MALFORMED;
+				token->value.cstr = direct;
+				return FALSE;
+			}
+			CkListAdd( expands, &ctoken );
+		}
+		return TRUE;
+	} else if ( token->kind == PP_DIRECTIVE_MESSAGE
+		   || token->kind == PP_DIRECTIVE_WARNING
+		   || token->kind == PP_DIRECTIVE_ERROR ) {
+		CkLexReadToken( lexer, &ctoken, FALSE );
+		if ( ctoken.kind != 'S' ) {
+			token->kind = PP_DIRECTIVE_MALFORMED;
+			token->value.cstr = direct;
+			return FALSE;
+		}
+		token->value.cstr = ctoken.value.cstr;
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 void CkLexCreateInstance( CkArenaFrame *arena, CkLexInstance *dest, CkSource *source )
 {
 	CK_ARG_NON_NULL( arena );
@@ -219,7 +464,7 @@ void CkLexDestroyInstance( CkLexInstance *lexer )
 	(void)lexer;
 }
 
-bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
+bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token, bool_t allow_ppdirect )
 {
 	char cur;
 	size_t base;
@@ -229,12 +474,8 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 
 	token->source = lexer->source;
 
+	_SkipSpaces( lexer );
 	cur = s_nextChar( lexer );
-
-	while ( isspace( cur ) ) {
-		lexer->cursor++;
-		cur = s_nextChar( lexer );
-	}
 	base = lexer->cursor;
 
 	if ( !cur ) {
@@ -258,6 +499,7 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 	case ',':
 	case '~':
 	case '?':
+	case '$':
 		token->kind = (uint64_t)cur;
 		token->position = lexer->cursor++;
 		return TRUE;
@@ -336,7 +578,7 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 				lexer->cursor++;
 				next = s_nextChar( lexer );
 			}
-			return CkLexReadToken( lexer, token );
+			return CkLexReadToken( lexer, token, TRUE );
 		} else if ( next == '*' ) { // C comment
 			while ( TRUE ) {
 				lexer->cursor++;
@@ -347,7 +589,7 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 					next = s_nextChar( lexer );
 					if ( next == '/' ) {
 						lexer->cursor++;
-						return CkLexReadToken( lexer, token );
+						return CkLexReadToken( lexer, token, TRUE );
 					} else {
 						lexer->cursor--;
 						continue;
@@ -628,6 +870,34 @@ bool_t CkLexReadToken( CkLexInstance *lexer, CkToken *token )
 		token->position = base;
 		token->kind = 'S';
 		return TRUE;
+	}
+
+	if ( cur == '#' && allow_ppdirect ) {
+		size_t length = 0;
+		char *strbuf;
+		lexer->cursor++; // #
+		cur = s_nextChar( lexer );
+		base = lexer->cursor;
+		while ( isalnum( cur ) || cur == '_' ) {
+			lexer->cursor++;
+			cur = s_nextChar( lexer );
+			length++;
+		}
+
+		strbuf = CkArenaAllocate( lexer->arena, length + 1 );
+		memcpy( strbuf, lexer->source->code + base, length );
+		strbuf[length] = 0;
+		token->value.cstr = strbuf; // used for error reporting (malformed + unknown)
+		for ( size_t i = 0; i < sizeof( s_macroDict ) / sizeof( MacroDirectiveEntryPair ); i++ ) {
+			if ( !strcmp( strbuf, s_macroDict[i].key ) ) {
+				token->position = base;
+				token->kind = s_macroDict[i].value;
+				return _ParsePreprocessorDirective( lexer->arena, lexer, token );
+			}
+		}
+		token->position = base;
+		token->kind = PP_DIRECTIVE_UNKNOWN;
+		return FALSE;
 	}
 
 	token->position = base;

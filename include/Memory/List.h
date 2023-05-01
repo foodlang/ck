@@ -43,6 +43,9 @@ CkList *CkListStart(
 // Adds an element to the list.
 void CkListAdd(CkList *desc, void *source);
 
+// Adds a list to another list.
+void CkListAddRange( CkList *desc, CkList *src );
+
 // Accesses an existing element on the list.
 void *CkListAccess(CkList *desc, size_t index);
 

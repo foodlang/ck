@@ -14,6 +14,7 @@
 #define CK_DRIVER_H_
 
 #include <Memory/Arena.h>
+#include <Syntax/Preprocessor.h>
 #include <Diagnostics.h>
 #include <Types.h>
 
@@ -23,17 +24,11 @@
 // This includes the source, the parsing and output settings.
 typedef struct CkDriverStartupConfiguration
 {
-	// The name of the driver.
-	char *name;
-
-	// The source code.
-	CkSource *source;
-
-	// If true, warnings act as errors (prevent compilation).
-	bool_t wError;
-
-	// The alignment requirement.
-	size_t align;
+	char     *name;   // The name of the driver.
+	CkSource *source; // The source code.
+	bool_t    wError; // If true, warnings act as errors (prevent compilation).
+	size_t    align;  // The alignment requirement.
+	CkList   *defines;// A list to default defines. Elem type = CkMacro
 
 } CkDriverStartupConfiguration;
 
@@ -41,11 +36,8 @@ typedef struct CkDriverStartupConfiguration
 // symbols and other information.
 typedef struct CkDriverCompilationResult
 {
-	// If true, the compilation unit compiled successfully.
-	bool_t successful;
-
-	// The time elapsed (in milliseconds) for the driver to run.
-	double executionTime;
+	bool_t successful;    // If true, the compilation unit compiled successfully.
+	double executionTime; // The time elapsed (in milliseconds) for the driver to run.
 
 } CkDriverCompilationResult;
 

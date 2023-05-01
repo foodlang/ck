@@ -114,3 +114,10 @@ void CkListClear( CkList *base )
 	base->used = 0;
 	memset( base + 1, 0, base->elemSize );
 }
+
+void CkListAddRange( CkList *desc, CkList *src )
+{
+	size_t srclen = CkListLength( src );
+	for ( size_t i = 0; i < srclen; i++ )
+		CkListAdd( desc, CkListAccess( src, i ) );
+}

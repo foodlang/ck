@@ -1,0 +1,19 @@
+#define MY_MACRO $ "Hello" $
+#define MY_MACRO2 $ MY_MACRO; "Test" $
+#define TEXT(Mtext) $ Mtext $
+#define IF_TEST $$
+
+#define ADD(Mx, My) $ Mx + My $
+
+#ifdef IF_TEST $
+	#define IF_RESULT $1$
+$ #else $
+	#define IF_RESULT $0$
+$
+
+public void Main()
+{
+	MY_MACRO2;
+	TEXT( $ "Hi" $ );
+	return ADD( $IF_RESULT$, $6$ );
+}

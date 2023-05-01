@@ -4,6 +4,7 @@
 #include <FileIO.h>
 #include <Util/Time.h>
 #include <Generation/GenPrototype.h>
+#include <Defines.h>
 
 #include <Syntax/Binder.h>
 
@@ -36,7 +37,7 @@ int main( int argc, char *argv[], char **envp )
 {
 	CkArenaFrame globalArena;                 // The arena used for global allocations.
 	CkDriverStartupConfiguration driverStart; // Driver startup configuration
-	CkDriverCompilationResult driverResult;   // Driver result
+	CkDriverCompilationResult driverResult={};// Driver result
 	CkBuildConfig *base;                      // The base configuration.
 	CkBuildConfig *applied;                   // The configuration with the profile applied.
 	char *buildDirectory = NULL;              // The directory where the project is located.
@@ -69,6 +70,9 @@ int main( int argc, char *argv[], char **envp )
     
     CkArenaStartFrame( &globalArena, 0 );
     CkTimeGetCurrent( &tcompilerStart );
+
+	driverStart.defines = CkListStart( &globalArena, sizeof( CkMacro ) );
+	CkDefineConstants( &globalArena, driverStart.defines );
     
 	if ( argc >= 2 ) buildDirectory = argv[1];
 	if ( argc >= 3 ) profileName = argv[2];
@@ -92,6 +96,8 @@ int main( int argc, char *argv[], char **envp )
     
 	result = CkCreateLibrary( &globalArena, applied->name );
 	CkDiagnosticHandlerCreateInstance( &globalArena, &dhi );
+
+	// __CC__
     
 	sourceCount = CkListLength( applied->sources );
 	for ( size_t i = 0; i < sourceCount; i++ ) {
@@ -110,7 +116,6 @@ int main( int argc, char *argv[], char **envp )
 		// Init
 		nameLen = strlen( applied->name ) + strlen( "::" ) + strlen( source );
 		sourceLen = strlen( buildDirectory ) + strlen( applied->sourceDir ) + strlen( "//" ) + strlen( source );
-		memset( &driverStart, 0, sizeof( CkDriverStartupConfiguration ) );
 		memset( &driverResult, 0, sizeof( CkDriverCompilationResult ) );
         
 		// Name (ProjectName::FileName)
@@ -126,6 +131,7 @@ int main( int argc, char *argv[], char **envp )
         
 		// Source loading
 		driverStart.source = CkReadFileContents( &globalArena, sourceTotal );
+		
 		if ( !driverStart.source ) {
 			fprintf( stderr, "ck: Project '%s' does not have source file '%s'.\n", applied->name, sourceTotal );
 			continue;
@@ -137,21 +143,20 @@ int main( int argc, char *argv[], char **envp )
 		// Driver compilation
 		CkDriverCompile( &dhi, &globalArena, &globalArena, result, &driverResult, &driverStart );
 		CkTimeGetCurrent( &tdriverEnd );
+		if ( dhi.anyErrors || (applied->wError && dhi.anyWarnings) || !driverResult.successful ) {
+			CkDiagnosticThrow( &dhi, NULL, CK_DIAG_SEVERITY_MESSAGE, "",
+				"Semantic analysis/type binding will not be performed if parsing failed." );
+			CkDiagnosticDisplay( &dhi );
+			CkTimeGetCurrent( &tcompilerEnd );
+			CkArenaEndFrame( &globalArena );
+			printf(
+				"Full compilation time: %f ms\n",
+				(double)(CkTimeElapsed_mcs( &tcompilerStart, &tcompilerEnd )) / 1000.0 );
+			return 0;
+		}
 		printf( "  - '%s' (%f ms)\n",
                sourceTotal,
                (double)(CkTimeElapsed_mcs( &tdriverStart, &tdriverEnd )) / 1000.0 );
-	}
-    
-	if ( dhi.anyErrors || (applied->wError && dhi.anyWarnings) || !driverResult.successful ) {
-		CkDiagnosticThrow( &dhi, NULL, CK_DIAG_SEVERITY_MESSAGE, "",
-			"Semantic analysis/type binding will not be performed if parsing failed." );
-		CkDiagnosticDisplay( &dhi );
-		CkTimeGetCurrent( &tcompilerEnd );
-		CkArenaEndFrame( &globalArena );
-		printf(
-			"Full compilation time: %f ms\n",
-			(double)(CkTimeElapsed_mcs( &tcompilerStart, &tcompilerEnd )) / 1000.0 );
-		return 0;
 	}
 
 	// Binding

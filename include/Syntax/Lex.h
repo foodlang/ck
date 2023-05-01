@@ -93,7 +93,21 @@ typedef enum CkKeyword
 	KW_TYPEOF,
 	KW_ASM,
 
-} CkKeyword;
+	PP_DIRECTIVE_UNKNOWN,   // Unknown preprocessor directive
+	PP_DIRECTIVE_MALFORMED, // Malformed preprocessor directive
+	PP_DIRECTIVE_DEFINE,    // Defines a new macro
+	PP_DIRECTIVE_UNDEFINE,  // Removes a macro
+	PP_DIRECTIVE_IFDEF,     // Pastes code if macro is defined
+	PP_DIRECTIVE_IFNDEF,    // Pastes code if macro is not defined
+	PP_DIRECTIVE_ELIFDEF,   // Pastes code if macro is defined (else if)
+	PP_DIRECTIVE_ELIFNDEF,  // Pastes code if macro is not defined (else if)
+	PP_DIRECTIVE_ELSE,      // If all other if conditions fail, paste code
+	PP_DIRECTIVE_MESSAGE,   // Adds a message to the diagnostic output
+	PP_DIRECTIVE_WARNING,   // Adds a warning to the diagnostic output
+	PP_DIRECTIVE_ERROR,     // Adds an error to the diagnostic output
+	PP_MACRO_WILDCARD,      // Used for macro parameters (value.u64 is argument index)
+
+} CkKeyword, CkDirectiveKind;
 
 #define CKTOK2(a, b)       (uint64_t)((a) << 8 | (b))
 #define CKTOK3(a, b, c)    (uint64_t)((a) << 16 | (b) << 8 | (c))
@@ -103,7 +117,7 @@ typedef enum CkKeyword
 void CkLexCreateInstance(CkArenaFrame *arena, CkLexInstance *dest, CkSource *source);
 
 // Reads a token from the lexer source code.
-bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *dest);
+bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *dest, bool_t allow_ppdirect );
 
 // Destroys a lexer instance.
 void CkLexDestroyInstance(CkLexInstance *lexer);

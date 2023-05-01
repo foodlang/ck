@@ -140,11 +140,13 @@ void CkDiagnosticThrow(
 			s_prefixBuffer,
 			DIAGNOSTICPREFIXFORMATNULL,
 			severityTxt );
+		diag.source = NULL;
 		vsprintf( s_messageBuffer, format, va_args );
 	} else {
 		CkGetRowColString( source->source->code, source->position, &pos2DRow, &pos2DCol );
 		diag.line = pos2DRow;
 		diag.column = pos2DCol;
+		diag.source = source->source;
 
 		// Allocating and writing to the sub-buffers
 		sprintf(
@@ -165,7 +167,7 @@ void CkDiagnosticThrow(
 	// Allocating and writing to the final buffer
 	diag.message = CkArenaAllocate( dhi->arena, totalLength + 1 );
 	diag.severity = severity;
-	diag.source = source->source;
+	
 	strcpy( diag.message, s_prefixBuffer );
 	strcat( diag.message, s_messageBuffer );
 	memset( s_prefixBuffer, 0, MAXDIAGLENGTH );
@@ -209,8 +211,8 @@ void CkDiagnosticDisplay( CkDiagnosticHandlerInstance *dhi )
 			curline = lines_array[diagnostic->line - 1];
 			prevline = diagnostic->line >= 2 ? lines_array[diagnostic->line - 2] : NULL;
 			if ( prevline )
-				printf( ESCB256F CYAN256 "%zu %s\n" ESCRESET, diagnostic->line - 1, prevline );
-			printf( ESCB256F CYAN256 "%zu %s\n" ESCRESET, diagnostic->line, curline );
+				printf( ESCB256F CYAN256 "%s\n" ESCRESET, prevline );
+			printf( ESCB256F CYAN256 "%s\n" ESCRESET, curline );
 			printf( ESCB256F MAGENTA256 );
 			for ( size_t i = 0; i < diagnostic->column - 1; i++ ) {
 				if ( curline[i - 1] == '\t' )
