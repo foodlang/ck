@@ -164,7 +164,7 @@ typedef enum FoodTypeID
 typedef struct CkFoodType
 {
 	// The type identifier. Must be equal to one of the
-	// CK_FOOD_(typename) macros.
+	// CK_FOOD_(typename) enums.
 	FoodTypeID id;
 
 	// A bit array storing the type qualifiers.

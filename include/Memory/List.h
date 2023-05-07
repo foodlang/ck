@@ -58,4 +58,8 @@ size_t CkListLength( CkList *desc );
 // Clears a whole list.
 void CkListClear( CkList *base );
 
+// Performs a foreach.
+#define FOREACH(x, N) for (CkList *N = x; e; e = e->next)
+#define ITEM(T, N) (T)(N + 1)
+
 #endif

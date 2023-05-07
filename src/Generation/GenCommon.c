@@ -1,9 +1,8 @@
-#ifdef SKIP // temporarily discontinued
 #include <Generation/GenCommon.h>
 #include <CDebug.h>
 
 #include <string.h>
-
+#ifdef SKIP // temporarily discontinued
 /*
  * List of Lua functions:
  * ckgen_expression(expression)     -> string   :: Generates an expression
@@ -306,3 +305,8 @@ char* CkGenProgram(
 	return out;
 }
 #endif
+
+void CkGenerate( CkGenerator *pGen )
+{
+	// TODO
+}

@@ -88,6 +88,9 @@ project "ck"
 	targetdir( "bin/" )
 	objdir( "obj/" .. output_target .. "/%{prj.name}" )
 
+	linkoptions { "`llvm-config --ldflags --system-libs --libs core`" }
+	buildoptions { "`llvm-config --cflags`" }
+
 	files {
 		"src/**.c",
 		"include/**.h"
