@@ -8,8 +8,8 @@
 CkScope *CkStartScope(
 	CkArenaFrame *allocator,
 	CkScope *optionalParent,
-	bool_t allowedLabels,
-	bool_t allowedFunctions )
+	bool allowedLabels,
+	bool allowedFunctions )
 {
 	CkScope *yield;
 
@@ -28,13 +28,13 @@ CkScope *CkStartScope(
 
 	// Labels
 	if ( allowedLabels ) {
-		yield->supportsLabels = TRUE;
+		yield->supportsLabels = true;
 		yield->labelList = CkListStart( allocator, sizeof( CkLabel ) );
 	}
 
 	// Functions
 	if ( allowedFunctions ) {
-		yield->supportsFunctions = TRUE;
+		yield->supportsFunctions = true;
 		yield->functionList = CkListStart( allocator, sizeof( CkFunction ) );
 		yield->usertypeList = CkListStart( allocator, sizeof( CkUserType ) );
 	}
@@ -51,7 +51,7 @@ CkScope *CkLeaveScope( CkScope *current )
 	return current->parent ? current->parent : current;
 }
 
-void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName, bool_t param )
+void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName, bool param )
 {
 	CkVariable var = {};
 
@@ -70,7 +70,7 @@ void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName, boo
 CkFunction *CkAllocateFunction(
 	CkArenaFrame *allocator,
 	CkScope *scope,
-	bool_t bPublic,
+	bool bPublic,
 	CkFoodType *signature,
 	char *passedName,
 	CkStatement *body )
@@ -86,7 +86,7 @@ CkFunction *CkAllocateFunction(
 	func.body = body;
 	func.bPublic = bPublic;
 	func.name = passedName;
-	func.funscope = CkStartScope( allocator, scope, TRUE, FALSE ); // TODO: nested functions
+	func.funscope = CkStartScope( allocator, scope, true, false ); // TODO: nested functions
 	CkListAdd( scope->functionList, &func );
 	return CkListAccess( scope->functionList, CkListLength( scope->functionList ) - 1 );
 }
@@ -95,7 +95,7 @@ CkLibrary *CkCreateLibrary( CkArenaFrame *allocator, char *passedName )
 {
 	CkLibrary *lib = CkArenaAllocate( allocator, sizeof( CkLibrary ) );
 	lib->name = passedName;
-	lib->scope = CkStartScope( allocator, NULL, FALSE, TRUE );
+	lib->scope = CkStartScope( allocator, NULL, false, true );
 	lib->scope->library = lib;
 	lib->scope->module = NULL;
 	lib->moduleList = CkListStart( allocator, sizeof( CkModule * ) );
@@ -107,14 +107,14 @@ CkModule *CkCreateModule(
 	CkArenaFrame *allocator,
 	CkLibrary *parent,
 	char *passedName,
-	bool_t isPublic,
-	bool_t isStatic )
+	bool isPublic,
+	bool isStatic )
 {
 	CkModule *mod = CkArenaAllocate( allocator, sizeof( CkModule ) );
 	mod->bPublic = isPublic;
 	mod->bStatic = isStatic;
 	mod->name = passedName;
-	mod->scope = CkStartScope( allocator, parent->scope, FALSE, TRUE );
+	mod->scope = CkStartScope( allocator, parent->scope, false, true );
 	mod->scope->module = mod;
 	CkListAdd( parent->moduleList, &mod );
 	return mod;
@@ -199,7 +199,7 @@ void CkPrintAST( CkLibrary *library )
 	}
 }
 
-bool_t CkSymbolDeclared( CkScope* current, char* passedName )
+bool CkSymbolDeclared( CkScope* current, char* passedName )
 {
 	const size_t varCount = CkListLength( current->variableList );
 	const size_t funcCount = current->supportsFunctions ? CkListLength( current->functionList ) : 0;
@@ -207,14 +207,14 @@ bool_t CkSymbolDeclared( CkScope* current, char* passedName )
 	for ( size_t i = 0; i < varCount; i++ ) {
 		CkVariable *var = CkListAccess( current->variableList, i );
 		if ( !strcmp( var->name, passedName ) )
-			return TRUE;
+			return true;
 	}
 
 	for ( size_t i = 0; i < funcCount; i++ ) {
 		CkFunction *func = CkListAccess( current->functionList, i );
 		if ( !strcmp( func->name, passedName ) )
-			return TRUE;
+			return true;
 	}
 
-	return current->parent ? CkSymbolDeclared( current->parent, passedName ) : FALSE;
+	return current->parent ? CkSymbolDeclared( current->parent, passedName ) : false;
 }

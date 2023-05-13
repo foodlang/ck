@@ -49,18 +49,18 @@ void CkParserReadToken( CkParserInstance *parser, CkToken *token )
 	parser->position++;
 }
 
-bool_t CkParserRewind( CkParserInstance *parser, size_t elems )
+bool CkParserRewind( CkParserInstance *parser, size_t elems )
 {
 	CK_ARG_NON_NULL( parser );
 	// If the amount of tokens cannot be rewinded, the 
 	// parser is set back to zero and false is returned.
 	if ( elems > parser->position ) {
 		parser->position = 0;
-		return FALSE;
+		return false;
 	}
 
 	parser->position -= elems;
-	return TRUE;
+	return true;
 }
 
 void CkParserGoto( CkParserInstance *parser, size_t index )

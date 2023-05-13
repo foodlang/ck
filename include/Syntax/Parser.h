@@ -65,9 +65,9 @@ void CkParserDelete( CkParserInstance *dest );
 void CkParserReadToken( CkParserInstance *parser, CkToken *token );
 
 // Attempts to rewind a parser's token pointer. If the parser
-// cannot be rewinded by the given amount, FALSE is returned and
+// cannot be rewinded by the given amount, false is returned and
 // the token pointer is set to 0.
-bool_t CkParserRewind( CkParserInstance *parser, size_t elems );
+bool CkParserRewind( CkParserInstance *parser, size_t elems );
 
 // Goes to a specific token. Used to rewind the parser.
 void CkParserGoto( CkParserInstance *parser, size_t index );

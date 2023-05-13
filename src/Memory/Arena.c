@@ -34,6 +34,10 @@ void CkArenaEndFrame( CkArenaFrame *frame )
 {
 	CK_ARG_NON_NULL( frame );
 
+#ifdef _DEBUG
+	printf("(debug) %zu bytes in use when arena 0x%zX was freed.\n", frame->offsetFree, frame->base);
+#endif
+
 #if defined(USE_MALLOC)
 	free( frame->base );
 #elif defined(_WIN32)

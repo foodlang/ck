@@ -26,7 +26,7 @@ typedef struct CkDriverStartupConfiguration
 {
 	char     *name;   // The name of the driver.
 	CkSource *source; // The source code.
-	bool_t    wError; // If true, warnings act as errors (prevent compilation).
+	bool    wError; // If true, warnings act as errors (prevent compilation).
 	size_t    align;  // The alignment requirement.
 	CkList   *defines;// A list to default defines. Elem type = CkMacro
 
@@ -36,7 +36,7 @@ typedef struct CkDriverStartupConfiguration
 // symbols and other information.
 typedef struct CkDriverCompilationResult
 {
-	bool_t successful;    // If true, the compilation unit compiled successfully.
+	bool successful;    // If true, the compilation unit compiled successfully.
 	double executionTime; // The time elapsed (in milliseconds) for the driver to run.
 
 } CkDriverCompilationResult;

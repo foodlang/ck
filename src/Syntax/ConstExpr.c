@@ -35,7 +35,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				k = CK_EXPRESSION_FLOAT_LITERAL;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, k, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -55,7 +55,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				k = CK_EXPRESSION_FLOAT_LITERAL;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, k, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -75,7 +75,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				k = CK_EXPRESSION_FLOAT_LITERAL;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, k, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -95,7 +95,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				k = CK_EXPRESSION_FLOAT_LITERAL;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, k, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -106,7 +106,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.i64 % right->token.value.i64;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_INTEGER_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -126,7 +126,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				k = CK_EXPRESSION_FLOAT_LITERAL;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, k, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 	case CK_EXPRESSION_UNARY_PLUS: if ( left->isConstant ) return src->left;
@@ -137,7 +137,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.u64 & right->token.value.u64;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_INTEGER_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -148,7 +148,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.u64 | right->token.value.u64;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_INTEGER_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -159,7 +159,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.u64 ^ right->token.value.u64;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_INTEGER_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -170,7 +170,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = ~left->token.value.i64;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_INTEGER_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 	case CK_EXPRESSION_LOGICAL_AND:
@@ -180,7 +180,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.boolean && right->token.value.boolean;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -191,7 +191,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.boolean && right->token.value.boolean;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -202,7 +202,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = !left->token.value.i64;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -213,7 +213,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.boolean == right->token.value.boolean;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -224,7 +224,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.boolean != right->token.value.boolean;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -235,7 +235,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.i64 << right->token.value.i64;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_INTEGER_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -246,7 +246,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 			v.position = 0;
 			v.value.u64 = left->token.value.i64 >> right->token.value.i64;
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_INTEGER_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -263,7 +263,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				v.value.u64 = left->token.value.f64 < right->token.value.f64;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -280,7 +280,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				v.value.u64 = left->token.value.f64 <= right->token.value.f64;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -297,7 +297,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				v.value.u64 = left->token.value.f64 > right->token.value.f64;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;
@@ -314,7 +314,7 @@ CkExpression *CkConstExprReduce( CkArenaFrame *arena, CkExpression *src )
 				v.value.u64 = left->token.value.f64 >= right->token.value.f64;
 			}
 			result = CkExpressionCreateLiteral( arena, &v, CK_EXPRESSION_BOOL_LITERAL, src->type );
-			result->isConstant = TRUE;
+			result->isConstant = true;
 			return result;
 		}
 		return src;

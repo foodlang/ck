@@ -40,7 +40,7 @@ static uint8_t s_ParseQualifiers( CkParserInstance *parser )
 
 	CK_ARG_NON_NULL( parser );
 
-	while ( TRUE ) {
+	while ( true ) {
 		CkParserReadToken( parser, &token );
 		switch ( token.kind ) {
 			// Const qualifier
@@ -127,7 +127,7 @@ CkFoodType *CkParserType( CkScope *scope, CkParserInstance *parser )
 	} else acc = CkFoodCreateTypeInstance( parser->arena, id, attr, NULL );
 
 	// Handle pointers, references and arrays.
-	while ( TRUE ) {
+	while ( true ) {
 		attr = s_ParseQualifiers( parser );
 		CkParserReadToken( parser, &token );
 		if ( token.kind == '*' ) { // Pointers

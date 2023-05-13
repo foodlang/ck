@@ -15,7 +15,7 @@ CkExpression *CkExpressionCreateType(
 	expr = CkArenaAllocate( arena, sizeof( CkExpression ) );
 	expr->type = type;
 	expr->kind = CK_EXPRESSION_TYPE;
-	expr->isLValue = FALSE;
+	expr->isLValue = false;
 	return expr;
 }
 
@@ -34,7 +34,7 @@ CkExpression *CkExpressionCreateLiteral(
 	memcpy( &expr->token, token, sizeof( CkToken ) );
 	expr->type = type;
 	expr->kind = kind;
-	expr->isLValue = FALSE;
+	expr->isLValue = false;
 	return expr;
 }
 
@@ -55,7 +55,7 @@ CkExpression *CkExpressionCreateUnary(
 	expr->left = operand;
 	expr->type = type;
 	expr->kind = kind;
-	expr->isLValue = FALSE;
+	expr->isLValue = false;
 	return expr;
 }
 
@@ -78,7 +78,7 @@ CkExpression *CkExpressionCreateBinary(
 	expr->right = right;
 	expr->type = type;
 	expr->kind = kind;
-	expr->isLValue = FALSE;
+	expr->isLValue = false;
 	return expr;
 }
 
@@ -103,7 +103,7 @@ CkExpression *CkExpressionCreateTernary(
 	expr->extra = extra;
 	expr->type = type;
 	expr->kind = kind;
-	expr->isLValue = FALSE;
+	expr->isLValue = false;
 	return expr;
 }
 

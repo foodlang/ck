@@ -29,7 +29,7 @@ typedef struct CkMacro
 typedef struct CkPreprocessorIf
 {
 	char   *condition; // If this macro is defined, expand
-	bool_t  negative;  // If this is true, the condition is reversed
+	bool  negative;  // If this is true, the condition is reversed
 	CkList *expands;   // The code to expand
 
 	struct CkPreprocessorIf *elseBranch; // The else branch
@@ -41,7 +41,7 @@ typedef struct CkPreprocessor
 	CkList *input;  // The input list of tokens. (elem type = CkToken)
 	CkList *macros; // The list of macros. (elem type = CkMacro)
 	CkList *output; // The output list of tokens.
-	bool_t  errors; // If true, some errors were encountered.
+	bool  errors; // If true, some errors were encountered.
 	CkDiagnosticHandlerInstance *pDhi; // Preprocessor DHI
 
 } CkPreprocessor;

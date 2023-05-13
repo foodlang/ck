@@ -43,14 +43,14 @@ size_t CkPreprocessorExpand( CkArenaFrame *allocator, CkPreprocessor *preprocess
 
 		if ( p_token->kind == PP_DIRECTIVE_DEFINE ) {
 			CkMacro *new = (CkMacro *)p_token->value.ptr;
-			bool_t all_good = TRUE;
+			bool all_good = true;
 			for ( size_t j = 0; j < macro_count; j++ ) {
 				CkMacro *p_macro = (CkMacro *)CkListAccess( preprocessor->macros, j );
 				if ( !strcmp( p_macro->name, new->name ) ) {
 					CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 						"Macro '%s' was already defined", p_macro->name );
-					preprocessor->errors = TRUE;
-					all_good = FALSE;
+					preprocessor->errors = true;
+					all_good = false;
 					break;
 				}
 			}
@@ -69,7 +69,7 @@ size_t CkPreprocessorExpand( CkArenaFrame *allocator, CkPreprocessor *preprocess
 		else if ( p_token->kind == PP_DIRECTIVE_ELIFDEF || p_token->kind == PP_DIRECTIVE_ELIFNDEF || p_token->kind == PP_DIRECTIVE_ELSE ) {
 			CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 				"Headless else directive" );
-			preprocessor->errors = TRUE;
+			preprocessor->errors = true;
 		} else if ( p_token->kind == PP_DIRECTIVE_MESSAGE )
 			CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_MESSAGE, "user-message",
 				"%s", p_token->value.cstr );
@@ -101,24 +101,24 @@ size_t CkPreprocessorExpand( CkArenaFrame *allocator, CkPreprocessor *preprocess
 				if ( i + 1 >= len ) {
 					CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 						"Insufficient parameters for macro expansion" );
-					preprocessor->errors = TRUE;
+					preprocessor->errors = true;
 					goto LContinueParentLoop;
 				}
 				p_current = (CkToken *)CkListAccess( preprocessor->input, ++i );
 				if ( p_current->kind != '(' ) {
 					CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 						"Expected opening bracket (" );
-					preprocessor->errors = TRUE;
+					preprocessor->errors = true;
 					goto LContinueParentLoop;
 				}
 				p_arguments = CkListStart( allocator, sizeof( CkList * ) );
-				while ( TRUE ) {
+				while ( true ) {
 					CkList *p_arg = CkListStart( allocator, sizeof( CkToken ) );
 
 					if ( i + 1 >= len ) {
 						CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 							"Insufficient parameters for macro expansion" );
-						preprocessor->errors = TRUE;
+						preprocessor->errors = true;
 						goto LContinueParentLoop;
 					}
 
@@ -126,15 +126,15 @@ size_t CkPreprocessorExpand( CkArenaFrame *allocator, CkPreprocessor *preprocess
 					if ( p_current->kind != '$' ) {
 						CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 							"Expected macro expansion block `$<tokens>$`" );
-						preprocessor->errors = TRUE;
+						preprocessor->errors = true;
 						goto LContinueParentLoop;
 					}
 
-					while ( TRUE ) {
+					while ( true ) {
 						if ( i + 1 >= len ) {
 							CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 								"Expected macro expansion block terminator $" );
-							preprocessor->errors = TRUE;
+							preprocessor->errors = true;
 							goto LContinueParentLoop;
 						}
 						p_current = (CkToken *)CkListAccess( preprocessor->input, ++i );
@@ -147,7 +147,7 @@ size_t CkPreprocessorExpand( CkArenaFrame *allocator, CkPreprocessor *preprocess
 					if ( i + 1 >= len ) {
 						CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 							"Expected comma , or closing bracket )" );
-						preprocessor->errors = TRUE;
+						preprocessor->errors = true;
 						goto LContinueParentLoop;
 					}
 					p_current = (CkToken *)CkListAccess( preprocessor->input, ++i );
@@ -157,7 +157,7 @@ size_t CkPreprocessorExpand( CkArenaFrame *allocator, CkPreprocessor *preprocess
 					else {
 						CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 							"Expected comma , or closing bracket )" );
-						preprocessor->errors = TRUE;
+						preprocessor->errors = true;
 						goto LContinueParentLoop;
 					}
 				}
@@ -165,7 +165,7 @@ size_t CkPreprocessorExpand( CkArenaFrame *allocator, CkPreprocessor *preprocess
 				if ( CkListLength( p_arguments ) != expand_target->argcount ) {
 					CkDiagnosticThrow( preprocessor->pDhi, p_token, CK_DIAG_SEVERITY_ERROR, "",
 						"Expected %zu macro arguments, got %zu", expand_target->argcount, CkListLength( p_arguments ) );
-					preprocessor->errors = TRUE;
+					preprocessor->errors = true;
 					goto LContinueParentLoop;
 				}
 

@@ -19,7 +19,7 @@ CkList *CkListStart(
 	new->elemSize = elemSize;
 	new->next = NULL;
 	new->prev = NULL;
-	new->used = FALSE;
+	new->used = false;
 	return new;
 }
 
@@ -34,7 +34,7 @@ void CkListAdd(CkList *desc, void *source)
 		head = head->next;
 
 	if ( head == desc && !head->used ) {
-		head->used = TRUE;
+		head->used = true;
 		memcpy( head + 1, source, head->elemSize );
 	}
 	else {

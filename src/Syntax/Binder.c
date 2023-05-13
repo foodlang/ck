@@ -149,15 +149,15 @@ static inline FoodTypeID s_GetFloatTContainsIntU( FoodTypeID U )
 }
 
 // Returns true if the type is usable as a boolean.
-static bool_t s_BooleanType( FoodTypeID typeID )
+static bool s_BooleanType( FoodTypeID typeID )
 {
 	return (CK_TYPE_CLASSED_INT( typeID ) || CK_TYPE_CLASSED_POINTER( typeID ) || typeID == CK_FOOD_BOOL);
 }
 
-static bool_t s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkScope *scope );
+static bool s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkScope *scope );
 
 // Compares two user types' signatures.
-static bool_t s_CompareUserTypesSignature( CkFoodType *left, CkFoodType *right, CkScope *scope )
+static bool s_CompareUserTypesSignature( CkFoodType *left, CkFoodType *right, CkScope *scope )
 {
 	size_t leftMemberCount = 0;                                // Left member count
 	size_t rightMemberCount = 0;                               // Right member count
@@ -166,30 +166,30 @@ static bool_t s_CompareUserTypesSignature( CkFoodType *left, CkFoodType *right, 
 
 	// The two types must be of compatible user type kind.
 	if ( leftT->kind != rightT->kind )
-		return FALSE;
+		return false;
 
 	// Enums are all compatible by default.
 	if ( leftT->kind == CK_USERTYPE_ENUM )
-		return TRUE;
+		return true;
 
 	// Records and unions use the same struct
 	leftMemberCount = CkListLength( leftT->custom.struct_.members );
 	rightMemberCount = CkListLength( rightT->custom.struct_.members );
 
 	if ( leftMemberCount != rightMemberCount )
-		return FALSE;
+		return false;
 
 	for ( size_t i = 0; i < leftMemberCount; i++ ) {
 		const CkVariable *leftM = CkListAccess( leftT->custom.struct_.members, i );
 		const CkVariable *rightM = CkListAccess( rightT->custom.struct_.members, i );
 
-		if ( !s_CompatibleTypesCheck( leftM->type, rightM->type, scope ) ) return FALSE;
+		if ( !s_CompatibleTypesCheck( leftM->type, rightM->type, scope ) ) return false;
 	}
-	return TRUE;
+	return true;
 }
 
 // Compares two types. This will return true if they are practically the same, but some attributes or qualifiers are different.
-static bool_t s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkScope *scope )
+static bool s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkScope *scope )
 {
 	// References to pointers is allowed
 	if ( (left->id == CK_FOOD_REFERENCE && right->id == CK_FOOD_POINTER)
@@ -201,11 +201,11 @@ static bool_t s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkSco
 		|| (left->id == CK_FOOD_UNION && right->id == CK_FOOD_UNION) )
 		return s_CompareUserTypesSignature( left, right, scope );
 
-	if ( CK_TYPE_CLASSED_INTFLOAT( left->id ) && CK_TYPE_CLASSED_INTFLOAT( right->id ) ) return TRUE;
-	if ( CK_TYPE_CLASSED_INT( left->id ) && CK_TYPE_CLASSED_POINTER_ARITHM( right->id ) ) return TRUE;
-	if ( CK_TYPE_CLASSED_POINTER_ARITHM( left->id ) && CK_TYPE_CLASSED_INT( right->id ) ) return TRUE;
+	if ( CK_TYPE_CLASSED_INTFLOAT( left->id ) && CK_TYPE_CLASSED_INTFLOAT( right->id ) ) return true;
+	if ( CK_TYPE_CLASSED_INT( left->id ) && CK_TYPE_CLASSED_POINTER_ARITHM( right->id ) ) return true;
+	if ( CK_TYPE_CLASSED_POINTER_ARITHM( left->id ) && CK_TYPE_CLASSED_INT( right->id ) ) return true;
 
-	return FALSE;
+	return false;
 }
 
 static CkExpression *s_ValidateExpression(
@@ -232,9 +232,8 @@ static CkExpression *s_ValidateExpressionNC(
 	case CK_EXPRESSION_STRING_LITERAL:
 	case CK_EXPRESSION_TYPE:
 	case CK_EXPRESSION_COMPOUND_LITERAL: {
-		CkExpression *expr = CkExpressionDuplicate( allocator, expression );
-		expr->isConstant = TRUE;
-		return expr;
+		expression->isConstant = true;
+		return expression;
 	}
 
 		// TODO: Scoped references
@@ -246,24 +245,14 @@ static CkExpression *s_ValidateExpressionNC(
 	{
 		CkExpression *result;
 		const CkFoodType *symType = s_TryGetSymbolType( expression->token.value.cstr, scope );
-		if ( symType )
-			result = CkExpressionCreateLiteral(
-				allocator,
-				&expression->token,
-				CK_EXPRESSION_IDENTIFIER,
-				CkFoodCopyTypeInstance( allocator, (CkFoodType *)symType )
-			);
+		if (symType) expression->type = CkFoodCopyTypeInstance(allocator, (CkFoodType *)symType);
 		else {
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The symbol '%s' cannot be found in this scope.", expression->token.value.cstr );
-			result = CkExpressionCreateLiteral( // int type by default. Still shouldn't compile.
-				allocator,
-				&expression->token,
-				CK_EXPRESSION_IDENTIFIER,
-				CkFoodCreateTypeInstance( allocator, CK_FOOD_I32, 0, NULL ) );
+			expression->type = CkFoodCreateTypeInstance(allocator, CK_FOOD_I32, 0, NULL);
 		}
-		result->isLValue = TRUE;
-		return result;
+		expression->isLValue = true;
+		return expression;
 	}
 
 	// sizeof() and alignof()
@@ -287,12 +276,8 @@ static CkExpression *s_ValidateExpressionNC(
 			else s_GetAlignFoodNativeT( &literal, refT );
 		}
 
-		return CkExpressionCreateLiteral(
-			allocator,
-			&literal,
-			CK_EXPRESSION_INTEGER_LITERAL,
-			CkFoodCreateTypeInstance( allocator, CK_FOOD_U64, 0, NULL )
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, CK_FOOD_U64, 0, NULL);
+		return expression;
 	}
 
 	// Addition and subtraction
@@ -329,14 +314,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"Addition and subtraction require arithmetic types on both operands. A pointer type is allowed on one of the two operands." );
 		}
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance( allocator, newTypeID, 0, subtype != NULL ? CkFoodCopyTypeInstance( allocator, subtype ) : NULL ),
-			left,
-			right
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, newTypeID, 0, subtype != NULL ? CkFoodCopyTypeInstance(allocator, subtype) : NULL);
+		return expression;
 	}
 
 	// Multiplication and division
@@ -365,14 +344,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"Multiplication and division require arithmetic types on both operands." );
 		}
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance( allocator, newTypeID, 0, NULL ),
-			left,
-			right
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, newTypeID, 0, NULL);
+		return expression;
 	}
 
 	// Modulo
@@ -393,14 +366,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"Modulo requires both its operands to be of integer type." );
 		}
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance( allocator, newTypeID, 0, NULL ),
-			left,
-			right
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, newTypeID, 0, NULL);
+		return expression;
 	}
 
 	// x++, x--, ++x, --x
@@ -424,13 +391,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"Postfix/prefix increment or decrement operators require an lvalue operand." );
 		}
 
-		return CkExpressionCreateUnary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCopyTypeInstance( allocator, left->type ),
-			left
-		);
+		expression->type = CkFoodCopyTypeInstance(allocator, left->type);
+		return expression;
 
 		// +x, -x
 	case CK_EXPRESSION_UNARY_PLUS:
@@ -450,13 +412,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"The unary plus and minus operators require an operand of integer or float type." );
 		}
 
-		return CkExpressionCreateUnary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCopyTypeInstance( allocator, left->type ),
-			left
-		);
+		expression->type = CkFoodCopyTypeInstance(allocator, left->type);
+		return expression;
 
 		// ~x
 	case CK_EXPRESSION_BITWISE_NOT:
@@ -471,13 +428,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"The bitwise not operator (~x) requires an integer operand." );
 		}
 
-		return CkExpressionCreateUnary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCopyTypeInstance( allocator, left->type ),
-			left
-		);
+		expression->type = CkFoodCopyTypeInstance(allocator, left->type);
+		return expression;
 
 		// !x
 	case CK_EXPRESSION_LOGICAL_NOT:
@@ -494,13 +446,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"The logical not operator (!x) requires an integer, pointer or boolean operand." );
 		}
 
-		return CkExpressionCreateUnary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance( allocator, CK_FOOD_BOOL, 0, NULL ),
-			left
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, CK_FOOD_BOOL, 0, NULL);
+		return expression;
 
 		// *x
 	case CK_EXPRESSION_DEREFERENCE:
@@ -521,37 +468,23 @@ static CkExpression *s_ValidateExpressionNC(
 			&& left->type->id != CK_FOOD_ARRAY ) {
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Only a pointer, reference or array may be dereferenced." );
-			return CkExpressionCreateUnary( // Avoiding NULL dereference + attempt to maintain order in error messages
-				allocator,
-				&expression->token,
-				expression->kind,
-				CkFoodCopyTypeInstance( allocator, left->type ),
-				left
-			);
+			expression->type = CkFoodCopyTypeInstance(allocator, left->type);
+			expression->isLValue = true;
+			return expression;
 		}
 
 		if ( left->type->child->id == CK_FOOD_VOID ) {
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"An anonymous pointer (void*) cannot be dereferenced." );
-			return CkExpressionCreateUnary( // Avoiding NULL dereference + attempt to maintain order in error messages
-				allocator,
-				&expression->token,
-				expression->kind,
-				CkFoodCopyTypeInstance( allocator, left->type ),
-				left
-			);
+			expression->type = CkFoodCopyTypeInstance(allocator, left->type);
+			expression->isLValue = true;
+			return expression;
 		}
 
-		result = CkExpressionCreateUnary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCopyTypeInstance( allocator, left->type->child ),
-			left
-		);
+		expression->type = CkFoodCopyTypeInstance(allocator, left->type->child);
 
-		result->isLValue = TRUE;
-		return result;
+		expression->isLValue = true;
+		return expression;
 	}
 
 	// Address-Of
@@ -561,11 +494,8 @@ static CkExpression *s_ValidateExpressionNC(
 			to be noted:
 			  1) The operand must be an lvalue (must be addressable)
 			  2) The operand must not be a reference
-			  3) Its result is **always** a reference, and will be
-				 casted to a pointer if required. This trick is
-				 because the binder is uni-directional.
 
-			&T => T& :: Always reference type.
+			&T => T* :: Always pointer type.
 		*/
 
 		CK_ASSERT( left );
@@ -579,18 +509,13 @@ static CkExpression *s_ValidateExpressionNC(
 				"It is impossible to take the address of a reference." );
 		}
 
-		return CkExpressionCreateUnary(
+		expression->type = CkFoodCreateTypeInstance(
 			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance(
-				allocator,
-				CK_FOOD_REFERENCE,
-				0,
-				CkFoodCopyTypeInstance( allocator, left->type )
-			),
-			left
+			CK_FOOD_POINTER,
+			0,
+			CkFoodCopyTypeInstance(allocator, left->type)
 		);
+		return expression;
 
 		// &&x
 	case CK_EXPRESSION_OPAQUE_ADDRESS_OF:
@@ -611,19 +536,42 @@ static CkExpression *s_ValidateExpressionNC(
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"It is impossible to take the opaque address of a reference." );
 		}
-
-		return CkExpressionCreateUnary(
+		
+		expression->type = CkFoodCreateTypeInstance(
 			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance(
-				allocator,
-				CK_FOOD_POINTER,
-				0,
-				CkFoodCreateTypeInstance( allocator, CK_FOOD_VOID, 0, NULL )
-			),
-			left
+			CK_FOOD_POINTER,
+			0,
+			CkFoodCreateTypeInstance(allocator, CK_FOOD_VOID, 0, NULL)
 		);
+		return expression;
+
+		// ref x
+	case CK_EXPRESSION_REF:
+		/*
+			The opaque address-of operator is very similar to the classic
+			address-of operator, however it will allows return an opaque
+			reference. It also requires its operand to be an lvalue and
+			not a reference.
+		*/
+
+		CK_ASSERT(left);
+		if (!left->isLValue) {
+			CkDiagnosticThrow(pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
+				"It is impossible to take a reference of a non-lvalue object.");
+		}
+
+		if (left->type->id == CK_FOOD_REFERENCE) {
+			CkDiagnosticThrow(pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
+				"It is impossible to take the opaque address of a reference.");
+		}
+
+		expression->type = CkFoodCreateTypeInstance(
+			allocator,
+			CK_FOOD_REFERENCE,
+			0,
+			CkFoodCopyTypeInstance(allocator, left->type)
+		);
+		return expression;
 
 		// Bitwise shifts
 	case CK_EXPRESSION_LEFT_SHIFT:
@@ -649,14 +597,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"The left operand of a bitwise shift must be an integer or an arithmetic-capable pointer." );
 		}
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCopyTypeInstance( allocator, left->type ),
-			left,
-			right
-		);
+		expression->type = CkFoodCopyTypeInstance(allocator, left->type);
+		return expression;
 
 		// <, <=, >, >=
 	case CK_EXPRESSION_LOWER:
@@ -683,14 +625,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"The operands of a comparison must either be two pointers with the same subtype, integers or floats." );
 		}
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance( allocator, CK_FOOD_BOOL, 0, NULL ),
-			left,
-			right
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, CK_FOOD_BOOL, 0, NULL);
+		return expression;
 
 		// == and !=
 	case CK_EXPRESSION_EQUAL:
@@ -727,14 +663,8 @@ static CkExpression *s_ValidateExpressionNC(
 				left->type->id, right->type->id );
 		}
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance( allocator, CK_FOOD_BOOL, 0, NULL ),
-			left,
-			right
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, CK_FOOD_BOOL, 0, NULL);
+		return expression;
 
 		// Classical bitwise operators (not shifts)
 	case CK_EXPRESSION_BITWISE_AND:
@@ -765,14 +695,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"The classic bitwise operators (&, |, ^) require their operands to be integer, with one operand allowed to be a pointer." );
 		}
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance( allocator, newTypeID, 0, subtype != NULL ? CkFoodCopyTypeInstance( allocator, subtype ) : NULL ),
-			left,
-			right
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, newTypeID, 0, subtype != NULL ? CkFoodCopyTypeInstance(allocator, subtype) : NULL);
+		return expression;
 	}
 
 	// && and ||
@@ -793,14 +717,8 @@ static CkExpression *s_ValidateExpressionNC(
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The right operand of a logical operator (&&, ||) must be either a boolean, an integer or a pointer." );
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCreateTypeInstance( allocator, CK_FOOD_BOOL, 0, NULL ),
-			left,
-			right
-		);
+		expression->type = CkFoodCreateTypeInstance(allocator, CK_FOOD_BOOL, 0, NULL);
+		return expression;
 
 		// x => T, (T)x
 	case CK_EXPRESSION_C_CAST:
@@ -814,8 +732,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"Casting to a reference is not allowed." );
 
 		// C-style discard
-		if ( expression->type->id == CK_FOOD_VOID )
-			return CkExpressionDuplicate(allocator, expression);
+		if (expression->type->id == CK_FOOD_VOID)
+			return expression;
 
 		if ( expression->type->id == CK_FOOD_STRUCT
 			|| expression->type->id == CK_FOOD_UNION)
@@ -827,7 +745,7 @@ static CkExpression *s_ValidateExpressionNC(
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The input of a cast must be of scalar type." );
 
-		return CkExpressionDuplicate(allocator, expression);
+		return expression;
 
 		// Classic assignment
 	case CK_EXPRESSION_ASSIGN:
@@ -880,13 +798,8 @@ static CkExpression *s_ValidateExpressionNC(
 				"Only an lvalue can be assigned a value." );
 
 		// Do not replace with CkExpressionDuplicate
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCopyTypeInstance( allocator, expression->type ),
-			left,
-			right );
+		expression->type = CkFoodCopyTypeInstance(allocator, expression->type);
+		return expression;
 
 		// x[y]
 	case CK_EXPRESSION_SUBSCRIPT:
@@ -905,20 +818,14 @@ static CkExpression *s_ValidateExpressionNC(
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"Cannot index a void pointer via subscript." );
 
-		return CkExpressionCreateBinary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCopyTypeInstance( allocator, left->type->child ),
-			left,
-			right
-		);
+		expression->type = CkFoodCopyTypeInstance(allocator, left->type->child);
+		return expression;
 
 		// x, y
 	case CK_EXPRESSION_COMPOUND:
 		CK_ASSERT( left );
 		CK_ASSERT( right );
-		return CkExpressionDuplicate(allocator, expression);
+		return expression;
 
 		// ?:
 	case CK_EXPRESSION_CONDITIONAL:
@@ -934,15 +841,8 @@ static CkExpression *s_ValidateExpressionNC(
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"The two operands of the conditional statement must be of practical equality/be compatible." );
 
-		return CkExpressionCreateTernary(
-			allocator,
-			&expression->token,
-			expression->kind,
-			CkFoodCopyTypeInstance( allocator, left->type ), // TODO: Lowest common denominator??
-			left,
-			right,
-			extra
-		);
+		expression->type = CkFoodCopyTypeInstance(allocator, left->type); // TODO: Lowest common denominator??
+		return expression;
 
 		// x(y...)
 	case CK_EXPRESSION_FUNCCALL: {
@@ -977,13 +877,8 @@ static CkExpression *s_ValidateExpressionNC(
 			CkListAdd( boundParams, &bound );
 		}
 
-		acc = CkExpressionCreateUnary(
-			allocator,
-			&expression->token,
-			CK_EXPRESSION_FUNCCALL,
-			returnType,
-			left );
-		acc->extended_extra = boundParams;
+		expression->type = returnType;
+		expression->extended_extra = boundParams;
 		return acc;
 	}
 

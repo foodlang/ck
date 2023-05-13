@@ -33,12 +33,12 @@ static size_t _static_unnamed_label_counter = 0;
 static CkList *_data_section = NULL;
 
 // Whether to use lea instead of mov for the dereference operator.
-static bool_t _lea_deref = FALSE;
+static bool _lea_deref = false;
 
 // A x86-64 register.
 typedef struct _Register
 {
-	bool_t free;
+	bool free;
 	char*  name8;
 	char*  name16;
 	char*  name32;
@@ -57,8 +57,8 @@ typedef union _StaticDataName
 typedef struct _StaticData
 {
 	void  *data;          // Constant data
-	bool_t public;        // Whether the data is public or not
-	bool_t named;         // Whether the data has a given name
+	bool public;        // Whether the data is public or not
+	bool named;         // Whether the data has a given name
 	_StaticDataName name; // The name
 	CkFoodType *type;     // The type of the data
 
@@ -67,21 +67,21 @@ typedef struct _StaticData
 // The table of integer registers.
 static _Register _regint_table[] =
 {
-	/* 0 */ { TRUE, "bl", "bx", "ebx", "rbx" },
-	/* 1 */ { TRUE, "cl", "cx", "ecx", "rcx" },
-	/* 2 */ { TRUE, "r8b", "r8w", "r8d", "r8" },
-	/* 3 */ { TRUE, "r9b", "r9w", "r9d", "r9" },
-	/* 4 */ { TRUE, "r10b", "r10w", "r10d", "r10" },
-	/* 5 */ { TRUE, "r11b", "r11w", "r11d", "r11" },
-	/* 6 */ { TRUE, "r12b", "r12w", "r12d", "r12" },
-	/* 7 */ { TRUE, "r13b", "r13w", "r13d", "r13" },
-	/* 8 */ { TRUE, "r14b", "r14w", "r14d", "r14" },
-	/* 9 */ { TRUE, "r15b", "r15w", "r15d", "r15" },
-	/* 10 */ { TRUE, "sil", "si", "esi", "rsi" },
-	/* 11 */ { TRUE, "dil", "di", "edi", "rdi" },
+	/* 0 */ { true, "bl", "bx", "ebx", "rbx" },
+	/* 1 */ { true, "cl", "cx", "ecx", "rcx" },
+	/* 2 */ { true, "r8b", "r8w", "r8d", "r8" },
+	/* 3 */ { true, "r9b", "r9w", "r9d", "r9" },
+	/* 4 */ { true, "r10b", "r10w", "r10d", "r10" },
+	/* 5 */ { true, "r11b", "r11w", "r11d", "r11" },
+	/* 6 */ { true, "r12b", "r12w", "r12d", "r12" },
+	/* 7 */ { true, "r13b", "r13w", "r13d", "r13" },
+	/* 8 */ { true, "r14b", "r14w", "r14d", "r14" },
+	/* 9 */ { true, "r15b", "r15w", "r15d", "r15" },
+	/* 10 */ { true, "sil", "si", "esi", "rsi" },
+	/* 11 */ { true, "dil", "di", "edi", "rdi" },
 	/* ----------- RESERVED DOWN BELOW ----------- */
-	/* 12 */ { FALSE, "al", "ax", "eax", "rax" }, // used for returns + division
-	/* 13 */ { FALSE, "dl", "dx", "edx", "rdx" }, // used for division
+	/* 12 */ { false, "al", "ax", "eax", "rax" }, // used for returns + division
+	/* 13 */ { false, "dl", "dx", "edx", "rdx" }, // used for division
 };
 
 typedef int64_t _StackPos;
@@ -137,7 +137,7 @@ static size_t _SizeOfV( FoodTypeID t )
 }
 
 // Whether a type is unsigned.
-static bool_t _Unsigned( FoodTypeID t )
+static bool _Unsigned( FoodTypeID t )
 {
 	return t == CK_FOOD_U8
 		|| t == CK_FOOD_U16
@@ -196,7 +196,7 @@ static size_t _AllocateIntRegister( void )
 {
 	for ( size_t i = 0; i < sizeof( _regint_table ) / sizeof( _Register ) - 2; i++ ) {
 		if ( _regint_table[i].free ) {
-			_regint_table[i].free = FALSE;
+			_regint_table[i].free = false;
 			return i;
 		}
 	}
@@ -209,7 +209,7 @@ static size_t _AllocateIntRegister( void )
 static void _FreeIntRegister( size_t reg )
 {
 	if ( reg == NOREG ) return;
-	_regint_table[reg].free = TRUE;
+	_regint_table[reg].free = true;
 }
 
 // Integer register name.
@@ -403,7 +403,7 @@ static char *_GetVarReferenceCurrent( CkArenaFrame *allocator, char *name )
 		return buf;
 	}
 
-	while ( TRUE ) {
+	while ( true ) {
 		// --- Global variables ---
 		glbl_varlen = CkListLength( _glbls->variableList );
 		for ( size_t i = 0; i < glbl_varlen; i++ ) {
@@ -431,10 +431,10 @@ static char *_GetVarReferenceCurrent( CkArenaFrame *allocator, char *name )
 // Inserts static data.
 static void _InsertStaticData(
 	CkArenaFrame *allocator,
-	bool_t public,
+	bool public,
 	void *cdata,
 	CkFoodType *type,
-	bool_t named,
+	bool named,
 	char *optional_name )
 {
 	_StaticData entry = {};
@@ -625,7 +625,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 	}
 	case CK_EXPRESSION_BOOL_LITERAL:
 		out = _AllocateIntRegister();
-		if ( expr->token.value.boolean == FALSE )
+		if ( expr->token.value.boolean == false )
 			_InsertLine( sb, "xor\t%s, %s", _regint_table[out].name8, _regint_table[out].name8 );
 		else
 			_InsertLine( sb, "mov\t%s, 1", _regint_table[out].name8 );
@@ -638,9 +638,9 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		sref = _static_unnamed_label_counter;
 		_InsertStaticData(
 			allocator,
-			FALSE,
+			false,
 			expr->token.value.ptr,
-			CkFoodCreateTypeInstance( allocator, CK_FOOD_STRING, FALSE, NULL), FALSE, NULL);
+			CkFoodCreateTypeInstance( allocator, CK_FOOD_STRING, false, NULL), false, NULL);
 		_InsertLine( sb, "lea\t%s, .S%zu", _regint_table[out].name64, sref );
 		break;
 	}
@@ -1022,13 +1022,13 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, rightname);
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1054,13 +1054,13 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "or\t%s [%s], %s", szprefix, leftname, rightname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1086,13 +1086,13 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "and\t%s [%s], %s", szprefix, leftname, rightname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1118,13 +1118,13 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "xor\t%s [%s], %s", szprefix, leftname, rightname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1150,13 +1150,13 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "sal\t%s [%s], %s", szprefix, leftname, rightname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1182,13 +1182,13 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "add\t%s [%s], %s", szprefix, leftname, rightname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1214,13 +1214,13 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
 			szprefix = _szprefixes[rsize <= 8 ? rsize : 0];
 			_InsertLine( sb, "sub\t%s [%s], %s", szprefix, leftname, rightname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1252,7 +1252,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
@@ -1261,7 +1261,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 				_InsertLine( sb, "mul\t%s, %s", rightname, leftname );
 			else _InsertLine( sb, "imul\t%s, %s", rightname, leftname );
 			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, rightname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1295,7 +1295,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
@@ -1305,7 +1305,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 				_InsertLine( sb, "div\t%s", rightname );
 			else _InsertLine( sb, "idiv\t%s", rightname );
 			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, accname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1339,7 +1339,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			char *leftname;
 			char *szprefix;
 			size_t rsize;
-			_lea_deref = TRUE;
+			_lea_deref = true;
 			left = _InsertExpression( allocator, sb, expr->left );
 			leftname = _RegnameInt( left, CK_FOOD_POINTER );
 			rsize = _SizeOfV( expr->right->type->id );
@@ -1349,7 +1349,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 				_InsertLine( sb, "div\t%s", rightname );
 			else _InsertLine( sb, "idiv\t%s", rightname );
 			_InsertLine( sb, "mov\t%s [%s], %s", szprefix, leftname, dataname );
-			_lea_deref = FALSE;
+			_lea_deref = false;
 			out = left;
 			break;
 		}
@@ -1402,7 +1402,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 }
 
 // Generates a statement.
-static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkStatement* stmt, bool_t vars )
+static void _GenerateStatement( CkArenaFrame *allocator, CkStrBuilder* sb, CkStatement* stmt, bool vars )
 {
 	switch ( stmt->stmt ) {
 	case CK_STMT_EMPTY: break;

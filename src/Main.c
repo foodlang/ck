@@ -49,7 +49,7 @@ int main( int argc, char *argv[], char **envp )
 	CkTimePoint tcompilerEnd;                 // The end of the compilation
 	CkTimePoint tdriverStart;                 // The start of the driver parsing
 	CkTimePoint tdriverEnd;                   // The end of the driver parsing
-	bool_t success = TRUE;                    // Compilation & linkage status
+	bool success = true;                    // Compilation & linkage status
 	CkList* libs;                             // Library list
     
 	puts( "CK, The Official Food Compiler" );
@@ -163,7 +163,7 @@ int main( int argc, char *argv[], char **envp )
 	CkBinderValidateAndBind( &dhi, &globalArena, result );
 	CkDiagnosticDisplay( &dhi );
 	if ( dhi.anyErrors || (applied->wError && dhi.anyWarnings) )
-		success = FALSE;
+		success = false;
     
 	if ( success ) {
 		FILE  *output;

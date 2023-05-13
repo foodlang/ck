@@ -1,6 +1,6 @@
 #include <Analyzer.h>
 
-extern size_t AnalyzeFunc( CkFunction *func, CkArenaFrame *allocator );
+size_t AnalyzeFunc(CkFunction *func, CkArenaFrame *allocator) { return 0; }
 
 static size_t _AnalyzeLib( CkLibrary *lib, CkArenaFrame *allocator )
 {
@@ -9,7 +9,7 @@ static size_t _AnalyzeLib( CkLibrary *lib, CkArenaFrame *allocator )
 	// Binding modules
 	FOREACH( lib->moduleList, mod ) {
 		CkModule *m = ITEM( CkModule *, mod );
-		FOREACH( m->scope->functionList, func ) AnalyzeFunc( ITEM( CkFunction *, func ), alocator );
+		FOREACH( m->scope->functionList, func ) AnalyzeFunc( ITEM( CkFunction *, func ), allocator );
 	}
 
 	return bindings;

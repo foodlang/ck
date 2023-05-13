@@ -1137,7 +1137,7 @@ static void suffixedexp (LexState *ls, expdesc *v) {
 
 
 static void simpleexp (LexState *ls, expdesc *v) {
-  /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
+  /* simpleexp -> FLT | INT | STRING | NIL | true | false | ... |
                   constructor | FUNCTION body | suffixedexp */
   switch (ls->t.token) {
     case TK_FLT: {

@@ -13,4 +13,6 @@ static module _PrivateStaticModule
 	public void ExposedStaticFunction() {}
 
 	void _InternalStaticModuleFunction(int d) { 3 + 2; }
+
+	void _AnotherInternalFunction() {}
 }

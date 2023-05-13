@@ -21,10 +21,10 @@ void CkDiagnosticHandlerCreateInstance(
 	CK_ARG_NON_NULL( arena );
 	
 	dhi->arena = arena;
-	dhi->anyErrors = FALSE;
-	dhi->anyWarnings = FALSE;
+	dhi->anyErrors = false;
+	dhi->anyWarnings = false;
 	dhi->thrownTryMode = 0;
-	dhi->tryMode = FALSE;
+	dhi->tryMode = false;
 	
 	dhi->blacklistVector = CkListStart( arena, sizeof( char * ) );
 	dhi->thrownDiagnosticsVector = CkListStart( arena, sizeof( CkThrownDiagnostic ) );
@@ -112,11 +112,11 @@ void CkDiagnosticThrow(
 		break;
 	case CK_DIAG_SEVERITY_WARNING:
 		severityTxt = ESCB256F YELLOW256 "warning";
-		dhi->anyWarnings = TRUE;
+		dhi->anyWarnings = true;
 		break;
 	case CK_DIAG_SEVERITY_ERROR:
 		severityTxt = ESCB256F RED256 "error";
-		dhi->anyErrors = TRUE;
+		dhi->anyErrors = true;
 		break;
 		default:
 		abort();
@@ -231,7 +231,7 @@ void CkDiagnosticDisplay( CkDiagnosticHandlerInstance *dhi )
 void CkDiagnosticBeginTryMode( CkDiagnosticHandlerInstance *dhi )
 {
 	if ( !dhi->tryMode ) {
-		dhi->tryMode = TRUE;
+		dhi->tryMode = true;
 		dhi->thrownTryMode = 0;
 	} else {
 		fprintf(stderr,  "ck internal error: Attempting to set try mode on diagnostic handler while already on try mode.\n" );
@@ -239,18 +239,18 @@ void CkDiagnosticBeginTryMode( CkDiagnosticHandlerInstance *dhi )
 	}
 }
 
-bool_t CkDiagnosticEndTryMode( CkDiagnosticHandlerInstance *dhi )
+bool CkDiagnosticEndTryMode( CkDiagnosticHandlerInstance *dhi )
 {
 	if ( dhi->tryMode ) {
-		dhi->tryMode = FALSE;
+		dhi->tryMode = false;
 		if ( dhi->thrownTryMode != 0 ) {
 			dhi->thrownTryMode = 0;
-			return FALSE;
+			return false;
 		}
-		return TRUE;
+		return true;
 	}
 	// No try mode enabled
-	return FALSE;
+	return false;
 }
 
 void CkDiagnosticClear( CkDiagnosticHandlerInstance* dhi )

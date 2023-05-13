@@ -95,7 +95,7 @@ char **CkGetLinesFreeable( char *str, size_t *lnum )
 		char *cline_c = cline_base;
 
 		char c = *cline_c;
-		while ( TRUE ) {
+		while ( true ) {
 			c = *(cline_c++);
 
 			if ( !(c != '\n' && c != 0) )

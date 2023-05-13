@@ -62,7 +62,7 @@ static inline char *s_StringDuplicate( CkArenaFrame *arena, char *source )
 /// <param name="jConfig">The JSON object.</param>
 /// <param name="config">A pointer to the configuration descriptor.</param>
 /// <param name="profile">The parent configuration to the profile. If NULL, parsing configuration.</param>
-static bool_t s_PopulateConfig(
+static bool s_PopulateConfig(
 	CkArenaFrame *arena,
 	cJSON *jConfig,
 	CkBuildConfig *config,
@@ -96,33 +96,33 @@ static bool_t s_PopulateConfig(
 	jLibrariesRoot = cJSON_GetObjectItemCaseSensitive( jConfig, CONFIGOBJECT_LIBRARIES );
 	jProfilesRoot = cJSON_GetObjectItemCaseSensitive( jConfig, CONFIGOBJECT_PROFILES );
 
-#define CHECKJ_STRING(X, Y) if (!cJSON_IsString(X)) { fprintf(stderr, "ck: %s must be a string.\n", Y); return FALSE; }
-#define CHECKJ_INT(X, Y)    if (!cJSON_IsNumber(X)) { fprintf(stderr, "ck: %s must be an integer.\n", Y); return FALSE; }
-#define CHECKJ_BOOL(X, Y)   if (!cJSON_IsBool(X)) { fprintf(stderr, "ck: %s must be a boolean.\n", Y); return FALSE; }
-#define CHECKJ_ARRAY(X, Y)  if (!cJSON_IsArray(X)) { fprintf(stderr, "ck: %s must be an array.\n", Y); return FALSE; }
+#define CHECKJ_STRING(X, Y) if (!cJSON_IsString(X)) { fprintf(stderr, "ck: %s must be a string.\n", Y); return false; }
+#define CHECKJ_INT(X, Y)    if (!cJSON_IsNumber(X)) { fprintf(stderr, "ck: %s must be an integer.\n", Y); return false; }
+#define CHECKJ_BOOL(X, Y)   if (!cJSON_IsBool(X)) { fprintf(stderr, "ck: %s must be a boolean.\n", Y); return false; }
+#define CHECKJ_ARRAY(X, Y)  if (!cJSON_IsArray(X)) { fprintf(stderr, "ck: %s must be an array.\n", Y); return false; }
 
 	if ( !jName ) {
 		fprintf( stderr, "ck: Build configuration or profile has no name.\n" );
-		return FALSE;
+		return false;
 	}
 	CHECKJ_STRING( jName, CONFIGOBJECT_NAME );
 	config->name = s_StoreStringFromJson( arena, jName );
 
 	if ( parent && (!jSourceDir && !parent->sourceDir) ) {
 		fprintf( stderr, "ck: A profile has no source directory.\n" );
-		return FALSE;
+		return false;
 	}
 	if ( jSourceDir ) {
 		if ( !cJSON_IsString( jSourceDir ) ) {
 			fprintf( stderr, "ck: %s must be a string.\n", CONFIGOBJECT_SOURCEDIR );
-			return FALSE;
+			return false;
 		}
 		config->sourceDir = s_StoreStringFromJson( arena, jSourceDir );
 	}
 
 	if ( parent && (!jObjDir && !parent->objDir) ) {
 		fprintf( stderr, "ck: A profile has no object directory.\n" );
-		return FALSE;
+		return false;
 	}
 	if ( jObjDir ) {
 		CHECKJ_STRING( jObjDir, CONFIGOBJECT_OBJDIR );
@@ -131,7 +131,7 @@ static bool_t s_PopulateConfig(
 
 	if ( parent && (!jOutDir && !parent->outDir) ) {
 		fprintf( stderr, "ck: A profile has no output directory.\n" );
-		return FALSE;
+		return false;
 	}
 	if ( jOutDir ) {
 		CHECKJ_STRING( jOutDir, CONFIGOBJECT_OUTPUTDIR );
@@ -140,7 +140,7 @@ static bool_t s_PopulateConfig(
 
 	if ( parent && (!jBinaryType && !parent->binaryType) ) {
 		fprintf( stderr, "ck: A profile has no output binary type.\n" );
-		return FALSE;
+		return false;
 	}
 	if ( jBinaryType ) {
 		// TODO: Add support for binary type to be a string
@@ -148,13 +148,13 @@ static bool_t s_PopulateConfig(
 		config->binaryType = (int8_t)cJSON_GetNumberValue( jBinaryType );
 		if ( !config->binaryType ) {
 			fprintf( stderr, "ck: Binary type cannot be zero.\n" );
-			return FALSE;
+			return false;
 		}
 	}
 
 	if ( parent && (!jPlatform && !parent->platform) ) {
 		fprintf( stderr, "ck: A profile has no target platform.\n" );
-		return FALSE;
+		return false;
 	}
 	if ( jPlatform ) {
 		CHECKJ_STRING( jPlatform, CONFIGOBJECT_PLATFORM );
@@ -163,7 +163,7 @@ static bool_t s_PopulateConfig(
 
 	if ( parent && (!jSystem && !parent->system) ) {
 		fprintf( stderr, "ck: A profile has no target system.\n" );
-		return FALSE;
+		return false;
 	}
 	if ( jSystem ) {
 		CHECKJ_STRING( jSystem, CONFIGOBJECT_SYSTEM );
@@ -172,13 +172,13 @@ static bool_t s_PopulateConfig(
 
 	if ( jWError ) {
 		CHECKJ_BOOL( jWError, CONFIGOBJECT_WERROR );
-		config->wError = jWError->type == cJSON_True ? TRUE : FALSE;
-	} else config->wError = FALSE;
+		config->wError = jWError->type == cJSON_True ? true : false;
+	} else config->wError = false;
 
 	if ( jDebug ) {
 		CHECKJ_BOOL( jDebug, CONFIGOBJECT_WERROR );
-		config->debug = jDebug->type == cJSON_True ? TRUE : FALSE;
-	} else config->debug = FALSE;
+		config->debug = jDebug->type == cJSON_True ? true : false;
+	} else config->debug = false;
 
 	if ( jOptLevel ) {
 		CHECKJ_INT( jOptLevel, CONFIGOBJECT_OPTLEVEL );
@@ -187,7 +187,7 @@ static bool_t s_PopulateConfig(
 
 	if ( parent && (!jSourcesRoot && (CkListLength( parent->sources ) == 0)) ) {
 		fprintf( stderr, "ck: A configuration or profile must have source files.\n" );
-		return FALSE;
+		return false;
 	}
 	if ( jSourcesRoot ) {
 		cJSON *sourcePath;
@@ -199,7 +199,7 @@ static bool_t s_PopulateConfig(
 			char *cstr;
 			if ( !cJSON_IsString( sourcePath ) ) {
 				fprintf( stderr, "ck: A source path must be a string.\n" );
-				return FALSE;
+				return false;
 			}
 			cstr = s_StringDuplicate( arena, cJSON_GetStringValue( sourcePath ) );
 			CkListAdd(
@@ -218,7 +218,7 @@ static bool_t s_PopulateConfig(
 			char *dup;
 			if ( !cJSON_IsString( libraryPath ) ) {
 				fprintf( stderr, "ck: A library path must be a string.\n" );
-				return FALSE;
+				return false;
 			}
 			dup = s_StringDuplicate( arena, cJSON_GetStringValue( libraryPath ) );
 			CkListAdd(
@@ -232,7 +232,7 @@ static bool_t s_PopulateConfig(
 
 		if ( parent ) {
 			fprintf( stderr, "ck: Cannot nest profiles.\n" );
-			return FALSE;
+			return false;
 		}
 		CHECKJ_ARRAY( jProfilesRoot, CONFIGOBJECT_PROFILES );
 		config->profiles = CkListStart( arena, sizeof( CkBuildConfig ) );
@@ -240,13 +240,13 @@ static bool_t s_PopulateConfig(
 		cJSON_ArrayForEach( profile, jProfilesRoot ) {
 			CkBuildConfig dest;
 			if ( !s_PopulateConfig( arena, profile, &dest, config ) ) {
-				return FALSE;
+				return false;
 			}
 			CkListAdd( config->profiles, &dest );
 		}
 	} else config->profiles = CkListStart( arena, sizeof( CkBuildConfig ) ); // empty list
 
-	return TRUE;
+	return true;
 }
 
 CkBuildConfig *CkConfigGetBuildConfig(

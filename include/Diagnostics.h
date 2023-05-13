@@ -57,17 +57,17 @@ typedef struct CkDiagnosticHandlerInstance
 	CkList *thrownDiagnosticsVector;
 
 	// True if the diagnostics encounters any errors.
-	bool_t anyErrors;
+	bool anyErrors;
 
 	// True if the diagnostics encounters any non-blacklisted warnings.
-	bool_t anyWarnings;
+	bool anyWarnings;
 
 	// The arena used for allocations. Does not include the thrown diagnostics
 	// and the blacklist.
 	CkArenaFrame *arena;
 
 	// If true, the diagnostic handler is currently in try mode.
-	bool_t tryMode;
+	bool tryMode;
 
 	// The number of diagnostics thrown in try mode. If no try mode, set to 0.
 	size_t thrownTryMode;
@@ -107,7 +107,7 @@ void CkDiagnosticBeginTryMode( CkDiagnosticHandlerInstance *dhi );
 
 // Begins an end try mode. The old diagnostics are restored after a
 // call to this function. Returns true if ok.
-bool_t CkDiagnosticEndTryMode( CkDiagnosticHandlerInstance *dhi );
+bool CkDiagnosticEndTryMode( CkDiagnosticHandlerInstance *dhi );
 
 // Clears the thrown diagnostics.
 void CkDiagnosticClear( CkDiagnosticHandlerInstance* dhi );

@@ -168,7 +168,7 @@ static CkStatement *s_ForStatement( CkScope *context, CkParserInstance *parser )
 	}
 
 	// for ( >>>init<<< ; condition ; lead ) block
-	forScope = CkStartScope( parser->genArena, context, FALSE, FALSE );
+	forScope = CkStartScope( parser->genArena, context, false, false );
 	init = CkParseStmt( forScope, parser );
 
 	// for ( init; >>>condition<<< ; lead ) block
@@ -263,12 +263,12 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 		block->stmt = CK_STMT_BLOCK;
 		block->data.block.scope = CkStartScope(
 			parser->genArena, context,
-			TRUE,
+			true,
 			context == context->library->scope
-			|| (context->module ? context->module->scope == context : FALSE) ? TRUE : FALSE
+			|| (context->module ? context->module->scope == context : false) ? true : false
 		);
 		block->data.block.stmts = CkListStart( parser->genArena, sizeof( CkStatement * ) );
-		while ( TRUE ) {
+		while ( true ) {
 			CkStatement *stmt;
 			size_t index;
 
@@ -285,10 +285,10 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 				parser->genArena,
 				block->data.block.scope,
 				parser,
-				FALSE,
-				FALSE,
-				TRUE,
-				FALSE,
+				false,
+				false,
+				true,
+				false,
 				block->data.block.stmts) ) continue;
 			else CkParserGoto( parser, index );
 

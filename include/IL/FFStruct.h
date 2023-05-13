@@ -73,7 +73,7 @@ typedef struct CkVariable
 	char *name;           // The name of the variable.
 	CkScope *parentScope; // The scope that contains the variable.
 	CkFoodType *type;     // The type of the variable.
-	bool_t param;         // If this is true, this variable is a function argument.
+	bool param;         // If this is true, this variable is a function argument.
 
 } CkVariable;
 
@@ -173,7 +173,7 @@ typedef char CkStatementData_Continue; // Continue statement data (no data)
 typedef struct CkStatementData_Goto // Goto statement data
 {
 	// Computed goto flag
-	bool_t computed;
+	bool computed;
 
 	// The label to go to.
 	CkLabel destination;
@@ -292,16 +292,16 @@ typedef struct CkScope
 	CkScope *parent;
 
 	// If this is true, the scope supports labels (e.g. function bodies)
-	bool_t supportsLabels;
+	bool supportsLabels;
 
 	// If this is true, the scope can contain function declarations (e.g. modules,
 	// libraries and base function scopes)
-	bool_t supportsFunctions;
+	bool supportsFunctions;
 
 	// The variables declared in this scope. ElementType = CkVariable.
 	CkList *variableList;
 
-	// The labels in the current scope. If supportsLabels is FALSE, this list is
+	// The labels in the current scope. If supportsLabels is false, this list is
 	// not created. Element type = CkLabel.
 	CkList *labelList;
 
@@ -354,11 +354,11 @@ typedef struct CkModule
 	char *name;
 
 	// If this is true, the module is public.
-	bool_t bPublic;
+	bool bPublic;
 
 	// If this is true, the module cannot be instanced (only one state
 	// should ever exist.)
-	bool_t bStatic;
+	bool bStatic;
 
 	// The scope of the module.
 	CkScope *scope;
@@ -381,10 +381,10 @@ typedef struct CkFunction
 	char *name;
 
 	// If this is true, the function is public.
-	bool_t bPublic;
+	bool bPublic;
 
 	// If this is true, the function is external.
-	bool_t bExtern;
+	bool bExtern;
 
 	// The body of the function.
 	CkStatement *body;
@@ -392,19 +392,19 @@ typedef struct CkFunction
 } CkFunction;
 
 // Creates and starts a new scope.
-CkScope *CkStartScope( CkArenaFrame *allocator, CkScope *optionalParent, bool_t allowedLabels, bool_t allowedFunctions );
+CkScope *CkStartScope( CkArenaFrame *allocator, CkScope *optionalParent, bool allowedLabels, bool allowedFunctions );
 
 // Attempts to leave the current scope. If this function fails, the current scope is returned.
 CkScope *CkLeaveScope( CkScope *current );
 
 // Attempts to allocate a variable in a scope.
-void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName, bool_t param );
+void CkAllocateVariable( CkScope *scope, CkFoodType *type, char *passedName, bool param );
 
 // Attempts to allocate a new function in a scope.
 CkFunction *CkAllocateFunction(
 	CkArenaFrame *frame,
 	CkScope *scope,
-	bool_t bPublic,
+	bool bPublic,
 	CkFoodType *signature,
 	char *passedName,
 	CkStatement *body );
@@ -417,13 +417,13 @@ CkModule *CkCreateModule(
 	CkArenaFrame *allocator,
 	CkLibrary *parent,
 	char *passedName,
-	bool_t isPublic,
-	bool_t isStatic );
+	bool isPublic,
+	bool isStatic );
 
 // Prints a whole library's structure.
 void CkPrintAST( CkLibrary *library );
 
 // Returns true if a symbol of that name is declared in the scope.
-bool_t CkSymbolDeclared( CkScope* current, char *passedName );
+bool CkSymbolDeclared( CkScope* current, char *passedName );
 
 #endif

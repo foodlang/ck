@@ -92,6 +92,7 @@ typedef enum CkKeyword
 	KW_THROW,
 	KW_TYPEOF,
 	KW_ASM,
+	KW_REF,
 
 	PP_DIRECTIVE_UNKNOWN,   // Unknown preprocessor directive
 	PP_DIRECTIVE_MALFORMED, // Malformed preprocessor directive
@@ -117,7 +118,7 @@ typedef enum CkKeyword
 void CkLexCreateInstance(CkArenaFrame *arena, CkLexInstance *dest, CkSource *source);
 
 // Reads a token from the lexer source code.
-bool_t CkLexReadToken(CkLexInstance *lexer, CkToken *dest, bool_t allow_ppdirect );
+bool CkLexReadToken(CkLexInstance *lexer, CkToken *dest, bool allow_ppdirect );
 
 // Destroys a lexer instance.
 void CkLexDestroyInstance(CkLexInstance *lexer);

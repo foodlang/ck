@@ -38,22 +38,10 @@ typedef size_t off_t;
 #define universal_fclose(f) fclose(f)
 #endif
 
-typedef signed char bool_t;
-
-#ifndef TRUE
-	#define TRUE 1
-#endif
-
-#ifndef FALSE
-	#define FALSE 0
-#endif
-
-#ifndef NULL
-	#define NULL (void *)0
-#endif
+#include <stdbool.h>
 
 // Compares two floats for approximal equality.
-static inline bool_t FloatEqual(double a, double b)
+static inline bool FloatEqual(double a, double b)
 {
 	const double diff = fmax(a, b) - fmin(a, b);
 
@@ -72,6 +60,8 @@ typedef struct m256_t
 #define CK_QUALIFIER_VOLATILE_BIT 2
 #define CK_QUALIFIER_RESTRICT_BIT 4
 #define CK_QUALIFIER_ATOMIC_BIT   8
+
+#define null (void *)0
 
 // Dynamic string
 typedef struct CkStrBuilder
@@ -102,7 +92,7 @@ typedef struct CkSource
 
 typedef union CkTokenValue
 {
-	bool_t boolean;
+	bool boolean;
 	int8_t i8;
 	uint8_t u8;
 	int16_t i16;
@@ -216,6 +206,7 @@ typedef enum CkExpressionKind
 	CK_EXPRESSION_DEREFERENCE,
 	CK_EXPRESSION_OPAQUE_ADDRESS_OF,
 	CK_EXPRESSION_ADDRESS_OF,
+	CK_EXPRESSION_REF,
 
 	CK_EXPRESSION_MUL,
 	CK_EXPRESSION_DIV,
@@ -296,10 +287,10 @@ typedef struct CkExpression
 	struct CkExpression *extra;
 
 	// If true, this expression can be referenced.
-	bool_t isLValue;
+	bool isLValue;
 
 	// Whether the expression is constant or not.
-	bool_t isConstant;
+	bool isConstant;
 
 	// Extended extra data (used for function calls)
 	void *extended_extra;

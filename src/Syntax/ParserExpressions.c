@@ -109,7 +109,7 @@ static CkExpression *s_ParsePrimaryExpression( CkScope* scope, CkParserInstance 
 				NULL // types are figured out later
 			);
 		CkParserRewind( parser, 1 );
-		while ( TRUE ) {
+		while ( true ) {
 			CkParserReadToken( parser, &op );
 			if ( op.kind == CKTOK2( ':', ':' ) ) {
 				scoped = CkExpressionCreateUnary( parser->arena, &token, CK_EXPRESSION_SCOPED_REFERENCE, NULL, scoped );
@@ -304,7 +304,7 @@ static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 	acc = s_ParsePrimaryExpression( scope, parser );
 	CkParserReadToken( parser, &token );
 
-	while ( TRUE ) {
+	while ( true ) {
 		switch ( token.kind ) {
 			// Postfix increment and decrement
 		case CKTOK2( '+', '+' ):
@@ -318,16 +318,6 @@ static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 				parser->arena,
 				&token,
 				CK_EXPRESSION_MEMBER_ACCESS,
-				NULL,
-				acc,
-				s_ParsePrimaryExpression( scope, parser ) );
-			break;
-
-		case CKTOK2( '-', '>' ):
-			acc = CkExpressionCreateBinary(
-				parser->arena,
-				&token,
-				CK_EXPRESSION_POINTER_MEMBER_ACCESS,
 				NULL,
 				acc,
 				s_ParsePrimaryExpression( scope, parser ) );
@@ -359,7 +349,7 @@ static CkExpression *s_ParseLevel1( CkScope* scope, CkParserInstance *parser )
 				acc );
 			acc->extended_extra = CkListStart( parser->arena, sizeof( CkExpression * ) );
 			// Arguments
-			while ( TRUE ) {
+			while ( true ) {
 				CkExpression *param;
 				CkParserReadToken( parser, &token );
 				if ( token.kind == ')' ) break;
@@ -414,6 +404,7 @@ static CkExpression *s_ParseLevel2( CkScope *scope, CkParserInstance *parser )
 	case '~':
 	case '*':
 	case '&':
+	case KW_REF:
 	case CKTOK2('&', '&'): // Opaque referencing
 		kind = token.kind == CKTOK2( '+', '+' ) ? CK_EXPRESSION_PREFIX_INC
 			: token.kind == CKTOK2( '-', '-' ) ? CK_EXPRESSION_PREFIX_DEC
@@ -423,6 +414,7 @@ static CkExpression *s_ParseLevel2( CkScope *scope, CkParserInstance *parser )
 			: token.kind == '~' ? CK_EXPRESSION_BITWISE_NOT
 			: token.kind == '*' ? CK_EXPRESSION_DEREFERENCE
 			: token.kind == CKTOK2('&', '&') ? CK_EXPRESSION_OPAQUE_ADDRESS_OF
+			: token.kind == KW_REF ? CK_EXPRESSION_REF
 			: CK_EXPRESSION_ADDRESS_OF;
 
 		accumulator = CkExpressionCreateUnary( parser->arena, &token, kind, NULL, s_ParseLevel2( scope, parser ) );
@@ -477,7 +469,7 @@ static CkExpression *s_ParseBinary( CkScope* scope, uint8_t parentPrec, CkParser
 	CkToken token;
 	CkExpression *acc = s_ParseLevel2( scope, parser );
 
-	while ( TRUE ) {
+	while ( true ) {
 		uint8_t prec;
 		CkExpression *right;
 

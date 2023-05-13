@@ -78,11 +78,11 @@ typedef struct CkBuildConfig
 	char *system;
 
 	// If true, all warnings are considered errors.
-	bool_t wError;
+	bool wError;
 
 	// If true, the program will be compiled and linked
 	// with debug symbols.
-	bool_t debug;
+	bool debug;
 
 	// The optimization level. 0 is the lowest, however
 	// minor optimizations (such as expression simplification)

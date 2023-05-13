@@ -31,7 +31,7 @@ typedef struct CkListNode
 
 	// This is only used for the first element of a list. If this is true, then the first
 	// node is used.
-	bool_t used;
+	bool used;
 
 } CkList, CkListNode;
 
@@ -59,7 +59,7 @@ size_t CkListLength( CkList *desc );
 void CkListClear( CkList *base );
 
 // Performs a foreach.
-#define FOREACH(x, N) for (CkList *N = x; e; e = e->next)
-#define ITEM(T, N) (T)(N + 1)
+#define FOREACH(x, N) for (CkList *N = x; x; x = x->next)
+#define ITEM(T, N) *(T*)(N + 1)
 
 #endif

@@ -37,15 +37,15 @@ void CkDriverCompile(
 	CK_ARG_NON_NULL( startupConfig );
 	
 	// 1. Default output values
-	result->successful = TRUE;
+	result->successful = true;
 	
 	// 2. Allocating memory for the token buffer
 	tokenList = CkListStart( threadArena, sizeof( CkToken ) );
 	
 	// 3. Lexical Analysis
 	CkLexCreateInstance( threadArena, &lexer, startupConfig->source );
-	while ( TRUE ) {
-		if ( !CkLexReadToken( &lexer, &current, TRUE ) ) {
+	while ( true ) {
+		if ( !CkLexReadToken( &lexer, &current, true ) ) {
 			if ( current.kind == 'S' ) {
 				CkDiagnosticThrow( pDhi, &current, CK_DIAG_SEVERITY_ERROR, "",
 					"Newline is not allowed in string literal" );
@@ -59,7 +59,7 @@ void CkDriverCompile(
 				CkDiagnosticThrow( pDhi, &current, CK_DIAG_SEVERITY_ERROR, "",
 					 "Failed to parse token '%c' (%hhu)", (char)current.kind, current.kind );
 			}
-			result->successful = FALSE;
+			result->successful = false;
 		}
 		if ( !current.kind )
 			break;
@@ -76,7 +76,7 @@ void CkDriverCompile(
 	pp.input = tokenList;
 	pp.macros = CkListStart( threadArena, sizeof( CkMacro ) );
 	pp.pDhi = pDhi;
-	pp.errors = FALSE;
+	pp.errors = false;
 
 	// Default macros
 	CkListAddRange( pp.macros, startupConfig->defines );
@@ -84,7 +84,7 @@ void CkDriverCompile(
 	while ( expansion_counter != 0 ) {
 		expansion_counter = CkPreprocessorExpand( threadArena, &pp );
 		CkPreprocessorPrepareNextPass( &pp );
-		if ( pp.errors ) result->successful = FALSE;
+		if ( pp.errors ) result->successful = false;
 	}
 	
 	if ( !result->successful ) {
@@ -103,8 +103,8 @@ void CkDriverCompile(
 		pDhi );
 	// Parsing all declarations
 	while ( parser.position < parser.passedTokenCount )
-		if ( !CkParseDecl( genArena, lib->scope, &parser, TRUE, TRUE, FALSE, TRUE, NULL ) ) {
-			result->successful = FALSE;
+		if ( !CkParseDecl( genArena, lib->scope, &parser, true, true, false, true, NULL ) ) {
+			result->successful = false;
 			break;
 		}
 	
