@@ -49,7 +49,7 @@ int main( int argc, char *argv[], char **envp )
 	CkTimePoint tcompilerEnd;                 // The end of the compilation
 	CkTimePoint tdriverStart;                 // The start of the driver parsing
 	CkTimePoint tdriverEnd;                   // The end of the driver parsing
-	bool success = true;                    // Compilation & linkage status
+	bool success = true;                      // Compilation & linkage status
 	CkList* libs;                             // Library list
     
 	puts( "CK, The Official Food Compiler" );
@@ -189,7 +189,7 @@ int main( int argc, char *argv[], char **envp )
 		cwk_path_join( output_path, applied->name, output_path, output_path_len );
 		cwk_path_change_extension( output_path, ".asm", output_path, output_path_len );
 
-		// ----- Opening and generating file -----q
+		// ----- Opening and generating file -----
 		output = fopen( output_path, "wb" );
 		fputs( CkGenProgram_Prototype( &dhi, &globalArena, libs ), output );
 		universal_fclose( output );
