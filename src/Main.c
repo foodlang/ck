@@ -179,13 +179,13 @@ int main( int argc, char *argv[], char **envp )
 			strlen( buildDirectory )
 			+ strlen( applied->outDir )
 			+ strlen( "//" )
-			+ strlen( applied->name ) + strlen( ".s" );
+			+ strlen( applied->name ) + strlen( ".asm" );
 		output_path = CkArenaAllocate( &globalArena, output_path_len + 1 );
 		cwk_path_join( buildDirectory, applied->outDir, output_path, output_path_len );
 		if ( stat( output_path, &st ) == -1 )
 			ported_mkdir( output_path );
 		cwk_path_join( output_path, applied->name, output_path, output_path_len );
-		cwk_path_change_extension( output_path, ".s", output_path, output_path_len );
+		cwk_path_change_extension( output_path, ".asm", output_path, output_path_len );
 
 		// ----- Opening and generating file -----q
 		output = fopen( output_path, "wb" );

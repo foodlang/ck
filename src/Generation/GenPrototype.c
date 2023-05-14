@@ -267,14 +267,14 @@ static char *_InsertFuncName( CkFunction *pFunc )
 		bufferLength = snprintf(
 			NULL,
 			0,
-			"%s_%s_%s",
+			"_?f%s_%s_%s",
 			pFunc->parent->library->name,
 			pFunc->parent->module->name,
 			pFunc->name );
 		buffer = malloc( bufferLength + 1 );
 		(void)sprintf(
 			buffer,
-			"%s_%s_%s",
+			"_?f%s_%s_%s",
 			pFunc->parent->library->name,
 			pFunc->parent->module->name,
 			pFunc->name );
@@ -282,13 +282,13 @@ static char *_InsertFuncName( CkFunction *pFunc )
 		bufferLength = snprintf(
 			NULL,
 			0,
-			"%s_%s",
+			"_?f%s_%s",
 			pFunc->parent->library->name,
 			pFunc->name );
 		buffer = malloc( bufferLength + 1 );
 		(void)sprintf(
 			buffer,
-			"%s_%s",
+			"_?f%s_%s",
 			pFunc->parent->library->name,
 			pFunc->name );
 	}
@@ -307,27 +307,27 @@ static char *_InsertVarName( CkVariable *pVar )
 		bufferLength = snprintf(
 			NULL,
 			0,
-			"%s_%s_%s",
+			"_?v%s_%s_%s",
 			pVar->parentScope->library->name,
 			pVar->parentScope->module->name,
 			pVar->name );
 		buffer = malloc( bufferLength + 1 );
 		(void)sprintf(
 			buffer,
-			"%s_%s_%s",
+			"_?v%s_%s_%s",
 			pVar->parentScope->library->name,
 			pVar->parentScope->module->name,
 			pVar->name );
 	} else { // Without module
 		bufferLength = sprintf(
 			NULL,
-			"%s_%s",
+			"_?v%s_%s",
 			pVar->parentScope->library->name,
 			pVar->name );
 		buffer = malloc( bufferLength + 1 );
 		(void)sprintf(
 			buffer,
-			"%s_%s",
+			"_?v%s_%s",
 			pVar->parentScope->library->name,
 			pVar->name );
 	}
@@ -1379,7 +1379,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 			_FreeIntRegister( param_reg );
 		}
 		_InsertLine( sb, "call\t%s", leftname );
-		_InsertLine( sb, "mov\t%s, %s", leftname_result, accname );
+		if (expr->left->type->child->id != CK_FOOD_VOID) _InsertLine( sb, "mov\t%s, %s", leftname_result, accname );
 		// Popping arguments
 		if ( param_count != 0 )
 		for ( size_t i = param_count; i-- > 0; ) {

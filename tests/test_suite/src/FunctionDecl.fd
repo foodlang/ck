@@ -14,5 +14,9 @@ static module _PrivateStaticModule
 
 	void _InternalStaticModuleFunction(int d) { 3 + 2; }
 
-	void _AnotherInternalFunction() {}
+	void _AnotherInternalFunction()
+	{
+		ExposedStaticFunction(); // comment
+		1 + 2 * 3;
+	}
 }
