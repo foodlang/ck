@@ -159,6 +159,8 @@ int main( int argc, char *argv[], char **envp )
                (double)(CkTimeElapsed_mcs( &tdriverStart, &tdriverEnd )) / 1000.0 );
 	}
 
+	puts("");
+
 	// Binding
 	CkBinderValidateAndBind( &dhi, &globalArena, result );
 	CkDiagnosticDisplay( &dhi );
