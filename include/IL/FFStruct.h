@@ -15,50 +15,34 @@
 
 #include <Memory/List.h>
 
+#define CK_DECLATTR_INLINE_REGISTER_BIT    0b00000001 // [inline] (function-only)/[register] (variable-only)
+#define CK_DECLATTR_CLANG_BIT              0b00000010 // [clang] (C symbols)
+#define CK_DECLATTR_DYNAMIC_BIT            0b00000100 // [dynamic] (dllimport (requires extern)/dllexport)
+#define CK_DECLATTR_DEPRECATED_BIT         0b00001000 // [deprecated] (generates warnings upon symbol usage)
+#define CK_DECLATTR_NORETURN_NULLCHECK_BIT 0b00010000 // [noreturn] (function-only)/[nullcheck] (variable-only)
+#define CK_DECLATTR_OVERRIDE_PACKED_BIT    0b00100000 // [override] (function-only)/[packed] (type-only)
+#define CK_DECLATTR_MAYBE_UNUSED_BIT       0b01000000 // [maybe_unused] (symbol can be unused)
+// alignas() and callconv() not supported in ckc (CK in C)
+
+typedef uint_least8_t CkDeclAttr; // Declaration attribute storage
+
 // The kind of a statement.
 typedef enum CkStatementKind
 {
-	// An empty statement.
-	CK_STMT_EMPTY,
-
-	// An expression statement.
-	CK_STMT_EXPRESSION,
-
-	// A block statement.
-	CK_STMT_BLOCK,
-
-	// An if statement.
-	CK_STMT_IF,
-
-	// A while statement.
-	CK_STMT_WHILE,
-
-	// A do ... while statement.
-	CK_STMT_DO_WHILE,
-
-	// A for statement.
-	CK_STMT_FOR,
-
-	// A switch statement.
-	CK_STMT_SWITCH,
-
-	// A break statement.
-	CK_STMT_BREAK,
-
-	// A continue statement.
-	CK_STMT_CONTINUE,
-
-	// A goto statement.
-	CK_STMT_GOTO,
-
-	// An assert statement.
-	CK_STMT_ASSERT,
-
-	// A sponge statement.
-	CK_STMT_SPONGE,
-
-	// A return statement.
-	CK_STMT_RETURN,
+	CK_STMT_EMPTY,      // An empty statement.
+	CK_STMT_EXPRESSION, // An expression statement.
+	CK_STMT_BLOCK,      // A block statement.
+	CK_STMT_IF,         // An if statement.
+	CK_STMT_WHILE,      // A while statement.
+	CK_STMT_DO_WHILE,   // A do ... while statement.
+	CK_STMT_FOR,        // A for statement.
+	CK_STMT_SWITCH,     // A switch statement.
+	CK_STMT_BREAK,      // A break statement.
+	CK_STMT_CONTINUE,   // A continue statement.
+	CK_STMT_GOTO,       // A goto statement.
+	CK_STMT_ASSERT,     // An assert statement.
+	CK_STMT_SPONGE,     // A sponge statement.
+	CK_STMT_RETURN,     // A return statement.
 
 } CkStatementKind;
 
@@ -73,29 +57,24 @@ typedef struct CkVariable
 	char *name;           // The name of the variable.
 	CkScope *parentScope; // The scope that contains the variable.
 	CkFoodType *type;     // The type of the variable.
-	bool param;         // If this is true, this variable is a function argument.
+	bool param;           // If this is true, this variable is a function argument.
+	CkDeclAttr decl_attr; // Declaration attributes
 
 } CkVariable;
 
 // An address to code.
 typedef struct CkLabel
 {
-	// The scope that contains the label.
-	CkScope *parentScope;
-
-	// The index to the statement to go to.
-	size_t stmtIndex;
+	CkScope *parentScope; // The scope that contains the label.
+	size_t stmtIndex;     // The index to the statement to go to.
 
 } CkLabel;
 
 // A switch case entry.
 typedef struct CkSwitchCase
 {
-	// The constant value to check for.
-	uint64_t checkFor;
-
-	// The label to go to.
-	CkLabel label;
+	uint64_t checkFor; // The constant value to check for.
+	CkLabel label;     // The label to go to.
 
 } CkSwitchCase;
 
@@ -104,89 +83,61 @@ typedef CkExpression *CkStatementData_Expression; // Expression statement data
 
 typedef struct CkStatementData_Block // Block statement data
 {
-	// The statements of the block statement. Element type=CkStatement*
-	CkList *stmts;
-
-	// The scope of the block statement.
-	CkScope *scope;
+	
+	CkList *stmts;  // The statements of the block statement. Element type=CkStatement*
+	CkScope *scope; // The scope of the block statement.
 
 } CkStatementData_Block;
 
 typedef struct CkStatementData_If // If statement data
 {
-	// The condition of the if statement.
-	CkExpression *condition;
-
-	// The statement to execute when the condition is true.
-	CkStatement *cThen;
-
-	// The statement to execute if the condition is false. Optional.
-	CkStatement *cElse;
+	
+	CkExpression *condition; // The condition of the if statement.
+	CkStatement *cThen;      // The statement to execute when the condition is true.
+	CkStatement *cElse;      // The statement to execute if the condition is false. Optional.
 
 } CkStatementData_If;
 
 typedef struct CkStatementData_While // While statement data
 {
-	// The condition of the while statement.
-	CkExpression *condition;
-
-	// The statement to be executed while the condition is true.
-	CkStatement *cWhile;
+	
+	CkExpression *condition; // The condition of the while statement.
+	CkStatement *cWhile;     // The statement to be executed while the condition is true.
 
 } CkStatementData_While;
 
 typedef struct CkStatementData_For // For statement data
 {
-	// This is executed once.
-	CkStatement *cInit;
-
-	// The condition that is checked before calling the body.
-	CkExpression *condition;
-
-	// This expression will be performed after the body.
-	CkExpression *lead;
-
-	// The body of the for loop.
-	CkStatement *body;
-	
-	// For loops have their own scopes.
-	CkScope *scope;
+	CkStatement *cInit;      // This is executed once.
+	CkExpression *condition; // The condition that is checked before calling the body.
+	CkExpression *lead;      // This expression will be performed after the body.
+	CkStatement *body;       // The body of the for loop.
+	CkScope *scope;          // For loops have their own scopes.
 
 } CkStatementData_For;
 
 typedef struct CkStatementData_Switch // Switch statement data
 {
-	// The expression to check against the cases.
-	CkExpression *expression;
-
-	// The list of cases to check against. Element type: CkSwitchCase
-	CkList *caseList;
-
-	// A block statement that stores the body of the switch.
-	CkStatement *block;
+	CkExpression *expression; // The expression to check against the cases.
+	CkList *caseList;         // The list of cases to check against. Element type: CkSwitchCase
+	CkStatement *block;       // A block statement that stores the body of the switch.
 
 } CkStatementData_Switch;
 
-typedef char CkStatementData_Break; // Break statement data (no data)
+typedef char CkStatementData_Break;    // Break statement data (no data)
 typedef char CkStatementData_Continue; // Continue statement data (no data)
 
 typedef struct CkStatementData_Goto // Goto statement data
 {
-	// Computed goto flag
-	bool computed;
-
-	// The label to go to.
-	CkLabel destination;
-
-	// The computed location (if not using a label)
-	CkExpression *computedExpression;
+	bool computed;                    // Computed goto flag
+	CkLabel destination;              // The label to go to.
+	CkExpression *computedExpression; // The computed location (if not using a label)
 
 } CkStatementData_Goto;
 
 typedef struct CkStatementData_Assert // Assert statement data. Static assert is done at parser-level
 {
-	// The expression to check.
-	CkExpression *expression;
+	CkExpression *expression; // The expression to check.
 
 } CkStatementData_Assert;
 
@@ -226,8 +177,7 @@ typedef enum CkUserTypeKind
 // Common structs for the struct, record and union user data types.
 typedef struct CkUserTypeData_StructRecordUnion
 {
-	// The members. Element type = CkVariable
-	CkList *members;
+	CkList *members; // The members. Element type = CkVariable
 
 } CkUserTypeData_Struct,
   CkUserTypeData_Record,
@@ -236,21 +186,15 @@ typedef struct CkUserTypeData_StructRecordUnion
 // A constant stored under an enum.
 typedef struct CkEnumConstant
 {
-	// The name of the constant.
-	char *name;
-
-	// The value of the constant.
-	uint64_t value;
+	char *name;     // The name of the constant.
+	uint64_t value; // The value of the constant.
 
 } CkEnumConstant;
 
 typedef struct CkUserTypeData_Enum
 {
-	// The native type used to store the members of the enum.
-	CkFoodType *native;
-
-	// The list of named constants. Element type = CkEnumConstant.
-	CkList *namedConstants;
+	CkFoodType *native;     // The native type used to store the members of the enum.
+	CkList *namedConstants; // The list of named constants. Element type = CkEnumConstant.
 
 } CkUserTypeData_Enum;
 
@@ -267,64 +211,35 @@ typedef union CkUserTypeData
 // A user type declaration.
 typedef struct CkUserType
 {
-	// The kind of user type we are dealing with.
-	CkUserTypeKind kind;
-
-	// The name given to the user type.
-	char           *name;
-
-	// The custom data of the user type.
-	CkUserTypeData custom;
+	CkUserTypeKind kind;      // The kind of user type we are dealing with.
+	char           *name;     // The name given to the user type.
+	CkUserTypeData custom;    // The custom data of the user type.
+	CkDeclAttr     decl_attr; // Declaration attributes
 
 } CkUserType;
 
 // A scope is the frame that stores functions and variables.
 typedef struct CkScope
 {
-	// The library that contains the scope.
-	CkLibrary *library;
-
-	// The module that contains the scope.
-	CkModule *module;
-
-	// The scope containing this one. If there's no higher scope, then this
-	// is NULL.
-	CkScope *parent;
-
-	// If this is true, the scope supports labels (e.g. function bodies)
-	bool supportsLabels;
-
-	// If this is true, the scope can contain function declarations (e.g. modules,
-	// libraries and base function scopes)
-	bool supportsFunctions;
-
-	// The variables declared in this scope. ElementType = CkVariable.
-	CkList *variableList;
-
-	// The labels in the current scope. If supportsLabels is false, this list is
-	// not created. Element type = CkLabel.
-	CkList *labelList;
-
-	// The list of functions in the current scope. Element type = CkFunction.
-	// Requires supportsFunction.
-	CkList *functionList;
-
-	// The list of user types. Element type = CkUserType. Requires supportsFunction.
-	CkList *usertypeList;
-
-	// The list of children scopes. Element type = CkScope *
-	CkList *children;
+	CkLibrary *library;     // The library that contains the scope.
+	CkModule *module;       // The module that contains the scope.
+	CkScope *parent;        // The scope containing this one. No parent = NULL
+	bool supportsLabels;    // If this is true, the scope supports labels (e.g. function bodies)
+	bool supportsFunctions; // If this is true, the scope can contain function declarations.
+	CkList *variableList;   // The variables declared in this scope. ElementType = CkVariable.
+	CkList *labelList;      // The list of labels. Element type = CkLabel. Requires supportsLabels.
+	CkList *functionList;   // The list of functions. Element type = CkFunction. Requires supportsFunctions.
+	CkList *usertypeList;   // The list of user types. Element type = CkUserType. Requires supportsFunction.
+	CkList *children;       // The list of children scopes. Element type = CkScope *
 
 } CkScope;
 
 // A statement is a piece of code that performs operations.
 typedef struct CkStatement
 {
-	// The statement.
-	CkStatementKind stmt;
-
-	// The data stored with the statement.
-	CkStatementData data;
+	CkStatementKind stmt; // The statement.
+	CkStatementData data; // The data stored with the statement.
+	CkToken         prim; // Primary token.
 
 } CkStatement;
 
@@ -332,17 +247,10 @@ typedef struct CkStatement
 // executable file is also a library.
 typedef struct CkLibrary
 {
-	// The namespace of the library (e.g. Food) and its name.
-	char *name;
-
-	// A list containing the library's modules. Element Type = CkModule *
-	CkList *moduleList;
-
-	// A list containing all of the library's other library dependencies. Element Type = char *
-	CkList *dependenciesList;
-
-	// The global scope of the library.
-	CkScope *scope;
+	char *name;               // The namespace of the library (e.g. Food) and its name.
+	CkList *moduleList;       // A list containing the library's modules. Element Type = CkModule *
+	CkList *dependenciesList; // A list containing all of the library's dependencies. Element Type = char *
+	CkScope *scope;           // The global scope of the library.
 
 } CkLibrary;
 
@@ -350,44 +258,27 @@ typedef struct CkLibrary
 // function.
 typedef struct CkModule
 {
-	// The name of the module. This is not the name of an instance.
-	char *name;
-
-	// If this is true, the module is public.
-	bool bPublic;
-
-	// If this is true, the module cannot be instanced (only one state
-	// should ever exist.)
-	bool bStatic;
-
-	// The scope of the module.
-	CkScope *scope;
+	char *name;    // The name of the module. This is not the name of an instance.
+	bool bPublic;  // If this is true, the module is public.
+#if __STDC_VERSION__ > 201710L
+	[[deprecated]]
+#endif
+	bool bStatic;   // Static module declaration
+	CkScope *scope; // The scope of the module.
 
 } CkModule;
 
 // A function is a calleable block of code.
 typedef struct CkFunction
 {
-	// The parent scope of the function.
-	CkScope *parent;
-
-	// The scope of the function.
-	CkScope *funscope;
-
-	// The signature of a function.
-	CkFoodType *signature;
-
-	// The name of the function.
-	char *name;
-
-	// If this is true, the function is public.
-	bool bPublic;
-
-	// If this is true, the function is external.
-	bool bExtern;
-
-	// The body of the function.
-	CkStatement *body;
+	CkScope *parent;       // The parent scope of the function.
+	CkScope *funscope;     // The scope of the function.
+	CkFoodType *signature; // The signature of a function.
+	char *name;            // The name of the function.
+	bool bPublic;          // If this is true, the function is public.
+	bool bExtern;          // If this is true, the function is external.
+	CkStatement *body;     // The body of the function.
+	CkDeclAttr decl_attr;  // Declaration attributes
 
 } CkFunction;
 

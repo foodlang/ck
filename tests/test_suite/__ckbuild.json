@@ -11,7 +11,7 @@
     "warningsAsErrors": false,
     "debug": true,
     "optimizationLevel": 1,
-    "sources": [ "FunctionDecl.fd", "Preprocessor.fd" ],
+    "sources": [ "FunctionDecl.fd", "Preprocessor.fd", "RefType.fd" ],
     "libraries": [],
 
     "profiles": []

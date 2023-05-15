@@ -11,7 +11,8 @@ workspace "ck"
 	filter "configurations:Debug"
 		symbols "On"
 		defines { "_DEBUG" }
-		optimize "Debug"
+		--optimize "Debug"
+		optimize "Off"
 		sanitize { "Address" }
 
 	filter "configurations:Release"
@@ -87,9 +88,6 @@ project "ck"
 	kind "ConsoleApp"
 	targetdir( "bin/" )
 	objdir( "obj/" .. output_target .. "/%{prj.name}" )
-
-	linkoptions { "`llvm-config --ldflags --system-libs --libs core`" }
-	buildoptions { "`llvm-config --cflags`" }
 
 	files {
 		"src/**.c",

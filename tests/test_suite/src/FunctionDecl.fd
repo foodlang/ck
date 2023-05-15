@@ -19,4 +19,6 @@ static module _PrivateStaticModule
 		ExposedStaticFunction(); // comment
 		1 + 2 * 3;
 	}
+
+	public i32 ReturnI32Zero() => 0;
 }

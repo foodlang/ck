@@ -7,6 +7,8 @@
 #include <FileIO.h>
 #include <CDebug.h>
 
+#include <string.h>
+
 bool CkParseDecl(
 	CkArenaFrame *allocator    /* Allocator */,
 	CkScope *context           /* The scope of the declaration. */,
@@ -283,9 +285,10 @@ bool CkParseDecl(
 			}
 		}
 		if ( token.kind == CKTOK2( '=', '>' ) ) {
-			body = CkArenaAllocate( allocator, sizeof( CkStatement ) );
+			body = CkArenaAllocate(allocator, sizeof(CkStatement));
 			body->stmt = CK_STMT_EXPRESSION;
 			body->data.expression = CkParserExpression( context, parser );
+			memcpy(&body->prim, &body->data.expression->token, sizeof(CkToken));
 
 			CkParserReadToken( parser, &token );
 			if ( token.kind != ';' ) {

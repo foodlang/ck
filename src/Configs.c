@@ -254,7 +254,7 @@ CkBuildConfig *CkConfigGetBuildConfig(
 	char *directoryPath )
 {
 	char *filepathBuffer;
-	char *fileConfigBuffer;
+	CkSource *fileConfigBuffer;
 	CkBuildConfig *config;
 	cJSON *jsonConfig;
 
@@ -267,12 +267,12 @@ CkBuildConfig *CkConfigGetBuildConfig(
 	cwk_path_join( filepathBuffer, CK_BUILD_FILE_RELATIVE, filepathBuffer, MAXPATHLENGTH );
 
 	// Reading file
-	fileConfigBuffer = CkReadFileContents( allocator, filepathBuffer )->code;
+	fileConfigBuffer = CkReadFileContents( allocator, filepathBuffer );
 	if ( !fileConfigBuffer ) // CkReadFileContents() already generates an error message
 		return NULL;
 
 	// Parsing JSON
-	jsonConfig = cJSON_Parse( fileConfigBuffer );
+	jsonConfig = cJSON_Parse( fileConfigBuffer->code );
 	if ( !jsonConfig ) {
 		fprintf( stderr, "ck: cJSON failed to read JSON file '%s':\n%s\n", filepathBuffer, cJSON_GetErrorPtr() );
 		return NULL;

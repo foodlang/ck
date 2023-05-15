@@ -123,17 +123,17 @@ typedef enum FoodTypeID
 {
 	CK_FOOD_VOID = 1,
 	CK_FOOD_BOOL,
-	CK_FOOD_I8,
 	CK_FOOD_U8,
-	CK_FOOD_I16,
+	CK_FOOD_I8,
 	CK_FOOD_U16,
+	CK_FOOD_I16,
 	CK_FOOD_F16,
-	CK_FOOD_I32,
 	CK_FOOD_U32,
+	CK_FOOD_I32,
 	CK_FOOD_ENUM,
 	CK_FOOD_F32,
-	CK_FOOD_I64,
 	CK_FOOD_U64,
+	CK_FOOD_I64,
 	CK_FOOD_F64,
 
 	CK_FOOD_FUNCPOINTER,
@@ -194,8 +194,7 @@ typedef enum CkExpressionKind
 	CK_EXPRESSION_FUNCCALL,
 	CK_EXPRESSION_SUBSCRIPT,
 	CK_EXPRESSION_MEMBER_ACCESS,
-	CK_EXPRESSION_POINTER_MEMBER_ACCESS,
-
+	
 	CK_EXPRESSION_PREFIX_INC,
 	CK_EXPRESSION_PREFIX_DEC,
 	CK_EXPRESSION_UNARY_PLUS,
@@ -255,6 +254,8 @@ typedef enum CkExpressionKind
 	CK_EXPRESSION_COMPOUND,
 
 } CkExpressionKind;
+
+#define CK_EXPRESSION_MAX CK_EXPRESSION_COMPOUND
 
 // A parser expression.
 typedef struct CkExpression
@@ -322,5 +323,9 @@ void CkStrBuilderAppendString( CkStrBuilder *sb, char* s );
 // Disposes of a string builder. These objects don't use arenas,
 // so it is important to dispose of them.
 void CkStrBuilderDispose( CkStrBuilder *sb );
+
+#ifndef max
+#define max fmax
+#endif
 
 #endif

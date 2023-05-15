@@ -192,9 +192,17 @@ static bool s_CompareUserTypesSignature( CkFoodType *left, CkFoodType *right, Ck
 static bool s_CompatibleTypesCheck( CkFoodType *left, CkFoodType *right, CkScope *scope )
 {
 	// References to pointers is allowed
-	if ( (left->id == CK_FOOD_REFERENCE && right->id == CK_FOOD_POINTER)
-		|| (left->id == CK_FOOD_POINTER && right->id == CK_FOOD_REFERENCE) )
-		return s_CompatibleTypesCheck( left->child, right->child, scope );
+	if ((left->id == CK_FOOD_REFERENCE && right->id == CK_FOOD_POINTER)
+		|| (left->id == CK_FOOD_POINTER && right->id == CK_FOOD_REFERENCE))
+		return s_CompatibleTypesCheck(left->child, right->child, scope);
+
+	if (left->id == CK_FOOD_REFERENCE && left->id == right->id)
+		return s_CompatibleTypesCheck(left->child, right->child, scope);
+
+	if (left->id == CK_FOOD_POINTER && left->id == right->id)
+		return s_CompatibleTypesCheck(left->child, right->child, scope);
+
+	// TODO: void* auto conversions
 
 	// Only user types can be compared with other user types...
 	if ( (left->id == CK_FOOD_STRUCT && right->id == CK_FOOD_STRUCT)
@@ -548,10 +556,7 @@ static CkExpression *s_ValidateExpressionNC(
 		// ref x
 	case CK_EXPRESSION_REF:
 		/*
-			The opaque address-of operator is very similar to the classic
-			address-of operator, however it will allows return an opaque
-			reference. It also requires its operand to be an lvalue and
-			not a reference.
+			Reference operator
 		*/
 
 		CK_ASSERT(left);
@@ -762,6 +767,10 @@ static CkExpression *s_ValidateExpressionNC(
 		CK_ASSERT( left );
 		CK_ASSERT( right );
 
+		if (left->type->id == CK_FOOD_REFERENCE && (right->type->id != CK_FOOD_REFERENCE))
+			CkDiagnosticThrow(pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
+				"An assignment to a reference requires a reference.");
+
 		if ( !s_CompatibleTypesCheck(left->type, right->type, scope) )
 			CkDiagnosticThrow( pDhi, &expression->token, CK_DIAG_SEVERITY_ERROR, "",
 				"An assignment requires compatible value types." );
@@ -886,7 +895,6 @@ static CkExpression *s_ValidateExpressionNC(
 	case CK_EXPRESSION_NAMEOF:
 	case CK_EXPRESSION_TYPEOF:
 	case CK_EXPRESSION_MEMBER_ACCESS:
-	case CK_EXPRESSION_POINTER_MEMBER_ACCESS:
 		printf( "ck internal error: Missing type binder for operator %d.\n", expression->kind );
 		abort();
 	}

@@ -997,6 +997,7 @@ static size_t _InsertExpression( CkArenaFrame *allocator, CkStrBuilder* sb, CkEx
 		break;
 	}
 	case CK_EXPRESSION_ADDRESS_OF:
+	case CK_EXPRESSION_REF:
 	case CK_EXPRESSION_OPAQUE_ADDRESS_OF: {
 		char *regname;
 		char *varref;
@@ -1660,13 +1661,13 @@ char* CkGenProgram_Prototype(
 
 		// Global functions
 		glblFuncCount = CkListLength( lib->scope->functionList );
-		for ( size_t j = 0; j < glblFuncCount; j++ )
-			_InsertFunction( allocator, &outsb, CkListAccess( lib->scope->functionList, j ) );
+		for (size_t j = 0; j < glblFuncCount; j++)
+			_InsertFunction(allocator, &outsb, CkListAccess(lib->scope->functionList, j));
 
 		// Modules
 		moduleCount = CkListLength( lib->moduleList );
-		for ( size_t j = 0; j < moduleCount; j++ )
-			_InsertModule( allocator, &outsb, *(CkModule**)CkListAccess(lib->moduleList, j) );
+		for (size_t j = 0; j < moduleCount; j++)
+			_InsertModule(allocator, &outsb, *(CkModule**)CkListAccess(lib->moduleList, j));
 	}
 
 	// --- Generating static data ---

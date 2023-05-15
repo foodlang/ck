@@ -4,6 +4,8 @@
 
 #include <CDebug.h>
 
+#include <string.h>
+
 static inline CkExpression *s_ParseExpr( CkScope *scope, CkParserInstance *parser )
 {
 	CkExpression *base = CkParserExpression( scope, parser );
@@ -243,6 +245,7 @@ static CkStatement *s_ReturnStatement( CkScope *context, CkParserInstance *parse
 CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 {
 	CkToken token;
+	CkStatement *returned;
 
 	CK_ARG_NON_NULL( parser );
 	CK_ARG_NON_NULL( context );
@@ -254,6 +257,7 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 	case ';': {
 		CkStatement* returned = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
 		returned->stmt = CK_STMT_EMPTY;
+		memcpy(&returned->prim, &token, sizeof(CkToken));
 		return returned;
 	}
 
@@ -297,29 +301,45 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 			if ( !stmt ) return NULL;
 			CkListAdd( block->data.block.stmts, &stmt );
 		}
+		memcpy(&block->prim, &token, sizeof(CkToken));
 		return block;
 	}
 
 		// If statement
-	case KW_IF: return s_IfStatement( context, parser );
+	case KW_IF: returned = 
+		s_IfStatement(context, parser);
+		memcpy(&returned->prim, &token, sizeof(CkToken));
+		return returned;
 
 		// While statement
-	case KW_WHILE: return s_WhileStatement( context, parser );
+	case KW_WHILE:
+		returned = s_WhileStatement(context, parser);
+		memcpy(&returned->prim, &token, sizeof(CkToken));
+		return returned;
 
 		// Do ... while statement
-	case KW_DO: return s_DoWhileStatement( context, parser );
+	case KW_DO:
+		returned = s_DoWhileStatement(context, parser);
+		memcpy(&returned->prim, &token, sizeof(CkToken));
+		return returned;
 	
 		// For statement
-	case KW_FOR: return s_ForStatement( context, parser );
+	case KW_FOR:
+		returned = s_ForStatement(context, parser);
+		memcpy(&returned->prim, &token, sizeof(CkToken));
+		return returned;
 
 		// Return statement
-	case KW_RETURN: return s_ReturnStatement( context, parser );
+	case KW_RETURN:
+		returned = s_ReturnStatement(context, parser);
+		memcpy(&returned->prim, &token, sizeof(CkToken));
+		return returned;
 
 		// Attempts to parse an expression/declaration
 	default:
 	{
 		CkExpression *expr;
-		CkStatement *returned;
+		
 
 		CkParserRewind( parser, 1 );
 		expr = s_ParseExpr( context, parser );
@@ -339,6 +359,7 @@ CkStatement *CkParseStmt( CkScope *context, CkParserInstance *parser )
 		returned = CkArenaAllocate( parser->genArena, sizeof( CkStatement ) );
 		returned->stmt = CK_STMT_EXPRESSION;
 		returned->data.expression = expr;
+		memcpy(&returned->prim, &expr->token, sizeof(CkToken));
 		return returned;
 	}
 

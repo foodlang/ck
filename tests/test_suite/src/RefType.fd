@@ -1,0 +1,9 @@
+int _GetValueAt(int& v) => *v;
+
+void _ReferenceTest()
+{
+	int a = 0;
+	int& b = ref a;
+	int* c = b;
+	_GetValueAt(b);
+}
