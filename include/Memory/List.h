@@ -61,5 +61,6 @@ void CkListClear( CkList *base );
 // Performs a foreach.
 #define FOREACH(x, N) if (x->used) for (CkList *N = x; N; N = N->next)
 #define ITEM(T, N) *(T*)(N + 1)
+#define ITEMPTR(T, N) (T*)(N + 1)
 
 #endif

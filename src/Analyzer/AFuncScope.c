@@ -11,8 +11,9 @@ size_t AnalyzeFunc(CkFunction *func, CkAnalyzeConfig *cfg)
 	// TODO: Detect unused variables & params
 
 	if (func->body->stmt == CK_STMT_EXPRESSION)
-		bindings = AnalyzeExpression(func->body->data.expression, cfg);
-	else bindings = AnalyzeStatement(func->body, cfg);
+		bindings = AnalyzeExpression(func->body->data.expression, cfg, func->funscope);
+	else
+		bindings = AnalyzeStatement(func->body, cfg, func->body->data.block.scope, &found_return);
 
 	// ----- Epilogue -----
 

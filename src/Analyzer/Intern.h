@@ -13,8 +13,9 @@
 
 #include <Analyzer.h>
 
-size_t AnalyzeExpression(CkExpression *expr, CkAnalyzeConfig *cfg);
-size_t AnalyzeStatement(CkStatement *stmt, CkAnalyzeConfig *cfg);
+size_t AnalyzeExpression(CkExpression *expr, CkAnalyzeConfig *cfg, CkScope *scope);
+size_t AnalyzeStatement(CkStatement *stmt, CkAnalyzeConfig *cfg, CkScope *scope, bool *mut_return_found);
 size_t AnalyzeFunc(CkFunction *func, CkAnalyzeConfig *cfg);
+CkFoodType *ResolveSymType(char *ident, CkAnalyzeConfig *cfg, CkScope *scope);
 
 #endif

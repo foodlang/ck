@@ -7,7 +7,7 @@
 
 static inline FoodTypeID s_GetMostInformationInt(FoodTypeID a, FoodTypeID b) { return max(a, b); }
 
-static size_t s_AnalyzeExpression(CkExpression *expr, CkAnalyzeConfig *cfg)
+static size_t s_AnalyzeExpression(CkExpression *expr, CkAnalyzeConfig *cfg, CkScope *scope)
 {
 #define CHECK_LVALUE(X, Y) if (!X->isLValue) { \
 		CkDiagnosticThrow(cfg->p_dhi, &expr->token, CK_DIAG_SEVERITY_ERROR, "", \
@@ -38,9 +38,16 @@ LDummy:
 	fprintf(stderr, "Unsupported expression %d\n", expr->kind);
 	abort(); // No fallthrough
 
-LIdentifier:
-	// TODO
-	goto LEnd;
+LIdentifier: {
+	CkFoodType *resolved_maybe = ResolveSymType(expr->token.value.cstr, cfg, scope);
+	if (resolved_maybe) {
+		bindings++;
+		expr->type = resolved_maybe;
+		expr->isLValue = true;
+		goto LEnd;
+	}
+	return 0;
+	}
 
 LScopedReference:
 	// TODO
@@ -79,7 +86,7 @@ LPostfixDec:
 LPrefixInc:
 LPrefixDec:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -112,8 +119,8 @@ LFuncCall:
 LSubscript:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL || expr->right->type == NULL)
@@ -135,7 +142,7 @@ LMemberAccess:
 LUnaryPlus:
 LUnaryMinus:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -152,7 +159,7 @@ LUnaryMinus:
 
 LLogicalNot:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -171,7 +178,7 @@ LLogicalNot:
 
 LBitwiseNot:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -188,7 +195,7 @@ LBitwiseNot:
 
 LCCast:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -198,13 +205,13 @@ LCCast:
 
 LDereference:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
 		return 0;
 
-	if (!CK_TYPE_CLASSED_POINTER(expr->left->type->id)) {
+	if (!CK_TYPE_CLASSED_POINTER(expr->left->type->id) && expr->left->type->id != CK_FOOD_REFERENCE) {
 		CkDiagnosticThrow(cfg->p_dhi, &expr->token, CK_DIAG_SEVERITY_ERROR, "",
 			"The operand of the dereference operator (*) must be a pointer.");
 		goto LEnd;
@@ -224,7 +231,7 @@ LDereference:
 
 LAddrOf:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -239,7 +246,7 @@ LAddrOf:
 
 LOpaqueAddrOf:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -254,7 +261,7 @@ LOpaqueAddrOf:
 
 LRef:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -276,8 +283,8 @@ LMul:
 LDiv:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -296,8 +303,8 @@ LDiv:
 LMod:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -317,8 +324,8 @@ LAdd:
 LSub:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -341,8 +348,8 @@ LLeftShift:
 LRightShift:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -364,8 +371,8 @@ LGreater:
 LGreaterEqual:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -383,8 +390,8 @@ LEqual:
 LNotEqual:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -408,8 +415,8 @@ LBitwiseXor:
 LBitwiseOr:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -429,8 +436,8 @@ LLogicalAnd:
 LLogicalOr:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -447,7 +454,7 @@ LLogicalOr:
 
 LFoodCast:
 	CK_ASSERT(expr->left);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
 
 	// Incomplete binding
 	if (expr->left->type == NULL)
@@ -459,9 +466,9 @@ LConditional:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
 	CK_ASSERT(expr->extra);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
-	bindings += s_AnalyzeExpression(expr->extra, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->extra, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL || expr->extra->type == NULL)
 		return 0;
@@ -495,8 +502,8 @@ LAssignOr:
 LCompound:
 	CK_ASSERT(expr->left);
 	CK_ASSERT(expr->right);
-	bindings += s_AnalyzeExpression(expr->left, cfg);
-	bindings += s_AnalyzeExpression(expr->right, cfg);
+	bindings += s_AnalyzeExpression(expr->left, cfg, scope);
+	bindings += s_AnalyzeExpression(expr->right, cfg, scope);
 
 	if (expr->left->type == NULL || expr->right->type == NULL)
 		return 0;
@@ -508,9 +515,9 @@ LEnd:
 	return bindings;
 }
 
-size_t AnalyzeExpression(CkExpression *expr, CkAnalyzeConfig *cfg)
+size_t AnalyzeExpression(CkExpression *expr, CkAnalyzeConfig *cfg, CkScope *scope)
 {
-	size_t ret = s_AnalyzeExpression(expr, cfg);
+	size_t ret = s_AnalyzeExpression(expr, cfg, scope);
 	expr = CkConstExprReduce(cfg->allocator, expr);
 	return ret;
 }

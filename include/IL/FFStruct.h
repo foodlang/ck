@@ -22,6 +22,7 @@
 #define CK_DECLATTR_NORETURN_NULLCHECK_BIT 0b00010000 // [noreturn] (function-only)/[nullcheck] (variable-only)
 #define CK_DECLATTR_OVERRIDE_PACKED_BIT    0b00100000 // [override] (function-only)/[packed] (type-only)
 #define CK_DECLATTR_MAYBE_UNUSED_BIT       0b01000000 // [maybe_unused] (symbol can be unused)
+#define CK_DECLATTR_PURE_BIT               0b10000000 // [pure] (function-only)
 // alignas() and callconv() not supported in ckc (CK in C)
 
 typedef uint_least8_t CkDeclAttr; // Declaration attribute storage

@@ -33,6 +33,7 @@ typedef off_t _off_t;  // for stat.h (stdlib bug)
 int main(int argc, char *argv[], char **envp)
 {
 	CkArenaFrame globalArena;                 // The arena used for global allocations.
+	CkArenaFrame parser_arena;                // Parser arena
 	CkDriverStartupConfiguration driverStart; // Driver startup configuration
 	CkDriverCompilationResult driverResult = {};// Driver result
 	CkBuildConfig *base;                      // The base configuration.
@@ -67,6 +68,7 @@ int main(int argc, char *argv[], char **envp)
 	}
 
 	CkArenaStartFrame(&globalArena, 0);
+	CkArenaStartFrame(&parser_arena, 1024 * 1024 * 128);
 	CkTimeGetCurrent(&tcompilerStart);
 
 	driverStart.defines = CkListStart(&globalArena, sizeof(CkMacro));
@@ -139,7 +141,7 @@ int main(int argc, char *argv[], char **envp)
 		driverStart.wError = applied->wError;
 
 		// Driver compilation
-		CkDriverCompile(&dhi, &globalArena, &globalArena, result, &driverResult, &driverStart);
+		CkDriverCompile(&dhi, &parser_arena, &globalArena, result, &driverResult, &driverStart);
 		CkTimeGetCurrent(&tdriverEnd);
 		if (dhi.anyErrors || (applied->wError && dhi.anyWarnings) || !driverResult.successful) {
 			CkDiagnosticThrow(&dhi, NULL, CK_DIAG_SEVERITY_MESSAGE, "",
@@ -147,11 +149,13 @@ int main(int argc, char *argv[], char **envp)
 			CkDiagnosticDisplay(&dhi);
 			CkTimeGetCurrent(&tcompilerEnd);
 			CkArenaEndFrame(&globalArena);
+			CkArenaEndFrame(&parser_arena);
 			printf(
 				"Full compilation time: %f ms\n",
 				(double)(CkTimeElapsed_mcs(&tcompilerStart, &tcompilerEnd)) / 1000.0);
 			return 0;
 		}
+		CkArenaResetFrame(&parser_arena);
 		printf("  - '%s' (%f ms)\n",
 			sourceTotal,
 			(double)(CkTimeElapsed_mcs(&tdriverStart, &tdriverEnd)) / 1000.0);
@@ -160,7 +164,6 @@ int main(int argc, char *argv[], char **envp)
 	puts("");
 
 	// Binding
-	//CkBinderValidateAndBind( &dhi, &globalArena, result );
 	analysis_cfg.allocator = &globalArena;
 	analysis_cfg.p_dhi = &dhi;
 	libs = CkListStart(&globalArena, sizeof(CkLibrary *));
@@ -191,12 +194,13 @@ int main(int argc, char *argv[], char **envp)
 
 		// ----- Opening and generating file -----
 		output = fopen(output_path, "wb");
-		fputs(CkGenProgram_Prototype(&dhi, &globalArena, libs), output);
+		//fputs(CkGenProgram_Prototype(&dhi, &globalArena, libs), output);
 		universal_fclose(output);
 		printf("Output file: '%s'\n", output_path);
 	}
 	CkTimeGetCurrent(&tcompilerEnd);
 	CkArenaEndFrame(&globalArena);
+	CkArenaEndFrame(&parser_arena);
 	printf(
 		"Full compilation time: %f ms\n",
 		(double)(CkTimeElapsed_mcs(&tcompilerStart, &tcompilerEnd)) / 1000.0);

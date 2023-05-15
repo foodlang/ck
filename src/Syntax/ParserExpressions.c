@@ -607,5 +607,5 @@ static CkExpression *s_ParseCompound( CkScope* scope, CkParserInstance *parser )
 CkExpression *CkParserExpression( CkScope* scope, CkParserInstance *parser )
 {
 	CK_ARG_NON_NULL( parser );
-	return s_ParseCompound( scope, parser );
+	return CkExpressionDuplicate(parser->genArena, s_ParseCompound( scope, parser ));
 }

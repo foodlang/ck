@@ -159,5 +159,5 @@ CkFoodType *CkParserType( CkScope *scope, CkParserInstance *parser )
 		}
 	}
 
-	return acc;
+	return CkFoodCopyTypeInstance(parser->genArena, acc);
 }
