@@ -1,2 +1,2 @@
 #!/bin/bash
-bin/ck tests/test0
+bin/ck tests/test_suite
