@@ -1,0 +1,6 @@
+﻿/*
+ * Base library for programs compiled with ck
+ * Only defines "freestanding" types and functions
+*/
+
+

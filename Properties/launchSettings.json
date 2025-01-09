@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ck": {
+      "commandName": "Project",
+      "commandLineArgs": "--test",
+      "workingDirectory": "$(SolutionDir)",
+      "nativeDebugging": true
+    }
+  }
+}

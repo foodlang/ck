@@ -1,0 +1,1 @@
+﻿internal func my_internal_function(): void {}

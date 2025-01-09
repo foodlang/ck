@@ -1,0 +1,37 @@
+﻿/*
+ * Test lex.fd -> this file does not contain any valid
+ * source code and is only meant to test all of the tokens.
+*/
+
+9401483174
+6.4321e3
+'G'
+"Cookin'"
+my_favorite_identifier
+// we're gaming
+()[]{}~?;,
++ ++ +=
+& && &=
+| || |=
+- -- -= ->
+= == =>
+! !=
+* *=
+/ /=
+% %=
+^ ^=
+: ::
+. .. ...
+< <= << <<=
+> >= >> >>=
+new default true false null sizeof nameof typeof
+void bool i8 u8 i16 u16 f16 i32 u32 f32 i64 u64 f64
+isz usz fmax
+let func varying in out
+const atomic shared
+
+1_i8 2_u8
+1_i16 2_u16 3_f16
+1_i32 2_u32 3_f32
+1_i64 2_u64 3_f64
+1_ix 2_ux 3_fx

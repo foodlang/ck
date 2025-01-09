@@ -1,0 +1,47 @@
+﻿/*
+ * General test - tests global language features
+*/
+
+struct test {}
+
+struct struct_a {
+	x: i32,
+	y: i32,
+}
+
+struct struct_b {
+	z: i32,
+	k: i32,
+	a: *struct_a,
+}
+
+enum Abc : i64 {
+ A = 255,
+ B = 399,
+ C = 6969,
+}
+
+struct test2 {}
+class class_a = struct_a; // alias
+
+func set_x(out x: i32, in y: i32): i32 {
+	x = y;
+	return x + y;
+}
+
+func main(argc: i32, #{maybe_unused} argv: **u8): i32 {
+	let mystr := "Hello, " "World!\n";
+
+	asm !["rcx", "r11"] &["rax"]
+		"mov %rax, $argc",
+		"syscall";
+
+	let a := 3;
+
+	a + a;
+
+	return mystr;
+}
+
+import "Tests/general.fd";
+import "Tests/internal_test.fd";

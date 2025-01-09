@@ -1,0 +1,33 @@
+﻿//CKTEST::ALL
+
+/*
+	common generator/SSA test
+*/
+
+class Vec3 :: struct {
+	x: f32;
+	y: f32;
+	z: f32;
+
+	Zero    :: { x: 0.0, y: 0.0, z: 0.0 };
+	One     :: { x: 1.0, y: 1.0, z: 1.0 };
+	default :: One;
+};
+
+class Abc :: enum(i32) {
+
+	A = 2,
+	B,
+	C,
+
+};
+
+main :: i32(argc: i32, argv: u8**) {
+	i := 0;
+
+	i = 2 * i;
+
+	if (i) {
+		return i;
+	}
+}
