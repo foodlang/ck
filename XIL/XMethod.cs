@@ -1,4 +1,6 @@
-﻿namespace ck.XIL;
+﻿using ck.Lang.Tree.Expressions;
+
+namespace ck.XIL;
 
 /// <summary>
 /// An X-op method.
@@ -25,6 +27,15 @@ public sealed class XMethod
     /// </summary>
     public readonly Dictionary<string, XReg> LocalTable;
 
+    public XReg GetLocalOrParam(string ident, out bool param)
+    {
+        param = true;
+        if (ParamTable.ContainsKey(ident))
+            return ParamTable[ident];
+        param = false;
+        return LocalTable[ident];
+    }
+
     /// <summary>
     /// Local block table
     /// </summary>
@@ -33,7 +44,7 @@ public sealed class XMethod
     /// <summary>
     /// Label table
     /// </summary>
-    private readonly Dictionary<string, int> _labeltable = new(4);
+    private readonly Dictionary<string, int> _labeltable = new(24);
 
     /// <summary>
     /// The internal ops.
@@ -45,7 +56,7 @@ public sealed class XMethod
     /// <summary>
     /// Temporary registers
     /// </summary>
-    private readonly List<XReg> _temps = new(16);
+    private readonly List<XReg> _registers = new(48);
 
     /// <summary>
     /// Stack memory blocks
@@ -63,12 +74,12 @@ public sealed class XMethod
     }
 
     /// <summary>
-    /// Creates a temporary storage register.
+    /// Allocates a register.
     /// </summary>
-    public XReg CreateTemp()
+    public XReg AllocateRegister(XRegStorage storage)
     {
-        var r = new XReg(_temps.Count, XRegStorage.Fast);
-        _temps.Add(r);
+        var r = new XReg(_registers.Count, storage);
+        _registers.Add(r);
         return r;
     }
 
@@ -88,6 +99,11 @@ public sealed class XMethod
     /// </summary>
     /// <param name="op">The operation to add.</param>
     public void Write(XOp op) => (_finally_writing ? _finally_block : _ops).Add(op);
+
+    /// <summary>
+    /// Writes a copy of the finally block into the main operations list.
+    /// </summary>
+    public void WriteFinallyBlock() => _ops.AddRange(_finally_block);
 
     public void ToggleFinallyWrite() => _finally_writing ^= true;
 

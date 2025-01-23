@@ -3,4 +3,10 @@
  * Only defines "freestanding" types and functions
 */
 
-
+__ck_impl_strlen :: usz( cstr: u8* )
+{
+	n: usz = 0;
+	while ( *(cstr++) )
+		n++;
+	return n;
+}

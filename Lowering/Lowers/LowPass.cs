@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -214,19 +215,42 @@ public sealed class LowPass : LowerOptStep
 
         case StatementKind.SwitchCase:
         {
-            var switch_id = stmt.FindNearestSwitch()!.Id;
+            var switch_stmt = stmt.FindNearestSwitch()!;
+            var switch_id = switch_stmt.Id;
+            
+
             var label = new Statement(stmt_parent, StatementKind.Label, stmt.KwToken);
-            label.Objects.Add($"${switch_id}_case{label.Id}");
+            var name = $"{switch_id}_case{label.Id}";
+            label.Objects.Add(name);
+            switch_stmt.Objects.Add((Name: name, Cval: (decimal)stmt.Expressions[0].Token.Value!));
             stmt = label;
             break;
         }
 
         case StatementKind.SwitchDefault:
         {
-            var switch_id = stmt.FindNearestSwitch()!.Id;
+            var switch_stmt = stmt.FindNearestSwitch()!;
+            var switch_id = switch_stmt.Id;
             var label = new Statement(stmt_parent, StatementKind.Label, stmt.KwToken);
             label.Objects.Add($"${switch_id}_default");
             stmt = label;
+            break;
+        }
+
+        case StatementKind.Assert:
+        {
+            var if_stmt = new Statement(stmt_parent, StatementKind.If, stmt.KwToken);
+            if_stmt.AddExpression(new UnaryExpression(stmt.KwToken, ExpressionKind.LogicalNot, stmt.Expressions[0]) { Type = stmt.Expressions[0].Type! });
+            var failure_code = new Statement(if_stmt, StatementKind.Expression, stmt.KwToken);
+            failure_code.AddExpression(
+                new AggregateExpression(stmt.KwToken, ExpressionKind.FunctionCall, [
+                    new ChildlessExpression(new Token(stmt.KwToken.Position, TokenKind.Identifier, null, "__ck_assert_abort"), ExpressionKind.Identifier)
+                    { Type = FType.Function(FType.VOID, new FunctionArgumentSignature([], null)) }
+                    ]));
+            if_stmt.AddStatement(
+                failure_code
+                );
+            stmt = if_stmt;
             break;
         }
 

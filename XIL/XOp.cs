@@ -1,4 +1,5 @@
 ﻿using ck.Lang.Tree.Expressions;
+using System.Runtime.Intrinsics.Arm;
 
 namespace ck.XIL;
 
@@ -21,6 +22,12 @@ public delegate void XOpExprPattern(Expression e, List<XOp> page);
 /// </summary>
 public sealed class XOp
 {
+    public string PrettyPrint()
+        => $"{Op.ToString().ToLowerInvariant()}::{Type.ToString()} Rd={Rd.R}," +
+        $" Rsx=[{Rsx.Select(r => r.R.ToString()).Aggregate((a, b) => $"{a}, {b}")}]," +
+        $" Kx=[{Kx.Select(k => k.ToString()).Aggregate((a, b) => $"{a}, {b}")}]," +
+        (Fn is not null ? $"Fn={Fn}" : "");
+
     /// <summary>
     /// The operation to perform.
     /// </summary>
@@ -82,7 +89,7 @@ public sealed class XOp
         => new(Op, T, Rd, [Rs0], []);
 
     public static XOp Nop()
-        => new(XOps.Nop, XType.U0, XReg.NoReg(), [], []);
+        => new(XOps.Nop, XType.U0, XReg.NoReg, [], []);
 
     public static XOp Const(XType T, XReg Rd, nuint K0)
         => new(XOps.ConstSet, T, Rd, [], [K0]);
@@ -180,11 +187,11 @@ public sealed class XOp
     public static XOp NotEqual(XType T, XReg Rd, XReg Rs0, XReg Rs1)
         => _Binary(T, XOps.NotEqual, Rd, Rs0, Rs1);
 
-    public static XOp Log_Not(XType T, XReg Rd, XReg Rs0)
+    public static XOp LNot(XType T, XReg Rd, XReg Rs0)
         => _Unary(T, XOps.LNot, Rd, Rs0);
 
     public static XOp Jmp(nuint Insn)
-        => new(XOps.Jmp, XType.U0, XReg.NoReg(), [], [Insn]);
+        => new(XOps.Jmp, XType.U0, XReg.NoReg, [], [Insn]);
 
     public static XOp IJmp(XReg Rd)
         => new(XOps.IJmp, XType.U0, Rd, [], []);
@@ -217,7 +224,7 @@ public sealed class XOp
         => new XOp(XOps.Retv, T, Rd, [], []);
 
     public static XOp Ret()
-        => new XOp(XOps.Ret, XType.U0, XReg.NoReg(), [], []);
+        => new XOp(XOps.Ret, XType.U0, XReg.NoReg, [], []);
 
     public static XOp Blkzero(XReg Rd, nuint K0)
         => new XOp(XOps.Blkzero, XType.Ptr, Rd, [], [K0]);
@@ -239,4 +246,7 @@ public sealed class XOp
 
     public static XOp FloatResize(XType dT, XType sT, XReg Rd, XReg Rs0)
         => new XOp(XOps.FloatResize, dT, Rd, [Rs0], [], [sT]);
+
+    public static XOp Leave()
+        => new XOp(XOps.Leave, XType.U0, XReg.NoReg, [], []);
 }

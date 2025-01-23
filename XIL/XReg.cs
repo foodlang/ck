@@ -45,23 +45,24 @@ public struct XReg
     /// <summary>
     /// Internal integer (-1=noreg)
     /// </summary>
-    public int R;
+    public readonly int R;
 
     /// <summary>
     /// The storage of the register.
     /// </summary>
-    public XRegStorage Storage;
+    public readonly XRegStorage Storage;
 
     /// <summary>
-    /// Whether the address is a local offset in the function.
+    /// Whether the storage of the register must be physical.
     /// </summary>
-    public bool LocalOffset;
+    public bool MustHavePhysicalStorage;
 
     public XReg(int r, XRegStorage storage)
     {
         R = r;
         Storage = storage;
+        MustHavePhysicalStorage = Storage == XRegStorage.LocalMustPhysical;
     }
 
-    public static XReg NoReg() => new(-1, XRegStorage.Fast);
+    public static readonly XReg NoReg = new(-1, XRegStorage.Fast);
 }

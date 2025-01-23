@@ -64,8 +64,9 @@ public enum XOps : byte
      * pcall F [Rs...]          ; calls a procedure
      * Rd = ficall Rs0 [Rs1...] ; calls indirectly a function
      * picall Rs0 [Rs1...]      ; calls indirectly a procedure
-     * retv Rd                  ; returns a value
-     * ret                      ; returns (with no value)
+     * retv Rd                  ; returns a value (soft return)
+     * ret                      ; returns (with no value) (soft return)
+     * leave                    ; leaves the function [true return]. value is preserved from last retv
      * 
      * blkzero(K0) Rd      ; initializes the block to zero at Rd (K0 bytes)
      * blkcopy(K0) Rd, Rs0 ; copies block from Rs0 to Rd (K0 bytes), overlap not permitted. analoguous to memcpy()
@@ -131,6 +132,7 @@ public enum XOps : byte
     PiCall,
     Retv,
     Ret,
+    Leave,
 
     Blkzero,
     Blkcopy,
