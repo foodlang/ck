@@ -262,7 +262,7 @@ public sealed partial class Analyzer
         {
             var aggregate = (AggregateExpression)e;
             FType? prev = null;
-            var casted = new List<Expression>();
+            var casted = new List<Expression>(aggregate.Aggregate.Count());
             foreach (var elem in aggregate.GetChildrenExpressions())
             {
                 if (prev is null)

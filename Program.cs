@@ -12,7 +12,7 @@ internal class Program
 #else
         Console.WriteLine("ck - the official food compiler (debug mode)");
 #endif
-        Console.WriteLine("copyright (c) The Food Project 2023-2024");
+        Console.WriteLine("copyright (c) The Food Project 2023-2025");
         Console.WriteLine();
 #if DEBUG
         Console.WriteLine($"working directory: {Directory.GetCurrentDirectory()}");

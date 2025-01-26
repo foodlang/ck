@@ -45,7 +45,7 @@ public static class XCompiler
         ByPointer,
     }
 
-    public static XReg GenerateExpression(XMethod method, Expression e, ObjectAccess access, XReg? target)
+    private static XReg GenerateExpression(XMethod method, Expression e, ObjectAccess access, XReg? target)
     {
         Debug.Assert(e.Kind != ExpressionKind.Error);
 
@@ -53,9 +53,12 @@ public static class XCompiler
         FType FT = e.Type!;
         XType XT = XType.FromFood(FT);
 
+        // TODO: new and default
+        // TODO: variadic function calls
+        // TODO: member access
         switch (e.Kind)
         {
-            // will be scalar, access is restricted to ByValue
+        // will be scalar, access is restricted to ByValue
         case ExpressionKind.Literal:
         {
             Debug.Assert(access == ObjectAccess.ByValue);
@@ -98,6 +101,19 @@ public static class XCompiler
             break;
         }
 
+        case ExpressionKind.Dereference:
+        {
+            if (access == ObjectAccess.ByPointer || FT.Traits.HasFlag(TypeTraits.Members) || FT.Traits.HasFlag(TypeTraits.Array))
+                GenerateExpression(method, e.GetChildrenExpressions().First(), ObjectAccess.ByValue, Ret);
+            else
+            {
+                var Ptr = GenerateExpression(method, e.GetChildrenExpressions().First(), ObjectAccess.ByValue, null);
+                method.Write(XOp.Read(XT, Ret, Ptr));
+            }
+
+            break;
+        }
+
         // just wrap around
         case ExpressionKind.UnaryPlus:
             GenerateExpression(method, e.GetChildrenExpressions().First(), access, target);
@@ -132,6 +148,367 @@ public static class XCompiler
             method.Write(XOp.LNot(XT, Ret, T));
             break;
         }
+
+        case ExpressionKind.CollectionInitialization:
+        {
+            var e_aggregate = (AggregateExpression)e;
+            var size = e_aggregate.Type!.SizeOf();
+            var blk = method.CreateBlock((nuint)size, false);
+            method.Write(XOp.Blkaddr(Ret, blk.Index));
+            var Dr_Intermediate = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Copy(XType.Ptr, Dr_Intermediate, Ret));
+            if (e_aggregate.Aggregate.Count() != 0)
+            {
+                var T_elem = e_aggregate.Aggregate.First().Type!;
+                var XT_elem = XType.FromFood(T_elem);
+                var T_is_blk = T_elem.Traits.HasFlag(TypeTraits.Members) || T_elem.Traits.HasFlag(TypeTraits.Array);
+                var elem_access = T_is_blk ? ObjectAccess.ByPointer : ObjectAccess.ByValue;
+                var elem_size = (nuint)T_elem.SizeOf();
+
+                foreach (var elem in e_aggregate.Aggregate)
+                {
+                    var R = GenerateExpression(method, elem, elem_access, null);
+
+                    if (T_is_blk)
+                    {
+                        method.Write(XOp.Blkcopy(Dr_Intermediate, R, elem_size));
+                    }
+                    else
+                    {
+                        method.Write(XOp.Write(XT_elem, Dr_Intermediate, R));
+                    }
+                    method.Write(XOp.Increment(XType.Ptr, Dr_Intermediate, elem_size));
+                }
+                method.Write(XOp.Blkaddr(Ret, blk.Index));
+            }
+            break;
+        }
+
+        case ExpressionKind.New:
+        case ExpressionKind.Default:
+            Console.WriteLine("codegen: new/default is unsupported");
+            break;
+
+        case ExpressionKind.Cast:
+        {
+            var Child = (Expression)e.GetChildren().First();
+            var To = XType.FromFood(e.Type!);
+            var From = XType.FromFood(Child.Type!);
+
+            var Rs = GenerateExpression(method, Child, ObjectAccess.ByValue, null);
+
+            // types dont match
+            if (To != From)
+            {
+                // TODO: vector types
+                if (To.Kind == XTypeKind.Fp && From.Kind == XTypeKind.Fp)
+                    method.Write(XOp.FloatResize(To, From, Ret, Rs));
+
+                else if (To.Kind == XTypeKind.Fp && (From.Kind == XTypeKind.S
+                    || From.Kind == XTypeKind.U))
+                    method.Write(XOp.IntToFloat(To, From, Ret, Rs));
+
+                else if ((To.Kind == XTypeKind.S || To.Kind == XTypeKind.U) && From.Kind == XTypeKind.Fp)
+                    method.Write(XOp.FloatToInt(To, From, Ret, Rs));
+
+                else
+                    method.Write(XOp.Icast(To, From, Ret, Rs));
+            }
+            break;
+        }
+
+        case ExpressionKind.PostfixIncrement:
+        {
+            var unary_expression = (UnaryExpression)e;
+
+            var R = GenerateExpression(method, unary_expression.Child, ObjectAccess.ByPointer, null);
+            var V = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, V, R));
+            method.Write(XOp.Copy(XT, Ret, V));
+            method.Write(XOp.Increment(XT, V, 1));
+            method.Write(XOp.Write(XT, R, V));
+            break;
+        }
+
+        case ExpressionKind.PostfixDecrement:
+        {
+            var unary_expression = (UnaryExpression)e;
+
+            var R = GenerateExpression(method, unary_expression.Child, ObjectAccess.ByPointer, null);
+            var V = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, V, R));
+            method.Write(XOp.Copy(XT, Ret, V));
+            method.Write(XOp.Decrement(XT, V, 1));
+            method.Write(XOp.Write(XT, R, V));
+            break;
+        }
+
+        case ExpressionKind.FunctionCall:
+        {
+            var f_call = (AggregateExpression)e;
+            var fx_ref = f_call.Aggregate.First();
+            var fx_signature = (FunctionSubjugateSignature)fx_ref.Type!.SubjugateSignature!;
+            var r_type = fx_signature.ReturnType;
+            var fname = (fx_ref is ChildlessExpression c) ? (string)c.Token.Value! : null;
+
+            var XT_args = new List<XType>();
+            foreach (var arg in fx_signature.Params.Arguments)
+                XT_args.Add(arg.Ref != Symbol.ArgumentRefType.Value ? XType.Ptr : XType.FromFood(arg.Type!));
+
+            var Rs_args = new List<XReg>();
+            foreach (var arg in f_call.Aggregate.Except([fx_ref]))
+                Rs_args.Add(GenerateExpression(method, arg, ObjectAccess.ByValue, null));
+
+            if (r_type.Traits.HasFlag(TypeTraits.Void))
+            {
+                if (fname is not null)
+                    method.Write(XOp.PCall(Rs_args.ToArray(), XT_args.ToArray(), fname));
+                else
+                {
+                    var F = GenerateExpression(method, fx_ref, ObjectAccess.ByValue, null);
+                    method.Write(XOp.PiCall(new[] { F }.Union(Rs_args).ToArray(), XT_args.ToArray()));
+                }
+            }
+            else
+            {
+                if (fname is not null)
+                    method.Write(XOp.FCall(XT, Ret, Rs_args.ToArray(), XT_args.ToArray(), fname));
+                else
+                {
+                    var F = GenerateExpression(method, fx_ref, ObjectAccess.ByValue, null);
+                    method.Write(XOp.FiCall(XT, Ret, new[] { F }.Union(Rs_args).ToArray(), XT_args.ToArray()));
+                }
+            }
+            break;
+        }
+
+        case ExpressionKind.ArraySubscript:
+        {
+            var binary_expression = (BinaryExpression)e;
+            var obj_type = ((ArraySubjugateSignature)binary_expression.Left.Type!.SubjugateSignature!).ObjectType;
+            var array = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, null);
+            var indexer = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+
+            method.Write(XOp.MulConst(XType.Ptr, indexer, (nuint)obj_type.SizeOf()));
+            method.Write(XOp.Add(XType.Ptr, array, array, indexer));
+
+            // return a pointer instead
+            if (access == ObjectAccess.ByPointer
+                || obj_type.Traits.HasFlag(TypeTraits.Members)
+                || obj_type.Traits.HasFlag(TypeTraits.Array))
+            {
+                method.Write(XOp.Copy(XType.Ptr, Ret, array));
+                break;
+            }
+
+            method.Write(XOp.Read(XType.FromFood(obj_type), Ret, array));
+            break;
+        }
+
+
+        case ExpressionKind.PrefixIncrement:
+        {
+            var unary_expression = (UnaryExpression)e;
+
+            var R = GenerateExpression(method, unary_expression.Child, ObjectAccess.ByPointer, null);
+            var V = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, V, R));
+            method.Write(XOp.Increment(XT, V, 1));
+            method.Write(XOp.Copy(XT, Ret, V));
+            method.Write(XOp.Write(XT, R, V));
+            break;
+        }
+
+        case ExpressionKind.PrefixDecrement:
+        {
+            var unary_expression = (UnaryExpression)e;
+
+            var R = GenerateExpression(method, unary_expression.Child, ObjectAccess.ByPointer, null);
+            var V = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, V, R));
+            method.Write(XOp.Decrement(XT, V, 1));
+            method.Write(XOp.Copy(XT, Ret, V));
+            method.Write(XOp.Write(XT, R, V));
+            break;
+        }
+
+        case ExpressionKind.Multiply:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Mul(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.Divide:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Div(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.Modulo:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Rem(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.Add:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Add(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.Subtract:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Sub(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.LeftShift:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Arthm_Lsh(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.RightShift:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Arthm_Rsh(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.BitwiseAnd:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Bit_And(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.BitwiseXOr:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Bit_Xor(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.BitwiseOr:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Bit_Or(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.Equal:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Equal(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.NotEqual:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.NotEqual(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.Lower:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Lower(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.LowerEqual:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.LowerEqual(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.Greater:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Greater(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.GreaterEqual:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.GreaterEqual(XT, Ret, Ret, Right));
+            break;
+        }
+
+        case ExpressionKind.LogicalAnd:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Leave = XOp.Ifz(Ret, 0);
+            method.Write(Leave);
+            _ = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, Ret);
+            Leave.Kx[0] = (nuint)method.CurCodePosition();
+
+            // current state of Ret
+            // if left was false, Ret will be 0
+            // otherwise, result of right
+            break;
+        }
+
+        case ExpressionKind.LogicalOr:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
+            var Leave = XOp.If(Ret, 0);
+            method.Write(Leave);
+            _ = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, Ret);
+            Leave.Kx[0] = (nuint)method.CurCodePosition();
+
+            // current state of Ret
+            // if left was true, Ret will be true
+            // otherwise, result of right
+            break;
+        }
+
+        case ExpressionKind.Conditional:
+            // TODO
+            break;
 
         }
 

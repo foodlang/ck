@@ -57,11 +57,13 @@ public enum ExpressionKind
 
     /// <summary>
     /// Allows to access symbols inside of modules and namespaces.
+    /// Shouldn't exist at codegen. Right?
     /// </summary>
     ScopeResolution,
 
     /// <summary>
     /// (TODO) Gets the length of an array or a string.
+    /// Shouldn't exist at codegen.
     /// </summary>
     LengthOf,
 
@@ -99,6 +101,10 @@ public enum ExpressionKind
     Greater,
     GreaterEqual,
 
+    /// <summary>
+    /// MemberOf, AllMembersOf, AnyMembersOf shouldn't
+    /// be present at codegen.
+    /// </summary>
     MemberOf,     // =.
     AllMembersOf, // =..
     AnyMembersOf, // =?.

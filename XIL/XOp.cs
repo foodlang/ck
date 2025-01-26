@@ -205,20 +205,20 @@ public sealed class XOp
     public static XOp FCall(XType T, XReg Rd, in XReg[] RsX, in XType[] TsX, string fn)
         => new XOp(XOps.FCall, T, Rd, RsX, [], TsX, fn);
 
-    public static XOp PCall(XReg Rd, in XReg[] RsX, in XType[] TsX, string fn)
-        => new XOp(XOps.PCall, XType.U0, Rd, RsX, [], TsX, fn);
+    public static XOp PCall(in XReg[] RsX, in XType[] TsX, string fn)
+        => new XOp(XOps.PCall, XType.U0, XReg.NoReg, RsX, [], TsX, fn);
 
     /// <summary>
     /// only provide TsX for arguments
     /// </summary>
-    public static XOp FiCall(XType T, XReg Rd, in XReg[] RsX, in XType[] TsX, string fn)
-        => new XOp(XOps.FiCall, T, Rd, RsX, [], [XType.Ptr, ..TsX], fn);
+    public static XOp FiCall(XType T, XReg Rd, in XReg[] RsX, in XType[] TsX)
+        => new XOp(XOps.FiCall, T, Rd, RsX, [], [XType.Ptr, ..TsX]);
 
     /// <summary>
     /// only provide TsX for arguments
     /// </summary>
-    public static XOp PiCall(XReg Rd, in XReg[] RsX, in XType[] TsX, string fn)
-        => new XOp(XOps.PiCall, XType.U0, Rd, RsX, [], [XType.Ptr, .. TsX], fn);
+    public static XOp PiCall(in XReg[] RsX, in XType[] TsX)
+        => new XOp(XOps.PiCall, XType.U0, XReg.NoReg, RsX, [], [XType.Ptr, .. TsX]);
 
     public static XOp Retv(XType T, XReg Rd)
         => new XOp(XOps.Retv, T, Rd, [], []);
@@ -246,6 +246,9 @@ public sealed class XOp
 
     public static XOp FloatResize(XType dT, XType sT, XReg Rd, XReg Rs0)
         => new XOp(XOps.FloatResize, dT, Rd, [Rs0], [], [sT]);
+
+    public static XOp Icast(XType dT, XType sT, XReg Rd, XReg Rs0)
+        => new XOp(XOps.Icast, dT, Rd, [Rs0], [], [sT]);
 
     public static XOp Leave()
         => new XOp(XOps.Leave, XType.U0, XReg.NoReg, [], []);
