@@ -25,7 +25,7 @@ public sealed partial class Analyzer
 
         var U = b.Type!;
         var u_integer_or_float
-            = (U.Traits.HasFlag(TypeTraits.Floating) || U.Traits.HasFlag(TypeTraits.Integer)) && !U.Traits.HasFlag(TypeTraits.Pointer);
+            = (U.Traits.HasFlag(TypeTraits.Floating) || (U.Traits.HasFlag(TypeTraits.Integer)) && !U.Traits.HasFlag(TypeTraits.Pointer));
 
         if (T == U)
             return b;

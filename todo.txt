@@ -1,24 +1,19 @@
-﻿current loc: 8905
-
--> x86-64 assembly generation
--> x86-64 codegen: blocks & strings
--> inline assembly generation (clobbering, etc)
--> x86-64 codegen: floats
--> capture blocks (& register optimizations)
--> extern and C linking
--> errnos
--> assert
--> begin standard library
+﻿
+-> variadic function support for XIL
+-> choosing a first target...
+-> capture blocks
+-> non-Food exports/linking (mostly C ...)
+-> struct named constants & default
+-> error management
+-> stdlib
 ==============================================================================
 +++ BETA
 ==============================================================================
--> more optimizations!
--> peephole optimization
+-> member_of, member_any, member_of_all
 -> goto case
 -> nameof()
--> struct named constants
 -> rtti support (both a compiler and stdlib feature)
 -> more attributes!
 -> coroutines
 -> meta system
--> poleesh
+-> units

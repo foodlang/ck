@@ -3,13 +3,37 @@
  * Only defines "freestanding" types and functions
 */
 
-__ck_impl_strlen :: usz( cstr: u8* ) {
+__ck_impl_strlen :: usz ( cstr: u8* ) {
 	n: usz = 0;
 	while ( *(cstr++) )
 		n++;
 	return n;
 }
 
-__ck_impl_assert_abort :: void( ) {
+__ck_impl_assert_abort :: void ( ) {
 	asm "int 3";
+}
+
+__ck_impl_memcmp :: bool (a0: void*, a1: void*, nbytes: usz) {
+	a0_u8 := cast(u8[]) a0;
+	a1_u8 := cast(u8[]) a1;
+
+	for (i := 0; i < nbytes; i++) {
+		if (a0_u8[i] != a1_u8[i])
+			return false;
+	}
+	return true;
+}
+
+__ck_impl_member_of :: bool (
+	array: void*,
+	p_elem: void*,
+	elem_size: usz,
+	array_len: usz ) {
+	
+	for (i := 0; i < array_len; i++) {
+		if (__ck_impl_memcmp( array + i * elem_size, p_elem, elem_size ))
+			return true;
+	}
+	return false;
 }

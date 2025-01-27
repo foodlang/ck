@@ -58,11 +58,49 @@ public static class XCompiler
         FType FT = e.Type!;
         XType XT = XType.FromFood(FT);
 
-        // TODO: new and default
         // TODO: variadic function calls
         // TODO: member access
         switch (e.Kind)
         {
+
+        case ExpressionKind.MemberAccess:
+        {
+            var binary_expression = (BinaryExpression)e;
+            var source = binary_expression.Left;
+            var src_type = source.Type!;
+            var looking_for = (string)binary_expression.Right.Token.Value!;
+
+            StructSubjugateSignature struct_type;
+            struct_type =
+                src_type.Traits.HasFlag(TypeTraits.Pointer)
+                ? (StructSubjugateSignature)((PointerSubjugateSignature)binary_expression.Left.Type!.SubjugateSignature!).ObjectType.SubjugateSignature!
+                : (StructSubjugateSignature)binary_expression.Left.Type!.SubjugateSignature!;
+
+            nint total_offset = 0;
+            // sponge
+            var found = false;
+            foreach (var member in struct_type.Members)
+            {
+                if (member.Name == looking_for)
+                {
+                    found = true;
+                    break;
+                }
+                total_offset += member.Type.SizeOf();
+            }
+            Debug.Assert(found);
+
+            // generating code
+            _ = GenerateExpression(method, source, ObjectAccess.ByPointer, Ret);
+            method.Write(XOp.Increment(XType.Ptr, Ret, (nuint)total_offset));
+
+            if (access == ObjectAccess.ByPointer || FT.Traits.HasFlag(TypeTraits.Members) || FT.Traits.HasFlag(TypeTraits.Array))
+                break;
+
+            method.Write(XOp.Read(XT, Ret, Ret));
+            break;
+        }
+
         // will be scalar, access is restricted to ByValue
         case ExpressionKind.Literal:
         {

@@ -157,6 +157,20 @@ public sealed class ObjectTable
         return true;
     }
 
+    /// <summary>
+    /// Adds another table to this one.
+    /// </summary>
+    /// <param name="other"></param>
+    public void Merge(ObjectTable other)
+    {
+        foreach (var sym in other._symbols)
+            _symbols.Add(sym.Key, sym.Value);
+        foreach (var @class in other._classes)
+            _classes.Add(@class.Key, @class.Value);
+        foreach (var @enum in other._enums)
+            _enums.Add(@enum.Key, @enum.Value);
+    }
+
     public ObjectTable(ScopeTree? parent)
     {
         Parent = parent;

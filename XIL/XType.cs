@@ -105,6 +105,14 @@ public sealed class XType
                 _ => throw new InvalidOperationException()
             };
 
+        if (Food.Traits.HasFlag(TypeTraits.Floating))
+            return Food.Size switch
+            {
+                4 => F32,
+                8 => F64,
+                _ => throw new InvalidOperationException()
+            };
+
         /* probably ptr */
         return Ptr;
     }

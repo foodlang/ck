@@ -23,5 +23,11 @@ class Abc :: enum(i32) {
 };
 
 main :: i32(argc: i32, argv: u8**) {
-	blk_test := [ argc, argc + 1, argc + 2, argc + 3 ];
+	my_vec: Vec3;
+
+	my_vec.x = 1.0_f32;
+
+	if (my_vec.y != 0) {
+		return 2;
+	}
 }

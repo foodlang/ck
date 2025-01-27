@@ -813,6 +813,7 @@ public sealed class O0Pass : LowerOptStep
         case StatementKind.For:
         {
             var condition = stmt.GetDecoratedExpression("for-condition");
+            var src_table = stmt.Table;
             if (condition is not null && condition.Kind == ExpressionKind.Literal && (decimal)condition.Token.Value! == 0)
             {
                 stmt = new Statement(stmt_parent, StatementKind.Empty, stmt.KwToken);
@@ -861,6 +862,9 @@ public sealed class O0Pass : LowerOptStep
                 stmt = full;
                 score += MutateStatement(ref stmt);
             }
+            // make sure all symbols get transposed
+            if (stmt.Table != src_table)
+                stmt.Table.Merge(src_table);
             break;
         }
 

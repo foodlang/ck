@@ -239,14 +239,12 @@ public sealed partial class Parser
         case TokenKind.Cast:
         {
             Position++;
-            ExpectAndConsume(TokenKind.Lower);
+            ExpectAndConsume(TokenKind.LeftBracket);
             var t = ParseType(parent);
             if (t is null)
                 Diagnostic.Throw(current.Source, current.Position, DiagnosticSeverity.Error, "", "expected resulting type being specified");
-            ExpectAndConsume(TokenKind.Greater);
-            ExpectAndConsume(TokenKind.LeftBracket);
-            var expr = ParseExpression_Conditional(parent);
             ExpectAndConsume(TokenKind.RightBracket);
+            var expr = ParseExpression_Postfix(parent);
             return new UnaryExpression(current, ExpressionKind.Cast, expr) { Type = t };
         }
 
