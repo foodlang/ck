@@ -77,6 +77,8 @@ public enum XOps : byte
      * Rd = int(Rs0)   ; float->int convert (4->4, 8->8)
      * Rd = float_resize Rs0 ; resizes a float
      * Rd = icast Rs0  ; convert integer types
+     * 
+     * asm K0          ; inline assembly with block index
      *
     **/
 
@@ -144,4 +146,6 @@ public enum XOps : byte
     FloatToInt,
     FloatResize,
     Icast,
+
+    Asm,
 }

@@ -1,5 +1,6 @@
 ﻿using ck.Lang.Tree.Expressions;
 using System.Runtime.Intrinsics.Arm;
+using System.Text;
 
 namespace ck.XIL;
 
@@ -23,10 +24,18 @@ public delegate void XOpExprPattern(Expression e, List<XOp> page);
 public sealed class XOp
 {
     public string PrettyPrint()
-        => $"{Op.ToString().ToLowerInvariant()}::{Type.ToString()} Rd={Rd.R}," +
-        $" Rsx=[{Rsx.Select(r => r.R.ToString()).Aggregate((a, b) => $"{a}, {b}")}]," +
-        $" Kx=[{Kx.Select(k => k.ToString()).Aggregate((a, b) => $"{a}, {b}")}]," +
-        (Fn is not null ? $"Fn={Fn}" : "");
+    {
+        var sb = new StringBuilder();
+        sb.Append($"{Op.ToString().ToLowerInvariant()}::{Type.ToString()} ");
+        sb.Append($"Rd={Rd.R}");
+        if (Rsx.Length != 0)
+            sb.Append($", Rsx=[{Rsx.Select(r => r.R.ToString()).Aggregate((a, b) => $"{a}, {b}")}]");
+        if (Kx.Length != 0)
+            sb.Append($", Kx=[{Kx.Select(k => k.ToString()).Aggregate((a, b) => $"{a}, {b}")}]");
+        if (Fn is not null)
+            sb.Append($", Fn={Fn}");
+        return sb.ToString();
+    }
 
     /// <summary>
     /// The operation to perform.
@@ -252,4 +261,7 @@ public sealed class XOp
 
     public static XOp Leave()
         => new XOp(XOps.Leave, XType.U0, XReg.NoReg, [], []);
+
+    public static XOp InlineAsm(uint K0)
+        => new XOp(XOps.Asm, XType.U0, XReg.NoReg, [], [K0]);
 }

@@ -6,6 +6,7 @@ using ck.Syntax;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
@@ -23,7 +24,7 @@ public sealed class LowPass : LowerOptStep
                 src.Token, ExpressionKind.Assign, src.Left,
                 new BinaryExpression(src.Token, ExpressionKind.Subtract, src.Left, src.Right)
                 { Type = src.Left.Type })
-        { Type = src.Type, Parent = src };
+        { Type = src.Type, Parent = src.Parent };
 
     protected override int MutateExpression(ref Expression expr)
     {
@@ -64,7 +65,7 @@ public sealed class LowPass : LowerOptStep
         stmt.Statements.AddRange(stmt_list);
 
         var expr_list = new Expression[stmt.Expressions.Count];
-        for (var i = 0; i < stmt_list.Length; i++)
+        for (var i = 0; i < expr_list.Length; i++)
         {
             expr_list[i] = stmt.Expressions[i];
             MutateExpression(ref expr_list[i]);
@@ -78,7 +79,7 @@ public sealed class LowPass : LowerOptStep
 
         case StatementKind.VariableInit:
         {
-            var expr = stmt.Expressions[0];
+            /*var expr = stmt.Expressions[0];
             if (expr.Kind == ExpressionKind.Assign)
             {
                 var assign = (BinaryExpression)expr;
@@ -101,7 +102,7 @@ public sealed class LowPass : LowerOptStep
                     }
                     stmt = blk;
                 }
-            }
+            }*/
             break;
         }
 
@@ -244,7 +245,7 @@ public sealed class LowPass : LowerOptStep
             var failure_code = new Statement(if_stmt, StatementKind.Expression, stmt.KwToken);
             failure_code.AddExpression(
                 new AggregateExpression(stmt.KwToken, ExpressionKind.FunctionCall, [
-                    new ChildlessExpression(new Token(stmt.KwToken.Position, TokenKind.Identifier, null, "__ck_assert_abort"), ExpressionKind.Identifier)
+                    new ChildlessExpression(new Token(stmt.KwToken.Position, TokenKind.Identifier, null, "__ck_impl_assert_abort"), ExpressionKind.Identifier)
                     { Type = FType.Function(FType.VOID, new FunctionArgumentSignature([], null)) }
                     ]));
             if_stmt.AddStatement(

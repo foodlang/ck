@@ -210,7 +210,20 @@ public sealed partial class Analyzer
 
         case ExpressionKind.LengthOf:
         {
-            var expr_ss = CFirst(e).Type!.SubjugateSignature!;
+            var what = CFirst(e);
+            var expr_ss = what.Type!.SubjugateSignature!;
+            if (what.Type! == FType.STRING)
+            {
+                e = new AggregateExpression(
+                    e.Token, ExpressionKind.FunctionCall,
+                    [
+                        new ChildlessExpression(new Token(e.Token.Position, TokenKind.Identifier, null, "__ck_impl_strlen"), ExpressionKind.Identifier)
+                        { Type = FType.Function(FType.USZ, new([new(new Token(e.Token.Position, TokenKind.Identifier, null, "cstr"), FType.STRING, Symbol.ArgumentRefType.Value, new(), null)], null )) },
+
+                        /* as an argument */ what,
+                    ])
+                { Type = FType.USZ };
+            }
             if (expr_ss.LengthOf() != 0)
             {
                 e = new ChildlessExpression(new Token(e.Token.Source!, e.Token.Position, TokenKind.NumberLiteral,
@@ -591,8 +604,6 @@ public sealed partial class Analyzer
             e.LValue = true;
             break;
         }
-
-        // TODO: member access
 
         case ExpressionKind.UnaryPlus:
         case ExpressionKind.UnaryMinus:

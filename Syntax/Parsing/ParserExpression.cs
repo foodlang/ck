@@ -197,7 +197,7 @@ public sealed partial class Parser
             var e = ParseExpression_Conditional(parent);
             ExpectAndConsume(TokenKind.RightBracket);
             // lengthof() may be computed at semantic analysis
-            return new ChildlessExpression(current, ExpressionKind.LengthOf) { Type = FType.USZ };
+            return new UnaryExpression(current, ExpressionKind.LengthOf, e) { Type = FType.USZ };
         }
 
         case TokenKind.TypeOf: // TODO

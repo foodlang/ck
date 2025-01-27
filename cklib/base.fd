@@ -3,10 +3,13 @@
  * Only defines "freestanding" types and functions
 */
 
-__ck_impl_strlen :: usz( cstr: u8* )
-{
+__ck_impl_strlen :: usz( cstr: u8* ) {
 	n: usz = 0;
 	while ( *(cstr++) )
 		n++;
 	return n;
+}
+
+__ck_impl_assert_abort :: void( ) {
+	asm "int 3";
 }

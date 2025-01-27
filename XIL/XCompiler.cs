@@ -1,4 +1,5 @@
-﻿using ck.Lang.Tree.Expressions;
+﻿using ck.Lang;
+using ck.Lang.Tree.Expressions;
 using ck.Lang.Tree.Scopes;
 using ck.Lang.Tree.Statements;
 using ck.Lang.Type;
@@ -25,7 +26,11 @@ public static class XCompiler
     private static nuint _Bits(Expression e)
     {
         if ((e.Type!.Traits & TypeTraits.Integer) != 0)
-            return (nuint)(decimal)e.Token.Value!;
+        {
+            if (e.Token.Value!.GetType() == typeof(decimal))
+                return (nuint)(decimal)e.Token.Value!;
+            return (nuint)(double)e.Token.Value!;
+        }
 
         var @struct = new BitConversionStruct();
         @struct.F = (double)(decimal)e.Token.Value!;
@@ -153,12 +158,14 @@ public static class XCompiler
         {
             var e_aggregate = (AggregateExpression)e;
             var size = e_aggregate.Type!.SizeOf();
-            var blk = method.CreateBlock((nuint)size, false);
-            method.Write(XOp.Blkaddr(Ret, blk.Index));
-            var Dr_Intermediate = method.AllocateRegister(XRegStorage.Fast);
-            method.Write(XOp.Copy(XType.Ptr, Dr_Intermediate, Ret));
+
             if (e_aggregate.Aggregate.Count() != 0)
             {
+                var blk = method.CreateBlock((nuint)size, false);
+                method.Write(XOp.Blkaddr(Ret, blk.Index));
+                var Dr_Intermediate = method.AllocateRegister(XRegStorage.Fast);
+                method.Write(XOp.Copy(XType.Ptr, Dr_Intermediate, Ret));
+
                 var T_elem = e_aggregate.Aggregate.First().Type!;
                 var XT_elem = XType.FromFood(T_elem);
                 var T_is_blk = T_elem.Traits.HasFlag(TypeTraits.Members) || T_elem.Traits.HasFlag(TypeTraits.Array);
@@ -179,7 +186,6 @@ public static class XCompiler
                     }
                     method.Write(XOp.Increment(XType.Ptr, Dr_Intermediate, elem_size));
                 }
-                method.Write(XOp.Blkaddr(Ret, blk.Index));
             }
             break;
         }
@@ -382,7 +388,7 @@ public static class XCompiler
             var binary_expression = (BinaryExpression)e;
             _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
             var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
-            method.Write(XOp.Arthm_Lsh(XT, Ret, Ret, Right));
+            method.Write(XT.Kind == XTypeKind.S ? XOp.Arthm_Lsh(XT, Ret, Ret, Right) : XOp.Bit_Lsh(XT, Ret, Ret, Right));
             break;
         }
 
@@ -391,7 +397,7 @@ public static class XCompiler
             var binary_expression = (BinaryExpression)e;
             _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
             var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
-            method.Write(XOp.Arthm_Rsh(XT, Ret, Ret, Right));
+            method.Write(XT.Kind == XTypeKind.S ? XOp.Arthm_Rsh(XT, Ret, Ret, Right) : XOp.Bit_Rsh(XT, Ret, Ret, Right));
             break;
         }
 
@@ -507,8 +513,188 @@ public static class XCompiler
         }
 
         case ExpressionKind.Conditional:
-            // TODO
+        {
+            var ternary_expression = (TernaryExpression)e;
+            _ = GenerateExpression(method, ternary_expression.First, ObjectAccess.ByValue, Ret);
+            var False = XOp.Ifz(Ret, 0);
+            method.Write(False);
+
+            _ = GenerateExpression(method, ternary_expression.Second, access, Ret);
+            var Leave = XOp.Jmp(0);
+
+            method.Write(Leave);
+            False.Kx[0] = (nuint)method.CurCodePosition();
+
+            _ = GenerateExpression(method, ternary_expression.Third, access, Ret);
+
+            Leave.Kx[0] = (nuint)method.CurCodePosition();
             break;
+        }
+
+        case ExpressionKind.Assign:
+        case ExpressionKind.VariableInit:
+        {
+            var binary_expression = (BinaryExpression)e;
+            var destination = binary_expression.Left;
+            var source = binary_expression.Right;
+
+            if (FT.Traits.HasFlag(TypeTraits.Array) || FT.Traits.HasFlag(TypeTraits.Members))
+            {
+                _ = GenerateExpression(method, destination, ObjectAccess.ByPointer, Ret);
+                var Rs = GenerateExpression(method, source, ObjectAccess.ByPointer, null);
+
+                method.Write(XOp.Blkcopy(Ret, Rs, (nuint)e.Type!.SizeOf()));
+            }
+            else
+            {
+                _ = GenerateExpression(method, destination, ObjectAccess.ByPointer, Ret);
+                var Rs = GenerateExpression(method, source, ObjectAccess.ByValue, null);
+
+                method.Write(XOp.Write(XT, Ret, Rs));
+            }
+            break;
+        }
+
+        case ExpressionKind.AssignSum:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Add(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignDiff:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Sub(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignProduct:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Mul(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignQuotient:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Div(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignRemainder:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Rem(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignBitwiseAnd:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Bit_And(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignBitwiseXOr:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Bit_Xor(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignBitwiseOr:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XOp.Bit_Or(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignLeftShift:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+
+            method.Write(XT.Kind == XTypeKind.S ? XOp.Arthm_Lsh(XT, AccValue, AccValue, Right) : XOp.Bit_Lsh(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
+
+        case ExpressionKind.AssignRightShift:
+        {
+            var binary_expression = (BinaryExpression)e;
+            _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByPointer, Ret);
+
+            var AccValue = method.AllocateRegister(XRegStorage.Fast);
+            method.Write(XOp.Read(XT, AccValue, Ret));
+
+            var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
+            method.Write(XT.Kind == XTypeKind.S ? XOp.Arthm_Rsh(XT, AccValue, AccValue, Right) : XOp.Bit_Rsh(XT, AccValue, AccValue, Right));
+            method.Write(XOp.Write(XT, Ret, AccValue));
+            break;
+        }
 
         }
 
@@ -536,24 +722,24 @@ public static class XCompiler
          * ---------------------------------------
          * Implementation Checklist (.=implemented, X=tested, !=lowering step reduced this)
          * [X] empty
-         * [.] block
-         * [.] labels
+         * [X] block
+         * [X] labels
          * [.] finally
          * [ ] asm
-         * [.] var init / expression
+         * [X] var init / expression
          * [!] switch .. case
          * [!] switch .. default
-         * [.] if
-         * [!] while
+         * [ ] switch
+         * [X] if
+         * [X] while
          * [X] do .. while
          * [X] for
          * [!] break
          * [!] continue
-         * [.] goto
-         * [ ] switch
-         * [.] return
-         * [!] assert :: for now it has no message and simply calls a function __ck_assert_abort()
-         * [!] sponge
+         * [X] goto
+         * [X] return
+         * [!] assert :: for now it has no message and simply calls  __ck_impl_assert_abort()
+         * [X] sponge
          * 
          */
 
@@ -574,7 +760,10 @@ public static class XCompiler
             method.Write(XOp.Jmp((nuint)method.GetLabel((string)statement.Objects[0])));
             return;
 
-        // TODO: asm
+        case StatementKind.Asm:
+            method.AsmBlocks.Add(statement.Id, (InlineAsmBlock)statement.Objects[0]);
+            method.Write(XOp.InlineAsm(statement.Id));
+            return;
 
         case StatementKind.Sponge:
             GenerateStatement(method, statement.Statements[0]);
@@ -672,11 +861,9 @@ public static class XCompiler
 
             // structures and arrays are stored as blocks, so the registers to perform operations
             // on them are treated as pointers.
-            if (local.Type!.Traits.HasFlag(TypeTraits.Array) || local.Type!.Traits.HasFlag(TypeTraits.Members))
-            {
-                var blk = method.CreateBlock((nuint)local.Type!.SizeOf(), false);
-                method.Write(XOp.Blkaddr(method.LocalTable[local.Name], blk.Index));
-            }
+            //
+            // Blocks were previously allocated here, but now we don't, as blocks are related
+            // to allocations rather than objects.
         }
 
         // generate the code!

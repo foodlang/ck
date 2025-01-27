@@ -320,7 +320,7 @@ public sealed class FType
                 foreach (var member in struct_signature.Members)
                 {
                     var mem_size = member.Type.SizeOf();
-                    var aligned = (mem_size + (CompilerRunner.AlignmentRequired - 1)) & ~(CompilerRunner.AlignmentRequired - 1);
+                    var aligned = mem_size;
                     accumulator = Math.Max(accumulator, aligned);
                 }
             }
@@ -337,7 +337,7 @@ public sealed class FType
         }
 
         // final alignment
-        return (Size + (CompilerRunner.AlignmentRequired - 1)) & ~(CompilerRunner.AlignmentRequired - 1);
+        return Size;
     }
 
     /// <summary>

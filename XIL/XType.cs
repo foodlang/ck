@@ -109,5 +109,5 @@ public sealed class XType
         return Ptr;
     }
 
-    public override string ToString() => $"{Kind}{Size}";
+    public override string ToString() => $"{Kind}{Size * 8}";
 }

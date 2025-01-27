@@ -1,9 +1,11 @@
 ﻿using ck.Diagnostics;
 using ck.Lang;
+using ck.Lang.Tree.Scopes;
 using ck.Lowering;
 using ck.Lowering.Lowers;
 using ck.Syntax;
 using ck.Syntax.Parsing;
+using ck.XIL;
 using System.Diagnostics;
 
 namespace ck;
@@ -112,8 +114,10 @@ public sealed class CompilerRunner
         var error_status = analyzer.Analyze() || Diagnostic.ErrorsEncountered;
 
         // lowering
-        //var low_expander = new LowExpander();
-        //low_expander.MutateAst(program);
+        var low_expander = new LowPass();
+        low_expander.MutateAst(program);
+        var o0 = new O0Pass();
+        o0.MutateAst(program);
 
         uptime_semantic = stopwatch.Elapsed.TotalMilliseconds;
         stopwatch.Restart();
@@ -126,20 +130,24 @@ public sealed class CompilerRunner
             return;
         }
 
-        /*var il = SsaTranslator.BuildProgram(program);
-        uptime_gen = stopwatch.Elapsed.TotalMilliseconds;
-        Console.WriteLine(il.Print());
-        stopwatch.Restart();
-        FAttribute.ReportUnusedAttributes();
-        var g_amd64 = new Generator_amd64(il);
-        Console.WriteLine(g_amd64.Run());*/
+        var xcode = new XModule(Path.GetFileNameWithoutExtension(InputPath));
+        foreach (var symbol in program.GetChildren())
+        {
+            if (symbol is not FunctionNode func)
+                continue;
+
+            xcode.AddMethod(XCompiler.GenerateFunction(func, xcode));
+        }
 
         uptime_asm = stopwatch.Elapsed.TotalMilliseconds;
         stopwatch.Stop();
 
+        var output_path = Path.ChangeExtension(InputPath, "x");
+        File.WriteAllText(output_path, xcode.ToString());
+
         // debug pannel
         Console.WriteLine();
-        Console.WriteLine($"assembly written to '{OutputAssemblyPath}'");
+        Console.WriteLine($"X written to {output_path}");
         Console.WriteLine($"uptime parser: {(float)uptime_parsing}ms");
         Console.WriteLine($"uptime analyzer: {(float)uptime_semantic}ms");
         Console.WriteLine($"uptime generator: {(float)uptime_gen}ms");

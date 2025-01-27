@@ -1,4 +1,6 @@
-﻿namespace ck.XIL;
+﻿using System.Text;
+
+namespace ck.XIL;
 
 /// <summary>
 /// An X-op module.
@@ -24,4 +26,14 @@ public sealed class XModule
 
     public XModule(string name)
         => Name = name;
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"module({Name})");
+        foreach (var method in _methods)
+            sb.Append(method.ToString());
+        sb.AppendLine("end module");
+        return sb.ToString();
+    }
 }

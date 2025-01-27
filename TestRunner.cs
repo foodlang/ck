@@ -26,9 +26,11 @@ public static class TestRunner
         {
             var file = files[i];
             // don't parse assembly!
-            if (Path.GetExtension(file.FullName) == ".s")
+            if (Path.GetExtension(file.FullName) == ".s" || Path.GetExtension(file.FullName) == ".x")
                 continue;
-            var stopwatch = Stopwatch.StartNew();
+            var runner = new CompilerRunner([file.FullName]);
+            runner.RunCompiler();
+            /*var stopwatch = Stopwatch.StartNew();
             var src = new Source(file.FullName);
             var parser = new Parser(src);
 
@@ -44,20 +46,6 @@ public static class TestRunner
             if (Diagnostic.ErrorsEncountered)
                 goto LError;
 
-            /*var ssa = SsaTranslator.BuildProgram(prog);
-            if (Diagnostic.ErrorsEncountered)
-                goto LError;
-
-            Console.WriteLine(ssa.Print());
-
-            var gen = new Generator_amd64(ssa);
-            var output = gen.Run();
-
-            if (Diagnostic.ErrorsEncountered)
-                goto LError;
-
-            
-            File.WriteAllText(Path.ChangeExtension(file.FullName, ".s"), output);*/
             stopwatch.Stop();
             var line_count = src.Code.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
             Console.WriteLine($"test #{0} ({file.FullName}) passed in {stopwatch.Elapsed.TotalMilliseconds} ms ({line_count/Math.Max(stopwatch.Elapsed.TotalSeconds, 1)} loc/s)");
@@ -67,7 +55,7 @@ public static class TestRunner
         LError:
             Diagnostic.Display();
             Console.WriteLine($"\ntest #{0} ({file.FullName}) failed");
-            Diagnostic.Clear();
+            Diagnostic.Clear();*/
         }
     }
 }

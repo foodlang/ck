@@ -1,4 +1,7 @@
-﻿using ck.Lang.Tree.Expressions;
+﻿using ck.Lang;
+using ck.Lang.Tree.Expressions;
+using System.Diagnostics;
+using System.Text;
 
 namespace ck.XIL;
 
@@ -26,6 +29,11 @@ public sealed class XMethod
     /// Local variable table
     /// </summary>
     public readonly Dictionary<string, XReg> LocalTable;
+
+    /// <summary>
+    /// Inline assembly blocks
+    /// </summary>
+    public readonly Dictionary<uint, InlineAsmBlock> AsmBlocks;
 
     public XReg GetLocalOrParam(string ident, out bool param)
     {
@@ -70,6 +78,7 @@ public sealed class XMethod
         ParamTable = ptable;
         LocalTable = ltable;
         MethodBlocks = blocks;
+        AsmBlocks = new();
         module.AddMethod(this);
     }
 
@@ -98,7 +107,10 @@ public sealed class XMethod
     /// Adds code.
     /// </summary>
     /// <param name="op">The operation to add.</param>
-    public void Write(XOp op) => (_finally_writing ? _finally_block : _ops).Add(op);
+    public void Write(XOp op)
+    {
+        (_finally_writing ? _finally_block : _ops).Add(op);
+    }
 
     /// <summary>
     /// Writes a copy of the finally block into the main operations list.
@@ -119,4 +131,21 @@ public sealed class XMethod
 
     public int GetLabel(string name)
         => _labeltable[name];
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"  function({Name})");
+        sb.AppendLine("    blocks {");
+        foreach (var blk in _blocks)
+            sb.AppendLine($"      [{blk.Index}]=(at=+0x{blk.Offset:X}, sz={blk.Size})");
+        sb.AppendLine("    }");
+
+        sb.AppendLine("    code {");
+        for (var i = 0; i < _ops.Count; i++)
+            sb.AppendLine($"      {i}  {_ops[i].PrettyPrint()}");
+        sb.AppendLine("    }");
+        sb.AppendLine("  end function");
+        return sb.ToString();
+    }
 }
