@@ -106,11 +106,11 @@ public sealed class XOp
     public static XOp Set(XType T, XReg Rd, XReg Rs0)
         => _Unary(T, XOps.Set, Rd, Rs0);
 
-    public static XOp ZExt(XType dT, XType sT, XReg Rd, XReg Rs0)
+    /*public static XOp ZExt(XType dT, XType sT, XReg Rd, XReg Rs0)
         => new(XOps.ZExt, dT, Rd, [Rs0], [], [sT]);
 
     public static XOp SExt(XType dT, XType sT, XReg Rd, XReg Rs0)
-        => new(XOps.SExt, dT, Rd, [Rs0], [], [sT]);
+        => new(XOps.SExt, dT, Rd, [Rs0], [], [sT]);*/
 
     public static XOp Read(XType T, XReg Rd, XReg Rs0)
         => _Unary(T, XOps.Read, Rd, Rs0);

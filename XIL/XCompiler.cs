@@ -118,7 +118,7 @@ public static class XCompiler
             // register already stores address
             if (FT.Traits.HasFlag(TypeTraits.Members) || FT.Traits.HasFlag(TypeTraits.Array))
             {
-                method.Write(XOp.Copy(XT, Ret, method.GetLocalOrParam(ident, out _ /* doesn't matter */)));
+                method.Write(XOp.Set(XT, Ret, method.GetLocalOrParam(ident, out _ /* doesn't matter */)));
             }
             // scalar, by pointer
             else if (access == ObjectAccess.ByPointer)
@@ -130,7 +130,7 @@ public static class XCompiler
             // scalar, by value
             else
             {
-                method.Write(XOp.Copy(XT, Ret, method.GetLocalOrParam(ident, out _ /* doesn't matter */)));
+                method.Write(XOp.Set(XT, Ret, method.GetLocalOrParam(ident, out _ /* doesn't matter */)));
             }
 
             break;
@@ -202,7 +202,7 @@ public static class XCompiler
                 var blk = method.CreateBlock((nuint)size, false);
                 method.Write(XOp.Blkaddr(Ret, blk.Index));
                 var Dr_Intermediate = method.AllocateRegister(XRegStorage.Fast);
-                method.Write(XOp.Copy(XType.Ptr, Dr_Intermediate, Ret));
+                method.Write(XOp.Set(XType.Ptr, Dr_Intermediate, Ret));
 
                 var T_elem = e_aggregate.Aggregate.First().Type!;
                 var XT_elem = XType.FromFood(T_elem);
@@ -268,7 +268,7 @@ public static class XCompiler
             var R = GenerateExpression(method, unary_expression.Child, ObjectAccess.ByPointer, null);
             var V = method.AllocateRegister(XRegStorage.Fast);
             method.Write(XOp.Read(XT, V, R));
-            method.Write(XOp.Copy(XT, Ret, V));
+            method.Write(XOp.Set(XT, Ret, V));
             method.Write(XOp.Increment(XT, V, 1));
             method.Write(XOp.Write(XT, R, V));
             break;
@@ -281,7 +281,7 @@ public static class XCompiler
             var R = GenerateExpression(method, unary_expression.Child, ObjectAccess.ByPointer, null);
             var V = method.AllocateRegister(XRegStorage.Fast);
             method.Write(XOp.Read(XT, V, R));
-            method.Write(XOp.Copy(XT, Ret, V));
+            method.Write(XOp.Set(XT, Ret, V));
             method.Write(XOp.Decrement(XT, V, 1));
             method.Write(XOp.Write(XT, R, V));
             break;
@@ -341,7 +341,7 @@ public static class XCompiler
                 || obj_type.Traits.HasFlag(TypeTraits.Members)
                 || obj_type.Traits.HasFlag(TypeTraits.Array))
             {
-                method.Write(XOp.Copy(XType.Ptr, Ret, array));
+                method.Write(XOp.Set(XType.Ptr, Ret, array));
                 break;
             }
 
@@ -358,7 +358,7 @@ public static class XCompiler
             var V = method.AllocateRegister(XRegStorage.Fast);
             method.Write(XOp.Read(XT, V, R));
             method.Write(XOp.Increment(XT, V, 1));
-            method.Write(XOp.Copy(XT, Ret, V));
+            method.Write(XOp.Set(XT, Ret, V));
             method.Write(XOp.Write(XT, R, V));
             break;
         }
@@ -371,7 +371,7 @@ public static class XCompiler
             var V = method.AllocateRegister(XRegStorage.Fast);
             method.Write(XOp.Read(XT, V, R));
             method.Write(XOp.Decrement(XT, V, 1));
-            method.Write(XOp.Copy(XT, Ret, V));
+            method.Write(XOp.Set(XT, Ret, V));
             method.Write(XOp.Write(XT, R, V));
             break;
         }
@@ -763,7 +763,7 @@ public static class XCompiler
          * [X] block
          * [X] labels
          * [.] finally
-         * [ ] asm
+         * [.] asm
          * [X] var init / expression
          * [!] switch .. case
          * [!] switch .. default
@@ -878,7 +878,7 @@ public static class XCompiler
         var func_Tsignature = (FunctionSubjugateSignature)(tree.FuncSym.Type!.SubjugateSignature!);
         var T_return = func_Tsignature.ReturnType;
 
-        var method = new XMethod(module, tree.Name,
+        var method = new XMethod(module, $"_$food_{tree.Name}",
             [],
             [],
             []);

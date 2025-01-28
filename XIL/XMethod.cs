@@ -119,6 +119,10 @@ public sealed class XMethod
 
     public void ToggleFinallyWrite() => _finally_writing ^= true;
 
+    public XOp GetInsn(int op) => _ops[op];
+
+    public int GetRegisterCount() => _registers.Count;
+
     private bool _finally_writing = false;
 
     /// <summary>

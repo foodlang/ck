@@ -27,6 +27,11 @@ public sealed class XModule
     public XModule(string name)
         => Name = name;
 
+    /// <summary>
+    /// Returns a enumerable of modules.
+    /// </summary>
+    public IEnumerable<XMethod> GetMethods() => _methods.AsEnumerable();
+
     public override string ToString()
     {
         var sb = new StringBuilder();
@@ -36,4 +41,10 @@ public sealed class XModule
         sb.AppendLine("end module");
         return sb.ToString();
     }
+
+    public XMethod? GetMethod(string name)
+        => _methods.Where(m => m.Name == name).FirstOrDefault();
+
+    public static readonly XModule CkModule = new XModule("ck");
+    public static readonly XMethod CkEntry = new XMethod(CkModule, "_start", [], [], []);
 }
