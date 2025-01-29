@@ -121,6 +121,8 @@ public sealed class XMethod
 
     public XOp GetInsn(int op) => _ops[op];
 
+    public int GetInsnCount() => _ops.Count;
+
     public int GetRegisterCount() => _registers.Count;
 
     private bool _finally_writing = false;

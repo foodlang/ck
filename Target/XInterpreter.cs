@@ -14,28 +14,65 @@ public sealed class XInterpreter : XTarget<Empty, CallFrame>
 {
     public override string GetName() => "runx";
 
-    public override unsafe void CreateFunctionFooter(XMethod func, ref XTargetState<CallFrame> state)
+    public override unsafe void CreateFunctionHeader(XMethod func, ref XTargetState<CallFrame> state)
     {
-        state.Frame.RegisterTable = new ulong[func.GetRegisterCount()];
+        
+
+        /*state.Frame.RegisterTable = new ulong[];
 
         state.Frame.Blocks = new void*[func.MethodBlocks.Count];
         foreach (var blk in func.MethodBlocks)
             state.Frame.Blocks[blk.Value.Index] = (void*)Marshal.AllocHGlobal((int)blk.Value.Size);
 
         for (var i = 0; i < state.Frame.Params.Length; i++)
-            state.Frame.RegisterTable[i] = state.Frame.Params[i];
+            state.Frame.RegisterTable[i] = state.Frame.Params[i];*/
+
+        state.Frame.StackFrameBase = state.Frame.StackFrameTop;
+        state.Frame.StackFrameTop += (uint)func.GetRegisterCount() * sizeof(long);
+
+        // blocks
+        foreach (var blk in func.MethodBlocks)
+        {
+            state.Frame.Blocks[blk.Value.Index] = state.Frame.StackFrameTop;
+            state.Frame.StackFrameTop += blk.Value.Size;
+        }
+
+        if (sz_StackHostBlock == 0)
+        {
+            sz_StackHostBlock = state.Frame.StackFrameTop - Stack_Start;
+            p_StackHostBlock = NativeMemory.Alloc((nuint)sz_StackHostBlock);
+        }
+        else if (state.Frame.StackFrameTop - Stack_Start > sz_StackHostBlock)
+        {
+            // i know there are better scaling factors for size efficiency,
+            // but we care more about the speed of access.
+            sz_StackHostBlock <<= 2;
+            p_StackHostBlock = NativeMemory.Realloc(p_StackHostBlock, (nuint)sz_StackHostBlock);
+        }
+
+        fixed (ulong* p_Params = state.Frame.Params)
+            NativeMemory.Copy(p_Params, (byte*)p_StackHostBlock + state.Frame.StackFrameBase, (uint)state.Frame.Params.Length * sizeof(ulong));
     }
 
-    public override unsafe void CreateFunctionHeader(XMethod func, ref XTargetState<CallFrame> state)
+    public override unsafe void CreateFunctionFooter(XMethod func, ref XTargetState<CallFrame> state)
     {
-        foreach (var blk in state.Frame.Blocks)
-            Marshal.FreeHGlobal((nint)blk);
+        //foreach (var blk in state.Frame.Blocks)
+        //    Marshal.FreeHGlobal((nint)blk);
     }
-    
+
     public override Empty ProduceImage(XModule module) => new Empty();
 
     public unsafe struct CallFrame
     {
+        public CallFrame()
+        {
+            Params = [];
+            Blocks = [];
+            StackFrameBase = 0;
+            StackFrameTop = 0;
+            ReturnRegister = -1;
+        }
+
         /// <summary>
         /// The parameters of the functions. This is copied by the function header
         /// into registers.
@@ -43,21 +80,106 @@ public sealed class XInterpreter : XTarget<Empty, CallFrame>
         public ulong[] Params;
 
         /// <summary>
-        /// Table that contains register values
+        /// The blocks of the function, easily represented as a list of pointers
+        /// indexed by block ID.
         /// </summary>
-        public ulong[] RegisterTable;
+        public ulong[] Blocks;
 
         /// <summary>
-        /// Array of pointers to blocks, all allocated on heap
-        /// bc life's though (no srs its just the best system we
-        /// have rn)
+        /// The current start of the stack.
         /// </summary>
-        public void*[] Blocks;
+        public ulong StackFrameBase;
+
+        /// <summary>
+        /// The current end of the stack.
+        /// </summary>
+        public ulong StackFrameTop;
 
         /// <summary>
         /// -1 -> no return expected, ignore last_return_value
         /// </summary>
         public int ReturnRegister;
+    }
+
+    public const ulong Stack_Start = 0x0000_2001_0000;
+    public const ulong Stack_End   = 0x00FF_FFFF_FFFF;
+
+    public const ulong VMem_ProgramStart = 0x10000;
+    public ulong VMem_ProgramEnd = VMem_ProgramStart;
+    public ulong VMem_ProgramSize => VMem_ProgramEnd - VMem_ProgramStart;
+
+    public unsafe void* p_StackHostBlock = null;
+    public ulong sz_StackHostBlock = 0;
+
+    /**
+     * 
+     * Virtual memory map of the X interpreter:
+     * 
+     * 0x0000000000000->0x00000000FFFF: nothing
+     * 0x0000000010000->0x00002000FFFF: reserved for program code
+     * 0x0000200010000->0x00FFFFFFFFFF: stack
+     * (the rest is provided by pages which must be requested by the user code.
+     *  this is usually done by a memory management system such as malloc()/free()
+     *  or arena allocators.)
+     */
+
+    /// <summary>
+    /// Virtual MMU that maps a given comptime address to a compiler address.
+    /// </summary>
+    /// <param name="vaddr"></param>
+    /// <returns></returns>
+    public unsafe ulong MapVirtualAddress(XMethod func, CallFrame frame, ulong vaddr)
+    {
+        int error = 0;
+
+        // no object under 0x10000
+        if (vaddr <= 0xFFFF)
+        {
+            error = 1; // low pointer
+            goto LInvalidAddr;
+        }
+
+        // program code!
+        if (vaddr <= VMem_ProgramEnd)
+        {
+            var code_addr = vaddr - VMem_ProgramStart;
+
+            if (code_addr > (ulong)func.GetInsnCount())
+            {
+                error = 3;
+                goto LInvalidAddr;
+            }
+
+            return code_addr;
+        }
+
+        // we are looking at stack memory
+        if (vaddr <= Stack_End)
+        {
+            var stack_relative = vaddr - Stack_Start;
+            if (stack_relative > frame.StackFrameTop)
+            {
+                error = 2; // out of stack bounds
+                goto LInvalidAddr;
+            }
+
+            return (ulong)p_StackHostBlock + stack_relative;
+        }
+
+// otherwise, check virtual memory pages
+;
+
+LInvalidAddr:
+        if (error == 0)
+            Diagnostic.Throw(null, 0, DiagnosticSeverity.Error, "", $"invalid address 0x{vaddr:X}");
+        else if (error == 1)
+            Diagnostic.Throw(null, 0, DiagnosticSeverity.Error, "", $"invalid address 0x{vaddr:X} (pointer is too low, most likely an object size)");
+        else if (error == 2)
+            Diagnostic.Throw(null, 0, DiagnosticSeverity.Error, "", $"invalid address 0x{vaddr:X} (pointer is within stack range, yet out of bounds)");
+        else if (error == 3)
+            Diagnostic.Throw(null, 0, DiagnosticSeverity.Error, "", $"invalid address 0x{vaddr:X} (pointer is in program range, but is out of local function)");
+
+        return 0;
     }
 
     public unsafe void ProcessF64Insn(XMethod func, ref XTargetState<CallFrame> state, ref int ip, ulong* p_RegisterTable)
@@ -648,6 +770,63 @@ public sealed class XInterpreter : XTarget<Empty, CallFrame>
             case XOps.BRsh:
                 p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] >> (byte)p_RegisterTable[insn.Rsx[1].R];
                 break;
+
+                // TODO: MEMORY BLOCKS
+
+            /*case XOps.Icast:
+            {
+                var src_type = insn.Tsx[0];
+                var rsx = insn.Rsx[0].R;
+                var result = p_RegisterTable[rsx] | Register_Restore[rsx];
+                var sign = false;
+
+                switch (src_type.Size)
+                {
+
+                case 2:
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        sign = (result & 0x8000) == 1;
+                        result &= 0x0000_0000_0000_FFFF;
+                    }
+                    else
+                    {
+                        result = (result & 0xFFFF_0000_0000_0000) >> 48;
+                        sign = (result & 0x8000_0000_0000_0000) == 1;
+                    }
+
+                    result = insn_type.Size switch
+                    {
+                        1 =>
+                            insn_type.Kind == XTypeKind.S ? (byte)(sbyte)((short)result * (sign ? -1 : 1))
+                                                          : (byte)(ushort)((short)result * (sign ? -1 : 1)),
+                        2 =>
+                            insn_type.Kind == XTypeKind.S ? result : (ushort)((short)result * (sign ? -1 : 1)),
+                    };
+                    break;
+
+                case 4:
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        result &= 0x0000_0000_FFFF_FFFF;
+                        sign = (result & 0x8000_0000) == 1;
+                    }
+                    else
+                    {
+                        result = (result & 0xFFFF_FFFF_0000_0000) >> 32;
+                        sign = (result & 0x8000_0000_0000_0000) == 1;
+                    }
+
+                    // don't do anything besides that as far as casting is concerned
+                    if (insn_type.Kind == XTypeKind.U)
+                        break;
+
+                    result = (uint)((int)result * (sign ? -1 : 1));
+                    break;
+                }
+
+                p_RegisterTable[insn.Rd.R] = result;
+            }*/
 
                 // TODO: int->float, float->int, float_resize, icast
 

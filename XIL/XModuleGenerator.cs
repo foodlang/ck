@@ -1,4 +1,5 @@
 ﻿using ck.Diagnostics;
+using ck.Target;
 using System.Diagnostics;
 
 namespace ck.XIL;
@@ -93,6 +94,14 @@ public sealed class XModuleGenerator<T, U> where T : XTarget<T, U> where U : str
             if (Ncall is not null)
             {
                 var call = Ncall.Value;
+                if (call.CallObject is XInterpreter.CallFrame frame)
+                {
+                    // assert is poorly recognized by roslyn
+                    if (!(state.Frame is XInterpreter.CallFrame cur_frame))
+                        throw new InvalidOperationException();
+
+                    frame.StackFrameTop = cur_frame.StackFrameTop;
+                }
                 last_return_value = RunSingle(call.From.Name, call.CallObject);
             }
 
