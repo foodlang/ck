@@ -882,5 +882,12 @@ public sealed class O0Pass : LowerOptStep
         return score;
     }
 
-    protected override int MutateFunction(ref FunctionNode func) => MutateStatement(ref func.Body!);
+    protected override int MutateFunction(ref FunctionNode func)
+    {
+        // two passes
+        var k = 0;
+        for (var i = 0; i < 2; i++)
+            k += MutateStatement(ref func.Body!);
+        return k;
+    }
 }

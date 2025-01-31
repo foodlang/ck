@@ -5,6 +5,8 @@ using ck.Lowering;
 using ck.Lowering.Lowers;
 using ck.Syntax;
 using ck.Syntax.Parsing;
+using ck.Target;
+using ck.Util;
 using ck.XIL;
 using System.Diagnostics;
 
@@ -121,12 +123,13 @@ public sealed class CompilerRunner
 
         uptime_semantic = stopwatch.Elapsed.TotalMilliseconds;
         stopwatch.Restart();
-        Diagnostic.Display();
         if (error_status)
         {
             DisplayError("cannot proceed with compilation; errors encountered before or at semantic analysis");
             Console.WriteLine($"uptime parser: {uptime_parsing}ms");
             Console.WriteLine($"uptime semantic analyzer: {uptime_semantic}ms");
+
+            Diagnostic.Display();
             return;
         }
 
@@ -145,8 +148,18 @@ public sealed class CompilerRunner
         var output_path = Path.ChangeExtension(InputPath, "x");
         File.WriteAllText(output_path, xcode.ToString());
 
+        var target = new XInterpreter();
+        var xmodule_generator = new XModuleGenerator<Empty, XInterpreter.CallFrame>(xcode, target);
+
+        var main_stack = new XInterpreter.CallFrame();
+        main_stack.StackFrameBase = XInterpreter.Stack_Start;
+        main_stack.StackFrameTop = XInterpreter.Stack_Start;
+        var R = xmodule_generator.RunSingle("_$food_main", main_stack);
+        Diagnostic.Display();
+
         // debug pannel
         Console.WriteLine();
+        Console.WriteLine($"exit code: {R}");
         Console.WriteLine($"X written to {output_path}");
         Console.WriteLine($"uptime parser: {(float)uptime_parsing}ms");
         Console.WriteLine($"uptime analyzer: {(float)uptime_semantic}ms");

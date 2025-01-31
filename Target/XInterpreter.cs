@@ -1,4 +1,5 @@
-﻿using ck.Diagnostics;
+﻿#define DUMP_XINTERPRETER_OP
+using ck.Diagnostics;
 using ck.Util;
 using ck.XIL;
 using System.Diagnostics;
@@ -40,14 +41,16 @@ public sealed class XInterpreter : XTarget<Empty, CallFrame>
         if (sz_StackHostBlock == 0)
         {
             sz_StackHostBlock = state.Frame.StackFrameTop - Stack_Start;
-            p_StackHostBlock = NativeMemory.Alloc((nuint)sz_StackHostBlock);
+            p_StackHostBlock = NativeMemory.AllocZeroed((nuint)sz_StackHostBlock);
         }
         else if (state.Frame.StackFrameTop - Stack_Start > sz_StackHostBlock)
         {
             // i know there are better scaling factors for size efficiency,
             // but we care more about the speed of access.
+            var old_size = sz_StackHostBlock;
             sz_StackHostBlock <<= 2;
             p_StackHostBlock = NativeMemory.Realloc(p_StackHostBlock, (nuint)sz_StackHostBlock);
+            NativeMemory.Clear((char*)p_StackHostBlock + (nint)old_size, (nuint)(sz_StackHostBlock - old_size));
         }
 
         fixed (ulong* p_Params = state.Frame.Params)
@@ -123,12 +126,21 @@ public sealed class XInterpreter : XTarget<Empty, CallFrame>
      *  or arena allocators.)
      */
 
+    [Flags]
+    private enum VMemAccess
+    {
+        None,
+        Read = 1,
+        Write = 2,
+        Exec = 4,
+    }
+
     /// <summary>
     /// Virtual MMU that maps a given comptime address to a compiler address.
     /// </summary>
     /// <param name="vaddr"></param>
     /// <returns></returns>
-    public unsafe ulong MapVirtualAddress(XMethod func, CallFrame frame, ulong vaddr)
+    private unsafe ulong MapVirtualAddress(VMemAccess access, XMethod func, CallFrame frame, ulong vaddr)
     {
         int error = 0;
 
@@ -150,6 +162,12 @@ public sealed class XInterpreter : XTarget<Empty, CallFrame>
                 goto LInvalidAddr;
             }
 
+            if ((access & VMemAccess.Exec) == 0)
+            {
+                error = 4;
+                goto LInvalidAddr;
+            }
+
             return code_addr;
         }
 
@@ -160,6 +178,12 @@ public sealed class XInterpreter : XTarget<Empty, CallFrame>
             if (stack_relative > frame.StackFrameTop)
             {
                 error = 2; // out of stack bounds
+                goto LInvalidAddr;
+            }
+
+            if ((access & (VMemAccess.Read | VMemAccess.Write)) == 0)
+            {
+                error = 4;
                 goto LInvalidAddr;
             }
 
@@ -178,6 +202,8 @@ LInvalidAddr:
             Diagnostic.Throw(null, 0, DiagnosticSeverity.Error, "", $"invalid address 0x{vaddr:X} (pointer is within stack range, yet out of bounds)");
         else if (error == 3)
             Diagnostic.Throw(null, 0, DiagnosticSeverity.Error, "", $"invalid address 0x{vaddr:X} (pointer is in program range, but is out of local function)");
+        else if (error == 4)
+            Diagnostic.Throw(null, 0, DiagnosticSeverity.Error, "", $"general protection fault for address 0x{vaddr:X}");
 
         return 0;
     }
@@ -194,71 +220,71 @@ LInvalidAddr:
         // CONST ARITHM OPERATIONS
 
         case XOps.Increment:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I64_F64Bits() + ((ulong)insn.Kx[0]).I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]).I64_F64Bits() + ((ulong)insn.Kx[0]).I64_F64Bits()).F64Bits();
             break;
 
         case XOps.Decrement:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I64_F64Bits() - ((ulong)insn.Kx[0]).I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]).I64_F64Bits() - ((ulong)insn.Kx[0]).I64_F64Bits()).F64Bits();
             break;
 
         case XOps.MulConst:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I64_F64Bits() * ((ulong)insn.Kx[0]).I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]).I64_F64Bits() * ((ulong)insn.Kx[0]).I64_F64Bits()).F64Bits();
             break;
 
         case XOps.DivConst:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I64_F64Bits() / ((ulong)insn.Kx[0]).I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]).I64_F64Bits() / ((ulong)insn.Kx[0]).I64_F64Bits()).F64Bits();
             break;
 
         // COMPARISON
 
         case XOps.Equal:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() == p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()) ? 1UL : 0;
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() == ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()) ? 1UL : 0;
             break;
 
         case XOps.NotEqual:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() != p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()) ? 1UL : 0;
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() != ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()) ? 1UL : 0;
             break;
 
         case XOps.Lower:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() < p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()) ? 1UL : 0;
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() < ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()) ? 1UL : 0;
             break;
 
         case XOps.LowerEqual:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() <= p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()) ? 1UL : 0;
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() <= ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()) ? 1UL : 0;
             break;
 
         case XOps.Greater:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() > p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()) ? 1UL : 0;
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() > ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()) ? 1UL : 0;
             break;
 
         case XOps.GreaterEqual:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() >= p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()) ? 1UL : 0;
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() >= ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()) ? 1UL : 0;
             break;
 
         // ARITHMETIC
 
         case XOps.UnaryMinus:
-            p_RegisterTable[insn.Rd.R] = (-p_RegisterTable[insn.Rsx[0].R].I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (-ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits()).F64Bits();
             break;
 
         case XOps.Add:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() + p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() + ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()).F64Bits();
             break;
 
         case XOps.Sub:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() - p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() - ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()).F64Bits();
             break;
 
         case XOps.Mul:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() * p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() * ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()).F64Bits();
             break;
 
         case XOps.Div:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() / p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() / ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()).F64Bits();
             break;
 
         case XOps.Rem:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rsx[0].R].I64_F64Bits() % p_RegisterTable[insn.Rsx[1].R].I64_F64Bits()).F64Bits();
+            p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I64_F64Bits() % ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]).I64_F64Bits()).F64Bits();
             break;
 
         }
@@ -266,83 +292,86 @@ LInvalidAddr:
 
     public unsafe void ProcessF32Insn(XMethod func, ref XTargetState<CallFrame> state, ref int ip, ulong* p_RegisterTable)
     {
-        var insn = func.GetInsn(ip);
-        var frame = state.Frame;
-        var insn_type = insn.Type;
-
-        switch (insn.Op)
+        unchecked
         {
+            var insn = func.GetInsn(ip);
+            var frame = state.Frame;
+            var insn_type = insn.Type;
 
-        // CONST ARITHM OPERATIONS
+            switch (insn.Op)
+            {
 
-        case XOps.Increment:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() + (float)((ulong)insn.Kx[0]).I64_F64Bits()).F32Bits();
-            break;
+            // CONST ARITHM OPERATIONS
 
-        case XOps.Decrement:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() - (float)((ulong)insn.Kx[0]).I64_F64Bits()).F32Bits();
-            break;
+            case XOps.Increment:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]).I32_F32Bits() + (float)((ulong)insn.Kx[0]).I64_F64Bits()).F32Bits();
+                break;
 
-        case XOps.MulConst:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() * (float)((ulong)insn.Kx[0]).I64_F64Bits()).F32Bits();
-            break;
+            case XOps.Decrement:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]).I32_F32Bits() - (float)((ulong)insn.Kx[0]).I64_F64Bits()).F32Bits();
+                break;
 
-        case XOps.DivConst:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() / (float)((ulong)insn.Kx[0]).I64_F64Bits()).F32Bits();
-            break;
+            case XOps.MulConst:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]).I32_F32Bits() * (float)((ulong)insn.Kx[0]).I64_F64Bits()).F32Bits();
+                break;
 
-        // COMPARISON
+            case XOps.DivConst:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]).I32_F32Bits() / (float)((ulong)insn.Kx[0]).I64_F64Bits()).F32Bits();
+                break;
 
-        case XOps.Equal:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() == ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()) ? 1UL : 0;
-            break;
+            // COMPARISON
 
-        case XOps.NotEqual:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() != ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()) ? 1UL : 0;
-            break;
+            case XOps.Equal:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() == ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()) ? 1UL : 0;
+                break;
 
-        case XOps.Lower:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() < ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()) ? 1UL : 0;
-            break;
+            case XOps.NotEqual:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() != ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()) ? 1UL : 0;
+                break;
 
-        case XOps.LowerEqual:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() <= ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()) ? 1UL : 0;
-            break;
+            case XOps.Lower:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() < ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()) ? 1UL : 0;
+                break;
 
-        case XOps.Greater:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() > ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()) ? 1UL : 0;
-            break;
+            case XOps.LowerEqual:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() <= ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()) ? 1UL : 0;
+                break;
 
-        case XOps.GreaterEqual:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() >= ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()) ? 1UL : 0;
-            break;
+            case XOps.Greater:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() > ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()) ? 1UL : 0;
+                break;
 
-        // ARITHMETIC
+            case XOps.GreaterEqual:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() >= ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()) ? 1UL : 0;
+                break;
 
-        case XOps.UnaryMinus:
-            p_RegisterTable[insn.Rd.R] = (-p_RegisterTable[insn.Rd.R].I32_F32Bits()).F32Bits();
-            break;
+            // ARITHMETIC
 
-        case XOps.Add:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() + ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()).F32Bits();
-            break;
+            case XOps.UnaryMinus:
+                p_RegisterTable[insn.Rd.R] = (-ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits()).F32Bits();
+                break;
 
-        case XOps.Sub:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() - ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()).F32Bits();
-            break;
+            case XOps.Add:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() + ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()).F32Bits();
+                break;
 
-        case XOps.Mul:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() * ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()).F32Bits();
-            break;
+            case XOps.Sub:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() - ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()).F32Bits();
+                break;
 
-        case XOps.Div:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() / ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()).F32Bits();
-            break;
+            case XOps.Mul:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() * ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()).F32Bits();
+                break;
 
-        case XOps.Rem:
-            p_RegisterTable[insn.Rd.R] = (p_RegisterTable[insn.Rd.R].I32_F32Bits() % ((uint)p_RegisterTable[insn.Rd.R]).I32_F32Bits()).F32Bits();
-            break;
+            case XOps.Div:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() / ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()).F32Bits();
+                break;
 
+            case XOps.Rem:
+                p_RegisterTable[insn.Rd.R] = (ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]).I32_F32Bits() % ((uint)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R])).I32_F32Bits()).F32Bits();
+                break;
+
+            }
         }
     }
 
@@ -364,512 +393,581 @@ LInvalidAddr:
         var frame = state.Frame;
         var insn_type = insn.Type;
 
-        switch (insn.Op)
+        unchecked
         {
+            switch (insn.Op)
+            {
 
             // CONST ARITHM OPERATIONS
 
-        case XOps.Increment:
-            p_RegisterTable[insn.Rd.R] += insn.Kx[0];
-            break;
+            case XOps.Increment:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) + insn.Kx[0];
+                break;
 
-        case XOps.Decrement:
-            p_RegisterTable[insn.Rd.R] -= insn.Kx[0];
-            break;
+            case XOps.Decrement:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) - insn.Kx[0];
+                break;
 
-        case XOps.MulConst:
-            p_RegisterTable[insn.Rd.R] *= insn.Kx[0];
-            break;
+            case XOps.MulConst:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) * insn.Kx[0];
+                break;
 
-        case XOps.DivConst:
-            p_RegisterTable[insn.Rd.R] /= insn.Kx[0];
-            break;
+            case XOps.DivConst:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) / insn.Kx[0];
+                break;
 
-        // COMPARISON
+            // COMPARISON
 
-        case XOps.Equal:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] == p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.Equal:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) == ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.NotEqual:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] != p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.NotEqual:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) != ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.Lower:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] < p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.Lower:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) < ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.LowerEqual:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] <= p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.LowerEqual:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) <= ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.Greater:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] > p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.Greater:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) > ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.GreaterEqual:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] >= p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.GreaterEqual:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) >= ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
             // ARITHMETIC
 
-        case XOps.UnaryMinus:
-            p_RegisterTable[insn.Rd.R] = (ulong)-(long)p_RegisterTable[insn.Rsx[0].R];
-            break;
+            case XOps.UnaryMinus:
+                p_RegisterTable[insn.Rd.R] = (ulong)-(long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]);
+                break;
 
-        case XOps.Add:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] + p_RegisterTable[insn.Rsx[1].R];
-            break;
+            case XOps.Add:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) + ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+                break;
 
-        case XOps.Sub:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] - p_RegisterTable[insn.Rsx[1].R];
-            break;
+            case XOps.Sub:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) - ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+                break;
 
-        case XOps.Mul:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] * p_RegisterTable[insn.Rsx[1].R];
-            break;
+            case XOps.Mul:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) * ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+                break;
 
-        case XOps.Div:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] / p_RegisterTable[insn.Rsx[1].R];
-            break;
+            case XOps.Div:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) / ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+                break;
 
-        case XOps.Rem:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] % p_RegisterTable[insn.Rsx[1].R];
-            break;
+            case XOps.Rem:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) % ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+                break;
 
+            }
         }
     }
 
     public unsafe void ProcessSignedInsn(XMethod func, ref XTargetState<CallFrame> state, ref int ip, ulong* p_RegisterTable)
     {
-        var insn = func.GetInsn(ip);
-        var frame = state.Frame;
-        var insn_type = insn.Type;
-
-        switch (insn.Op)
+        unchecked
         {
 
-        // CONST ARITHM OPERATIONS
+            var insn = func.GetInsn(ip);
+            var frame = state.Frame;
+            var insn_type = insn.Type;
 
-        case XOps.Increment:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rd.R] + (long)insn.Kx[0]);
-            break;
+            switch (insn.Op)
+            {
 
-        case XOps.Decrement:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rd.R] - (long)insn.Kx[0]);
-            break;
+            // CONST ARITHM OPERATIONS
 
-        case XOps.MulConst:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rd.R] * (long)insn.Kx[0]);
-            break;
+            case XOps.Increment:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]) + (long)insn.Kx[0]);
+                break;
 
-        case XOps.DivConst:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rd.R] / (long)insn.Kx[0]);
-            break;
+            case XOps.Decrement:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]) - (long)insn.Kx[0]);
+                break;
 
-        // COMPARISON
+            case XOps.MulConst:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]) * (long)insn.Kx[0]);
+                break;
 
-        case XOps.Equal:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] == p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.DivConst:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]) / (long)insn.Kx[0]);
+                break;
 
-        case XOps.NotEqual:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] != p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            // COMPARISON
 
-        case XOps.Lower:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] < p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.Equal:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) == ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.LowerEqual:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] <= p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.NotEqual:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) != ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.Greater:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] > p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.Lower:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) < ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.GreaterEqual:
-            p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] >= p_RegisterTable[insn.Rsx[1].R] ? 1UL : 0;
-            break;
+            case XOps.LowerEqual:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) <= ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        // ARITHMETIC
+            case XOps.Greater:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) > ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.UnaryMinus:
-            p_RegisterTable[insn.Rd.R] = (ulong)-(long)p_RegisterTable[insn.Rsx[0].R];
-            break;
+            case XOps.GreaterEqual:
+                p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) >= ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]) ? 1UL : 0;
+                break;
 
-        case XOps.Add:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rsx[0].R] + (long)p_RegisterTable[insn.Rsx[1].R]);
-            break;
+            // ARITHMETIC
 
-        case XOps.Sub:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rsx[0].R] - (long)p_RegisterTable[insn.Rsx[1].R]);
-            break;
+            case XOps.UnaryMinus:
+                p_RegisterTable[insn.Rd.R] = (ulong)-(long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]);
+                break;
 
-        case XOps.Mul:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rsx[0].R] * (long)p_RegisterTable[insn.Rsx[1].R]);
-            break;
+            case XOps.Add:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) + (long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]));
+                break;
 
-        case XOps.Div:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rsx[0].R] / (long)p_RegisterTable[insn.Rsx[1].R]);
-            break;
+            case XOps.Sub:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) - (long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]));
+                break;
 
-        case XOps.Rem:
-            p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rsx[0].R] % (long)p_RegisterTable[insn.Rsx[1].R]);
-            break;
+            case XOps.Mul:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) * (long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]));
+                break;
 
+            case XOps.Div:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) / (long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]));
+                break;
+
+            case XOps.Rem:
+                p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) % (long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]));
+                break;
+
+            }
         }
     }
+
+    public ulong ApplyTMask(XType T, ulong v)
+    {
+        var result = BitConverter.IsLittleEndian ? (ulong)(T.Size switch
+        {
+            0 => 0,
+            1 => v & 0xFF,
+            2 => v & 0xFFFF,
+            4 => v & 0xFFFF_FFFF,
+            8 => v & 0xFFFF_FFFF_FFFF_FFFF,
+            _ => throw new NotImplementedException()
+        }) : (T.Size switch
+        {
+            0 => 0,
+            1 => v & 0xFF00_0000_0000_0000,
+            2 => v & 0xFFFF_0000_0000_0000,
+            4 => v & 0xFFFF_FFFF_0000_0000,
+            8 => v & 0xFFFF_FFFF_FFFF_FFFF,
+            _ => throw new NotImplementedException()
+        });
+        return result;
+   }
 
     public override unsafe XCallObject<CallFrame>? ProcessInsn(XMethod func, ref XTargetState<CallFrame> state, ref int ip, ulong last_return_value)
     {
         var insn = func.GetInsn(ip);
         var frame = state.Frame;
         var insn_type = insn.Type;
+        var ip_modified = false;
 
         XCallObject<CallFrame>? branched_function_target = null;
 
         // little side gig here: set return value from previous instruction
         if (frame.ReturnRegister != -1)
         {
-            frame.RegisterTable[frame.ReturnRegister] = state.ReturnValue;
+            var addr = MapVirtualAddress(VMemAccess.Write, func, frame, frame.StackFrameBase + (uint)frame.ReturnRegister);
+            *(ulong*)addr = state.ReturnValue;
             frame.ReturnRegister = -1;
         }
 
-        fixed (ulong* p_RegisterTable = frame.RegisterTable)
+        ulong* p_RegisterTable = (ulong*)MapVirtualAddress(VMemAccess.Read | VMemAccess.Write, func, frame, frame.StackFrameBase);
+        var reg_count = func.GetRegisterCount();
+        /*Span<ulong> Register_Restore = stackalloc ulong[reg_count];
+        Register_Restore.Fill(0);
+
+        if (BitConverter.IsLittleEndian)
         {
-            Span<ulong> Register_Restore = stackalloc ulong[frame.RegisterTable.Length];
-            Register_Restore.Fill(0);
-
-            if (BitConverter.IsLittleEndian)
+            if (insn_type.Size == 1)
             {
-                if (insn_type.Size == 1)
+                for (var i = 0; i < reg_count; i++)
                 {
-                    for (var i = 0; i < frame.RegisterTable.Length; i++)
-                    {
-                        Register_Restore[i] = p_RegisterTable[i] & 0xFFFF_FFFF_FFFF_FF00;
-                        p_RegisterTable[i] &= 0xFF;
-                    }
-                }
-                else if (insn_type.Size == 2)
-                {
-                    for (var i = 0; i < frame.RegisterTable.Length; i++)
-                    {
-                        Register_Restore[i] = p_RegisterTable[i] & 0xFFFF_FFFF_FFFF_0000;
-                        p_RegisterTable[i] &= 0xFFFF;
-                    }
-                }
-                else if (insn_type.Size == 4)
-                {
-                    for (var i = 0; i < frame.RegisterTable.Length; i++)
-                    {
-                        Register_Restore[i] = p_RegisterTable[i] & 0xFFFF_FFFF_0000_0000;
-                        p_RegisterTable[i] &= 0xFFFF_FFFFF;
-                    }
+                    Register_Restore[i] = p_RegisterTable[i] & 0xFFFF_FFFF_FFFF_FF00;
+                    p_RegisterTable[i] &= 0xFF;
                 }
             }
-            else
+            else if (insn_type.Size == 2)
             {
-                if (insn_type.Size == 1)
+                for (var i = 0; i < reg_count; i++)
                 {
-                    for (var i = 0; i < frame.RegisterTable.Length; i++)
-                    {
-                        Register_Restore[i] = p_RegisterTable[i] & 0x00FF_FFFF_FFFF_FFFF;
-                        p_RegisterTable[i] &= 0xFF00_0000_0000_0000;
-                    }
-                }
-                else if (insn_type.Size == 2)
-                {
-                    for (var i = 0; i < frame.RegisterTable.Length; i++)
-                    {
-                        Register_Restore[i] = p_RegisterTable[i] & 0x0000_FFFF_FFFF_FFFF;
-                        p_RegisterTable[i] &= 0xFFFF_0000_0000_0000;
-                    }
-                }
-                else if (insn_type.Size == 4)
-                {
-                    for (var i = 0; i < frame.RegisterTable.Length; i++)
-                    {
-                        Register_Restore[i] = p_RegisterTable[i] & 0x0000_0000_FFFF_FFFF;
-                        p_RegisterTable[i] &= 0xFFFF_FFFF_0000_0000;
-                    }
+                    Register_Restore[i] = p_RegisterTable[i] & 0xFFFF_FFFF_FFFF_0000;
+                    p_RegisterTable[i] &= 0xFFFF;
                 }
             }
-
-            var covered = true;
-            switch (insn.Op)
+            else if (insn_type.Size == 4)
             {
+                for (var i = 0; i < reg_count; i++)
+                {
+                    Register_Restore[i] = p_RegisterTable[i] & 0xFFFF_FFFF_0000_0000;
+                    p_RegisterTable[i] &= 0xFFFF_FFFFF;
+                }
+            }
+        }
+        else
+        {
+            if (insn_type.Size == 1)
+            {
+                for (var i = 0; i < reg_count; i++)
+                {
+                    Register_Restore[i] = p_RegisterTable[i] & 0x00FF_FFFF_FFFF_FFFF;
+                    p_RegisterTable[i] &= 0xFF00_0000_0000_0000;
+                }
+            }
+            else if (insn_type.Size == 2)
+            {
+                for (var i = 0; i < reg_count; i++)
+                {
+                    Register_Restore[i] = p_RegisterTable[i] & 0x0000_FFFF_FFFF_FFFF;
+                    p_RegisterTable[i] &= 0xFFFF_0000_0000_0000;
+                }
+            }
+            else if (insn_type.Size == 4)
+            {
+                for (var i = 0; i < reg_count; i++)
+                {
+                    Register_Restore[i] = p_RegisterTable[i] & 0x0000_0000_FFFF_FFFF;
+                    p_RegisterTable[i] &= 0xFFFF_FFFF_0000_0000;
+                }
+            }
+        }*/
 
-            // SPECIAL
+        var covered = true;
+        switch (insn.Op)
+        {
 
-            case XOps.Nop:
-                break;
+        // SPECIAL
 
-            case XOps.Break:
-                state.Sig_Abort = true;
-                break;
+        case XOps.Nop:
+            break;
 
-            case XOps.Asm: /* replaced as a no-op */
-                Diagnostic.Throw(null, 0, DiagnosticSeverity.Info, "xrun-asm-block", "encountered assembly block in xrun. aborted.");
-                state.Sig_Abort = true;
-                break;
+        case XOps.Break:
+            state.Sig_Abort = true;
+            break;
 
-            // REGISTER CONTROL OPERATIONS
+        case XOps.Asm: /* replaced as a no-op */
+            Diagnostic.Throw(null, 0, DiagnosticSeverity.Info, "xrun-asm-block", "encountered assembly block in xrun. aborted.");
+            state.Sig_Abort = true;
+            break;
 
-            case XOps.ConstSet:
-                p_RegisterTable[insn.Rd.R] = (ulong)insn.Kx[0];
-                break;
+        // REGISTER CONTROL OPERATIONS
 
-            case XOps.Set:
-                p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R];
-                break;
+        case XOps.ConstSet:
+            p_RegisterTable[insn.Rd.R] = insn.Kx[0];
+            break;
 
-            // MEMORY OPERATIONS
+        case XOps.Set:
+            p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]);
+            break;
 
-            case XOps.Read:
-                p_RegisterTable[insn.Rd.R] = *(ulong*)p_RegisterTable[insn.Rsx[0].R];
-                break;
+        // MEMORY OPERATIONS
 
-            case XOps.Write:
-                *(ulong*)p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R];
-                break;
+        case XOps.Read:
+            p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, * (ulong*)MapVirtualAddress(VMemAccess.Read, func, frame, p_RegisterTable[insn.Rsx[0].R]));
+            break;
 
-            case XOps.Copy:
-                *(ulong*)p_RegisterTable[insn.Rd.R] = *(ulong*)p_RegisterTable[insn.Rsx[0].R];
-                break;
+        case XOps.Write:
+            *(ulong*)MapVirtualAddress(VMemAccess.Write, func, frame, p_RegisterTable[insn.Rd.R])
+                = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]);
+            break;
 
-            case XOps.AddressOf:
-                p_RegisterTable[insn.Rd.R] = (ulong)p_RegisterTable + (uint)insn.Rsx[0].R * sizeof(ulong);
-                break;
+        case XOps.Copy:
+            *(ulong*)MapVirtualAddress(VMemAccess.Write, func, frame, p_RegisterTable[insn.Rd.R])
+                = ApplyTMask(insn_type, *(ulong*)MapVirtualAddress(VMemAccess.Read, func, frame, p_RegisterTable[insn.Rsx[0].R]));
+            break;
 
-            // BLOCK OPERATIONS
+        case XOps.AddressOf:
+            // TODO: symbols other than locals
+            p_RegisterTable[insn.Rd.R] = frame.StackFrameBase + (uint)insn.Rsx[0].R * sizeof(ulong);
+            break;
 
-            case XOps.Blkzero:
-                new Span<byte>((void*)p_RegisterTable[insn.Rd.R], (int)insn.Kx[0]).Fill(0);
-                break;
+        // BLOCK OPERATIONS
 
-            case XOps.Blkcopy:
-                Buffer.MemoryCopy((void*)p_RegisterTable[insn.Rsx[0].R], (void*)p_RegisterTable[insn.Rd.R], (long)insn.Kx[0], (long)insn.Kx[0]);
-                break;
+        case XOps.Blkzero:
+            new Span<byte>((void*)MapVirtualAddress(VMemAccess.Write, func, frame, p_RegisterTable[insn.Rd.R]), (int)insn.Kx[0]).Fill(0);
+            break;
 
-            case XOps.Blkmove:
-                Buffer.MemoryCopy((void*)p_RegisterTable[insn.Rsx[0].R], (void*)p_RegisterTable[insn.Rd.R], (long)insn.Kx[0], (long)insn.Kx[0]);
-                break;
+        case XOps.Blkcopy:
+            //Buffer.MemoryCopy((void*)p_RegisterTable[insn.Rsx[0].R], (void*)p_RegisterTable[insn.Rd.R], (long)insn.Kx[0], (long)insn.Kx[0]);
+            Buffer.MemoryCopy(
+                (void*)MapVirtualAddress(VMemAccess.Read, func, frame, p_RegisterTable[insn.Rsx[0].R]),
+                (void*)MapVirtualAddress(VMemAccess.Write, func, frame, p_RegisterTable[insn.Rd.R]),
+                (long)insn.Kx[0], (long)insn.Kx[0]);
+            break;
 
-            case XOps.Blkaddr:
-                p_RegisterTable[insn.Rd.R] = (ulong)frame.Blocks[(int)insn.Kx[0]];
-                break;
+        case XOps.Blkmove:
+            //Buffer.MemoryCopy((void*)p_RegisterTable[insn.Rsx[0].R], (void*)p_RegisterTable[insn.Rd.R], (long)insn.Kx[0], (long)insn.Kx[0]);
+            Buffer.MemoryCopy(
+                (void*)MapVirtualAddress(VMemAccess.Read, func, frame, p_RegisterTable[insn.Rsx[0].R]),
+                (void*)MapVirtualAddress(VMemAccess.Write, func, frame, p_RegisterTable[insn.Rd.R]),
+                (long)insn.Kx[0], (long)insn.Kx[0]);
+            break;
 
-            // CONTROL OPERATIONS
+        case XOps.Blkaddr:
+            p_RegisterTable[insn.Rd.R] = (ulong)frame.Blocks[(int)insn.Kx[0]];
+            break;
 
-            case XOps.Jmp:
+        // CONTROL OPERATIONS
+
+        case XOps.Jmp:
+            ip = (int)insn.Kx[0];
+            ip_modified = true;
+            break;
+
+        case XOps.IJmp:
+            ip = (int)MapVirtualAddress(VMemAccess.Exec, func, frame, p_RegisterTable[insn.Rd.R]);
+            ip_modified = true;
+            break;
+
+        case XOps.PiCall:
+        case XOps.FiCall:
+            Diagnostic.Throw(null, 0, DiagnosticSeverity.Info, "xrun-indirect-branch", "indirect calls are not supported by xrun. aborted.");
+            state.Sig_Abort = true;
+            ip_modified = true;
+            break;
+
+        case XOps.If:
+            if (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]) != 0)
+            {
                 ip = (int)insn.Kx[0];
-                break;
-
-            case XOps.IJmp:
-            case XOps.PiCall:
-            case XOps.FiCall:
-                Diagnostic.Throw(null, 0, DiagnosticSeverity.Info, "xrun-indirect-branch", "indirect branches are not supported by xrun. aborted.");
-                state.Sig_Abort = true;
-                break;
-
-            case XOps.If:
-                if (p_RegisterTable[insn.Rd.R] != 0)
-                    ip = (int)insn.Kx[0];
-                break;
-
-            case XOps.Ifz:
-                if (p_RegisterTable[insn.Rd.R] == 0)
-                    ip = (int)insn.Kx[0];
-                break;
-
-            case XOps.Leave:
-                state.Sig_Return = true;
-                break;
-
-            // TODO: most likely slow as dogwater
-            case XOps.Ret:
-                ip = func.GetLabel("$leave");
-                break;
-
-            // TODO: most likely slow as dogwater
-            case XOps.Retv:
-                state.ReturnValue = p_RegisterTable[insn.Rd.R];
-                ip = func.GetLabel($"leave");
-                break;
-
-            case XOps.FCall:
-            {
-                var target = func.Module.GetMethod(insn.Fn ?? "");
-                Debug.Assert(target is not null);
-
-                var param_list = new ulong[insn.Rsx.Length];
-                for (var i = 0; i < insn.Rsx.Length; i++)
-                    param_list[i] = p_RegisterTable[insn.Rsx[i].R];
-
-                frame.ReturnRegister = insn.Rd.R;
-                branched_function_target = new(target, 0, new() { Params = param_list });
-
-                // all should be in order here
-                break;
+                ip_modified = true;
             }
+            break;
 
-            case XOps.PCall:
+        case XOps.Ifz:
+            if (ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]) == 0)
             {
-                var target = func.Module.GetMethod(insn.Fn ?? "");
-                Debug.Assert(target is not null);
-
-                var param_list = new ulong[insn.Rsx.Length];
-                for (var i = 0; i < insn.Rsx.Length; i++)
-                    param_list[i] = p_RegisterTable[insn.Rsx[i].R];
-                
-                // VVV --- what makes PCall different --- VVVV
-                //frame.ReturnRegister = insn.Rd.R; <-- this is off
-                //////////////////////////////////////////////
-                branched_function_target = new(target, 0, new() { Params = param_list });
-
-                // all should be in order here
-                break;
+                ip = (int)insn.Kx[0];
+                ip_modified = true;
             }
+            break;
 
-            // BITWISE OPERATIONS
+        case XOps.Leave:
+            state.Sig_Return = true;
+            ip_modified = true;
+            break;
 
-            case XOps.BNot:
-                p_RegisterTable[insn.Rd.R] = ~p_RegisterTable[insn.Rsx[0].R];
-                break;
+        // TODO: most likely slow as dogwater
+        case XOps.Ret:
+            ip = func.GetLabel("$leave");
+            ip_modified = true;
+            break;
 
-            case XOps.BAnd:
-                p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] & p_RegisterTable[insn.Rsx[1].R];
-                break;
+        // TODO: most likely slow as dogwater
+        case XOps.Retv:
+            state.ReturnValue = ApplyTMask(insn_type, p_RegisterTable[insn.Rd.R]);
+            ip = func.GetLabel($"$leave");
+            ip_modified = true;
+            break;
 
-            case XOps.BOr:
-                p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] | p_RegisterTable[insn.Rsx[1].R];
-                break;
+        case XOps.FCall:
+        {
+            var target = func.Module.GetMethod(insn.Fn ?? "");
+            Debug.Assert(target is not null);
 
-            case XOps.BXor:
-                p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] ^ p_RegisterTable[insn.Rsx[1].R];
-                break;
+            var param_list = new ulong[insn.Rsx.Length];
+            for (var i = 0; i < insn.Rsx.Length; i++)
+                param_list[i] = ApplyTMask(insn.Tsx[i], p_RegisterTable[insn.Rsx[i].R]);
 
-            case XOps.LNot:
-                p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] == 0 ? 1UL : 0UL;
-                break;
+            frame.ReturnRegister = insn.Rd.R;
+            branched_function_target = new(target, 0, new() { Params = param_list });
+            ip_modified = true;
 
-            case XOps.ALsh:
-                p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rsx[0].R] << (byte)p_RegisterTable[insn.Rsx[1].R]);
-                break;
+            // all should be in order here
+            break;
+        }
 
-            case XOps.ARsh:
-                p_RegisterTable[insn.Rd.R] = (ulong)((long)p_RegisterTable[insn.Rsx[0].R] >> (byte)p_RegisterTable[insn.Rsx[1].R]);
-                break;
+        case XOps.PCall:
+        {
+            var target = func.Module.GetMethod(insn.Fn ?? "");
+            Debug.Assert(target is not null);
 
-            case XOps.BLsh:
-                p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] << (byte)p_RegisterTable[insn.Rsx[1].R];
-                break;
+            var param_list = new ulong[insn.Rsx.Length];
+            for (var i = 0; i < insn.Rsx.Length; i++)
+                param_list[i] = ApplyTMask(insn.Tsx[i], p_RegisterTable[insn.Rsx[i].R]);
 
-            case XOps.BRsh:
-                p_RegisterTable[insn.Rd.R] = p_RegisterTable[insn.Rsx[0].R] >> (byte)p_RegisterTable[insn.Rsx[1].R];
-                break;
+            // VVV --- what makes PCall different --- VVVV
+            //frame.ReturnRegister = insn.Rd.R; <-- this is off
+            //////////////////////////////////////////////
+            branched_function_target = new(target, 0, new() { Params = param_list });
+            ip_modified = true;
 
-                // TODO: MEMORY BLOCKS
+            // all should be in order here
+            break;
+        }
 
-            /*case XOps.Icast:
+        // BITWISE OPERATIONS
+
+        case XOps.BNot:
+            p_RegisterTable[insn.Rd.R] = ~ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]);
+            break;
+
+        case XOps.BAnd:
+            p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) & ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+            break;
+
+        case XOps.BOr:
+            p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) | ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+            break;
+
+        case XOps.BXor:
+            p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) ^ ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+            break;
+
+        case XOps.LNot:
+            p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) == 0 ? 1UL : 0UL;
+            break;
+
+        case XOps.ALsh:
+            p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) << (byte)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]));
+            break;
+
+        case XOps.ARsh:
+            p_RegisterTable[insn.Rd.R] = (ulong)((long)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) >> (byte)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]));
+            break;
+
+        case XOps.BLsh:
+            p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) << (byte)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+            break;
+
+        case XOps.BRsh:
+            p_RegisterTable[insn.Rd.R] = ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[0].R]) >> (byte)ApplyTMask(insn_type, p_RegisterTable[insn.Rsx[1].R]);
+            break;
+
+        // TODO: MEMORY BLOCKS
+
+        /*case XOps.Icast:
+        {
+            var src_type = insn.Tsx[0];
+            var rsx = insn.Rsx[0].R;
+            var result = p_RegisterTable[rsx] | Register_Restore[rsx];
+            var sign = false;
+
+            switch (src_type.Size)
             {
-                var src_type = insn.Tsx[0];
-                var rsx = insn.Rsx[0].R;
-                var result = p_RegisterTable[rsx] | Register_Restore[rsx];
-                var sign = false;
 
-                switch (src_type.Size)
+            case 2:
+                if (BitConverter.IsLittleEndian)
                 {
-
-                case 2:
-                    if (BitConverter.IsLittleEndian)
-                    {
-                        sign = (result & 0x8000) == 1;
-                        result &= 0x0000_0000_0000_FFFF;
-                    }
-                    else
-                    {
-                        result = (result & 0xFFFF_0000_0000_0000) >> 48;
-                        sign = (result & 0x8000_0000_0000_0000) == 1;
-                    }
-
-                    result = insn_type.Size switch
-                    {
-                        1 =>
-                            insn_type.Kind == XTypeKind.S ? (byte)(sbyte)((short)result * (sign ? -1 : 1))
-                                                          : (byte)(ushort)((short)result * (sign ? -1 : 1)),
-                        2 =>
-                            insn_type.Kind == XTypeKind.S ? result : (ushort)((short)result * (sign ? -1 : 1)),
-                    };
-                    break;
-
-                case 4:
-                    if (BitConverter.IsLittleEndian)
-                    {
-                        result &= 0x0000_0000_FFFF_FFFF;
-                        sign = (result & 0x8000_0000) == 1;
-                    }
-                    else
-                    {
-                        result = (result & 0xFFFF_FFFF_0000_0000) >> 32;
-                        sign = (result & 0x8000_0000_0000_0000) == 1;
-                    }
-
-                    // don't do anything besides that as far as casting is concerned
-                    if (insn_type.Kind == XTypeKind.U)
-                        break;
-
-                    result = (uint)((int)result * (sign ? -1 : 1));
-                    break;
+                    sign = (result & 0x8000) == 1;
+                    result &= 0x0000_0000_0000_FFFF;
+                }
+                else
+                {
+                    result = (result & 0xFFFF_0000_0000_0000) >> 48;
+                    sign = (result & 0x8000_0000_0000_0000) == 1;
                 }
 
-                p_RegisterTable[insn.Rd.R] = result;
-            }*/
+                result = insn_type.Size switch
+                {
+                    1 =>
+                        insn_type.Kind == XTypeKind.S ? (byte)(sbyte)((short)result * (sign ? -1 : 1))
+                                                      : (byte)(ushort)((short)result * (sign ? -1 : 1)),
+                    2 =>
+                        insn_type.Kind == XTypeKind.S ? result : (ushort)((short)result * (sign ? -1 : 1)),
+                };
+                break;
 
-                // TODO: int->float, float->int, float_resize, icast
+            case 4:
+                if (BitConverter.IsLittleEndian)
+                {
+                    result &= 0x0000_0000_FFFF_FFFF;
+                    sign = (result & 0x8000_0000) == 1;
+                }
+                else
+                {
+                    result = (result & 0xFFFF_FFFF_0000_0000) >> 32;
+                    sign = (result & 0x8000_0000_0000_0000) == 1;
+                }
 
-            default:
-                covered = false;
+                // don't do anything besides that as far as casting is concerned
+                if (insn_type.Kind == XTypeKind.U)
+                    break;
+
+                result = (uint)((int)result * (sign ? -1 : 1));
                 break;
             }
 
-            if (covered)
-                goto LSkipArithmOperators;
+            p_RegisterTable[insn.Rd.R] = result;
+        }*/
 
-            switch (insn_type.Kind)
-            {
+        // TODO: int->float, float->int, float_resize, icast
 
-            case XTypeKind.Vs:
-            case XTypeKind.Vd:
-                Diagnostic.Throw(null, 0, DiagnosticSeverity.Info, "xrun-vector", "vector types are not supported. aborted.");
-                state.Sig_Abort = true;
-                break;
+        default:
+            covered = false;
+            break;
+        }
 
-            case XTypeKind.Fp:
-                ProcessFloatInsn(func, ref state, ref ip, p_RegisterTable);
-                break;
+        if (covered)
+            goto LSkipArithmOperators;
 
-            case XTypeKind.U:
-                ProcessUnsignedInsn(func, ref state, ref ip, p_RegisterTable);
-                break;
+        switch (insn_type.Kind)
+        {
 
-            case XTypeKind.S:
-                ProcessSignedInsn(func, ref state, ref ip, p_RegisterTable);
-                break;
+        case XTypeKind.Vs:
+        case XTypeKind.Vd:
+            Diagnostic.Throw(null, 0, DiagnosticSeverity.Info, "xrun-vector", "vector types are not supported. aborted.");
+            state.Sig_Abort = true;
+            break;
 
-            default:
-                // something is wrong if we end up here
-                throw new NotImplementedException();
+        case XTypeKind.Fp:
+            ProcessFloatInsn(func, ref state, ref ip, p_RegisterTable);
+            break;
 
-            }
+        case XTypeKind.U:
+            ProcessUnsignedInsn(func, ref state, ref ip, p_RegisterTable);
+            break;
+
+        case XTypeKind.S:
+            ProcessSignedInsn(func, ref state, ref ip, p_RegisterTable);
+            break;
+
+        default:
+            // something is wrong if we end up here
+            throw new NotImplementedException();
+
+        }
 
 LSkipArithmOperators:
-            // restore the registers
-            for (var i = 0; i < frame.RegisterTable.Length; i++)
-                p_RegisterTable[i] |= Register_Restore[i];
+        // restore the registers
+        //for (var i = 0; i < reg_count; i++)
+        //    p_RegisterTable[i] |= Register_Restore[i];
+
+        if (!ip_modified)
+            ip++;
+#if DUMP_XINTERPRETER_OP
+        Console.WriteLine($"{insn.Op.ToString().ToLower()}::{insn_type.ToString()}");
+        for (var i = 0; i < reg_count; i++)
+        {
+            Console.WriteLine($"R[{i}]=0x{p_RegisterTable[i]:X}");
         }
+        Console.WriteLine($"IP=0x{ip:X}");
+#endif
 
         return branched_function_target;
     }

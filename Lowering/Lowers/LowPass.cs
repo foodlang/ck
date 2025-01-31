@@ -30,7 +30,7 @@ public sealed class LowPass : LowerOptStep
     {
         var expr_parent = expr.Parent;
 
-        var assign_kind = expr.Kind switch
+        /*var assign_kind = expr.Kind switch
         {
             ExpressionKind.AssignSum => ExpressionKind.Add,
             ExpressionKind.AssignDiff => ExpressionKind.Subtract,
@@ -48,7 +48,7 @@ public sealed class LowPass : LowerOptStep
         {
             expr = DecomposeBinaryAssign((BinaryExpression)expr, assign_kind);
             return 0;
-        }
+        }*/
 
         return 0;
     }

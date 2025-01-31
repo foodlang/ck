@@ -5,7 +5,6 @@ using ck.Lang.Tree.Statements;
 using ck.Lang.Type;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace ck.XIL;
 
@@ -489,7 +488,7 @@ public static class XCompiler
             var binary_expression = (BinaryExpression)e;
             _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
             var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
-            method.Write(XOp.Lower(XT, Ret, Ret, Right));
+            method.Write(XOp.Lower(XType.FromFood(binary_expression.Left.Type!), Ret, Ret, Right));
             break;
         }
 
@@ -498,7 +497,7 @@ public static class XCompiler
             var binary_expression = (BinaryExpression)e;
             _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
             var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
-            method.Write(XOp.LowerEqual(XT, Ret, Ret, Right));
+            method.Write(XOp.LowerEqual(XType.FromFood(binary_expression.Left.Type!), Ret, Ret, Right));
             break;
         }
 
@@ -507,7 +506,7 @@ public static class XCompiler
             var binary_expression = (BinaryExpression)e;
             _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
             var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
-            method.Write(XOp.Greater(XT, Ret, Ret, Right));
+            method.Write(XOp.Greater(XType.FromFood(binary_expression.Left.Type!), Ret, Ret, Right));
             break;
         }
 
@@ -516,7 +515,7 @@ public static class XCompiler
             var binary_expression = (BinaryExpression)e;
             _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
             var Right = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, null);
-            method.Write(XOp.GreaterEqual(XT, Ret, Ret, Right));
+            method.Write(XOp.GreaterEqual(XType.FromFood(binary_expression.Left.Type!), Ret, Ret, Right));
             break;
         }
 
@@ -524,7 +523,7 @@ public static class XCompiler
         {
             var binary_expression = (BinaryExpression)e;
             _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
-            var Leave = XOp.Ifz(Ret, 0);
+            var Leave = XOp.Ifz(XType.FromFood(binary_expression.Left.Type!), Ret, 0);
             method.Write(Leave);
             _ = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, Ret);
             Leave.Kx[0] = (nuint)method.CurCodePosition();
@@ -539,7 +538,7 @@ public static class XCompiler
         {
             var binary_expression = (BinaryExpression)e;
             _ = GenerateExpression(method, binary_expression.Left, ObjectAccess.ByValue, Ret);
-            var Leave = XOp.If(Ret, 0);
+            var Leave = XOp.If(XType.FromFood(binary_expression.Left.Type!), Ret, 0);
             method.Write(Leave);
             _ = GenerateExpression(method, binary_expression.Right, ObjectAccess.ByValue, Ret);
             Leave.Kx[0] = (nuint)method.CurCodePosition();
@@ -554,7 +553,7 @@ public static class XCompiler
         {
             var ternary_expression = (TernaryExpression)e;
             _ = GenerateExpression(method, ternary_expression.First, ObjectAccess.ByValue, Ret);
-            var False = XOp.Ifz(Ret, 0);
+            var False = XOp.Ifz(XType.FromFood(ternary_expression.First.Type!), Ret, 0);
             method.Write(False);
 
             _ = GenerateExpression(method, ternary_expression.Second, access, Ret);
@@ -821,7 +820,7 @@ public static class XCompiler
         case StatementKind.If:
         {
             var C_reg = GenerateExpression(method, statement.Expressions[0], ObjectAccess.ByValue, null);
-            var Insn_if_true = XOp.If(C_reg, 0);
+            var Insn_if_true = XOp.If(XType.FromFood(statement.Expressions[0].Type!), C_reg, 0);
             var Insn_tail = XOp.Jmp(0);
 
             // if the condition was true, jump to the true block

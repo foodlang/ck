@@ -7,12 +7,13 @@ namespace ck.XIL;
 /// <summary>
 /// Generates a module using a given target.
 /// </summary>
-public sealed class XModuleGenerator<T, U> where T : XTarget<T, U> where U : struct
+public sealed class XModuleGenerator<T, U>
+    where U : struct
 {
     /// <summary>
     /// The target that will be used.
     /// </summary>
-    public readonly T Target;
+    public readonly XTarget<T, U> Target;
 
     /// <summary>
     /// The module that will be used.
@@ -24,16 +25,10 @@ public sealed class XModuleGenerator<T, U> where T : XTarget<T, U> where U : str
     /// </summary>
     public bool Done { get; private set; } = false;
 
-    /// <summary>
-    /// Target-specific object for each function
-    /// </summary>
-    public readonly U FunctionObject;
-
-    public XModuleGenerator(XModule module, T target, U function_object)
+    public XModuleGenerator(XModule module, XTarget<T, U> target)
     {
         Target = target;
         Module = module;
-        FunctionObject = function_object;
     }
 
     /// <summary>
@@ -80,14 +75,6 @@ public sealed class XModuleGenerator<T, U> where T : XTarget<T, U> where U : str
 
             if (state.Sig_Return)
             {
-                /*Debug.Assert(state.Callstack.Count > 1);
-
-                state.Sig_Return = false;
-                var last_frame = state.Callstack.Pop();
-                if (last_frame is null)
-                    break;
-                entrypoint = last_frame.Value.From;
-                ip = last_frame.Value.NextInsn;*/
                 break;
             }
 
@@ -100,6 +87,7 @@ public sealed class XModuleGenerator<T, U> where T : XTarget<T, U> where U : str
                     if (!(state.Frame is XInterpreter.CallFrame cur_frame))
                         throw new InvalidOperationException();
 
+                    frame.StackFrameBase = cur_frame.StackFrameTop;
                     frame.StackFrameTop = cur_frame.StackFrameTop;
                 }
                 last_return_value = RunSingle(call.From.Name, call.CallObject);

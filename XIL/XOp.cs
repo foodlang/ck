@@ -205,11 +205,11 @@ public sealed class XOp
     public static XOp IJmp(XReg Rd)
         => new(XOps.IJmp, XType.U0, Rd, [], []);
 
-    public static XOp If(XReg Rd, nuint Insn)
-        => new(XOps.If, XType.U0, Rd, [], [Insn]);
+    public static XOp If(XType T, XReg Rd, nuint Insn)
+        => new(XOps.If, T, Rd, [], [Insn]);
 
-    public static XOp Ifz(XReg Rd, nuint Insn)
-        => new(XOps.If, XType.U0, Rd, [], [Insn]);
+    public static XOp Ifz(XType T, XReg Rd, nuint Insn)
+        => new(XOps.If, T, Rd, [], [Insn]);
 
     public static XOp FCall(XType T, XReg Rd, in XReg[] RsX, in XType[] TsX, string fn)
         => new XOp(XOps.FCall, T, Rd, RsX, [], TsX, fn);
